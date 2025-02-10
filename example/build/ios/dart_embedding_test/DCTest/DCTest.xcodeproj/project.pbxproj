@@ -6,13 +6,22 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4416B23F7F382D5EE7DA6384 /* Pods_DCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9489286A89E29C2561AECC48 /* Pods_DCTest.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		0857C0112C5157B39DF6B104 /* Pods-DCTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DCTest.release.xcconfig"; path = "Target Support Files/Pods-DCTest/Pods-DCTest.release.xcconfig"; sourceTree = "<group>"; };
+		160E5EBC572953589C86847D /* Pods-DCTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DCTest.debug.xcconfig"; path = "Target Support Files/Pods-DCTest/Pods-DCTest.debug.xcconfig"; sourceTree = "<group>"; };
 		3CC4AED32D5A590700E03E8B /* DCTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DCTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9489286A89E29C2561AECC48 /* Pods_DCTest.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DCTest.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3CC4AED52D5A590700E03E8B /* DCTest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = DCTest;
 			sourceTree = "<group>";
 		};
@@ -23,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4416B23F7F382D5EE7DA6384 /* Pods_DCTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -34,6 +44,8 @@
 			children = (
 				3CC4AED52D5A590700E03E8B /* DCTest */,
 				3CC4AED42D5A590700E03E8B /* Products */,
+				3EAD40BB38B62D341866E30D /* Pods */,
+				663751B2FFE06855D9A95496 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -45,6 +57,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		3EAD40BB38B62D341866E30D /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				160E5EBC572953589C86847D /* Pods-DCTest.debug.xcconfig */,
+				0857C0112C5157B39DF6B104 /* Pods-DCTest.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		663751B2FFE06855D9A95496 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9489286A89E29C2561AECC48 /* Pods_DCTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -52,9 +82,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3CC4AEE12D5A590900E03E8B /* Build configuration list for PBXNativeTarget "DCTest" */;
 			buildPhases = (
+				815D22D2C318BF78504A70F3 /* [CP] Check Pods Manifest.lock */,
+				5EEBDE76023FE38DC6FDB8EA /* [CP-User] Run Flutter Build app_module Script */,
 				3CC4AECF2D5A590700E03E8B /* Sources */,
 				3CC4AED02D5A590700E03E8B /* Frameworks */,
 				3CC4AED12D5A590700E03E8B /* Resources */,
+				C057F4319EBB3A5352C6B18C /* [CP-User] Embed Flutter Build app_module Script */,
 			);
 			buildRules = (
 			);
@@ -64,8 +97,6 @@
 				3CC4AED52D5A590700E03E8B /* DCTest */,
 			);
 			name = DCTest;
-			packageProductDependencies = (
-			);
 			productName = DCTest;
 			productReference = 3CC4AED32D5A590700E03E8B /* DCTest.app */;
 			productType = "com.apple.product-type.application";
@@ -113,6 +144,51 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5EEBDE76023FE38DC6FDB8EA /* [CP-User] Run Flutter Build app_module Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			name = "[CP-User] Run Flutter Build app_module Script";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nset -u\nsource \"${SRCROOT}/app_module/.ios/Flutter/flutter_export_environment.sh\"\nexport VERBOSE_SCRIPT_LOGGING=1 && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/xcode_backend.sh build";
+		};
+		815D22D2C318BF78504A70F3 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-DCTest-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C057F4319EBB3A5352C6B18C /* [CP-User] Embed Flutter Build app_module Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			name = "[CP-User] Embed Flutter Build app_module Script";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nset -u\nsource \"${SRCROOT}/app_module/.ios/Flutter/flutter_export_environment.sh\"\nexport VERBOSE_SCRIPT_LOGGING=1 && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/xcode_backend.sh embed_and_thin";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		3CC4AECF2D5A590700E03E8B /* Sources */ = {
@@ -246,6 +322,7 @@
 		};
 		3CC4AEE22D5A590900E03E8B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 160E5EBC572953589C86847D /* Pods-DCTest.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -275,6 +352,7 @@
 		};
 		3CC4AEE32D5A590900E03E8B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0857C0112C5157B39DF6B104 /* Pods-DCTest.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
