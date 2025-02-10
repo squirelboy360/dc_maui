@@ -1,6 +1,0 @@
-framework module Pods_DCTest {
-  umbrella header "Pods-DCTest-umbrella.h"
-
-  export *
-  module * { export * }
-}
