@@ -1,2 +1,1 @@
-A sample command-line application with an entrypoint in `bin/`, library code
-in `lib/`, and example unit test in `test/`.
+This Cli is under development. Its aim is to simplify cross-platform app dev for personal future projects
