@@ -1,48 +1,61 @@
 import 'package:dc_test/ui_apis.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 
-
-// Bridge instance
+final _logger = Logger('MainApp');
 final NativeUIBridge bridge = NativeUIBridge();
 
 void main() {
-  // Initialize native side
+  _setupLogging();
   initializeNativeUI();
+}
+
+void _setupLogging() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name}: ${record.message}');
+  });
 }
 
 Future<void> initializeNativeUI() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Get root view
     final rootInfo = await bridge.getRootView();
-    print('Root view ready: ${rootInfo?['viewId']}');
+    _logger.info('Root view ready: ${rootInfo?['viewId']}');
 
-    // Create main container
     final containerId = await bridge.createView('Container');
-    if (containerId == null) return;
+    if (containerId == null) {
+      _logger.severe('Failed to create container view');
+      return;
+    }
 
-    // Create stack view for layout
     final stackId = await bridge.createView('StackView');
+    if (stackId == null) {
+      _logger.severe('Failed to create stack view');
+      return;
+    }
     await bridge.attachView(containerId, stackId);
 
-    // Add a button
-    final buttonId = await bridge.createView('Button', properties: {
-      'title': 'Test Button'
-    });
+    final buttonId = await bridge.createView('Button');
+    if (buttonId == null) {
+      _logger.severe('Failed to create button view');
+      return;
+    }
     await bridge.attachView(stackId, buttonId);
+    await bridge.updateView(buttonId, {'title': 'Test Button'});
     await bridge.setViewBackgroundColor(buttonId, 'blue');
 
-    // Add a label
-    final labelId = await bridge.createView('Label', properties: {
-      'text': 'Click Counter: 0'
-    });
+    final labelId = await bridge.createView('Label');
+    if (labelId == null) {
+      _logger.severe('Failed to create label view');
+      return;
+    }
     await bridge.attachView(stackId, labelId);
+    await bridge.updateView(labelId, {'text': 'Click Counter: 0'});
 
-    // Track clicks
     var clicks = 0;
     
-    // Register button click handler
     await bridge.registerEvent(buttonId, 'onClick', () async {
       clicks++;
       await bridge.updateView(labelId, {
@@ -51,6 +64,6 @@ Future<void> initializeNativeUI() async {
     });
 
   } catch (e) {
-    print('Native UI initialization failed: $e');
+    _logger.severe('Native UI initialization failed: $e');
   }
 }
