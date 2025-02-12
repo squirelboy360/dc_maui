@@ -317,7 +317,7 @@ class NativeUIManager: NSObject {
         result(children)
     }
     
-    func handleChangeViewBackgroundColor(call: FlutterMethodCall, result: FlutterResult) {
+    func handleChangeViewBackgroundColor(call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
               let colorString = args["color"] as? String,
@@ -331,19 +331,19 @@ class NativeUIManager: NSObject {
             case "red": view.backgroundColor = .red
             case "blue": view.backgroundColor = .blue
             case "green": view.backgroundColor = .green
-                        case "yellow": view.backgroundColor = .yellow
-                        case "black": view.backgroundColor = .black
-                        case "white": view.backgroundColor = .white
-                        case "clear": view.backgroundColor = .clear
-                        default:
-                            if let color = UIColor(hexString: colorString) {
-                                view.backgroundColor = color
-                            }
-                        }
-                    }
-                    
-                    result(true)
+            case "yellow": view.backgroundColor = .yellow
+            case "black": view.backgroundColor = .black
+            case "white": view.backgroundColor = .white
+            case "clear": view.backgroundColor = .clear
+            default:
+                if let color = UIColor(named: colorString) {
+                    view.backgroundColor = color
                 }
+            }
+        }
+        
+        result(true)
+    }
                 
                 func handleSetViewVisibility(call: FlutterMethodCall, result: FlutterResult) {
                     guard let args = call.arguments as? [String: Any],
