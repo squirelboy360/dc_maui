@@ -19,25 +19,40 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.makeKeyAndVisible()
         
         // Initialize Flutter engine for headless execution
-        let project = FlutterDartProject()
-        flutterEngine = FlutterEngine(name: "io.flutter.engine", project: project, allowHeadlessExecution: true)
+        flutterEngine = FlutterEngine(name: "io.flutter.engine")
+        
+        // Register plugins before running the engine
+        self.registerPlugins()
         
         // Run engine without any UI entrypoint
-        guard flutterEngine?.run(withEntrypoint: nil) == true else {
+        guard let flutterEngine = flutterEngine,
+              flutterEngine.run(withEntrypoint: nil) else {
             fatalError("Failed to run Flutter engine")
         }
         
-        // Initialize NativeUIManager after engine is running
+        // Initialize and register NativeUIManager after engine is running
         nativeUIManager = NativeUIManager(flutterEngine: flutterEngine)
         
         return true
     }
+    
+    private func registerPlugins() {
+        guard let flutterEngine = flutterEngine else { return }
+        GeneratedPluginRegistrant.register(with: flutterEngine)
+    }
 }
 
-// Add FlutterPluginRegistry conformance to support plugins if needed
-extension AppDelegate: FlutterPlugin {
-    public static func register(with registrar: FlutterPluginRegistrar) {
-        // Plugin registration if needed
+// Plugin registration
+private class RegisterGeneratedPlugins: NSObject {
+    static func register(with registry: FlutterPluginRegistry) {
+        if let registrar = registry.registrar(forPlugin: "NativeUIManager") {
+            let channel = FlutterMethodChannel(
+                name: "com.dcmaui.framework",
+                binaryMessenger: registrar.messenger()
+            )
+            let instance = NativeUIManager(flutterEngine: registry as? FlutterEngine)
+            channel.setMethodCallHandler(instance.handle(_:result:))
+        }
     }
 }
 

@@ -19,44 +19,47 @@ class NativeUIManager: NSObject {
         
         methodChannel?.setMethodCallHandler { [weak self] (call, result) in
             guard let self = self else { return }
-            
-            switch call.method {
-            case "createView":
-                self.handleCreateView(call: call, result: result)
-            case "attachView":
-                self.handleAttachView(call: call, result: result)
-            case "deleteView":
-                self.handleDeleteView(call: call, result: result)
-            case "updateView":
-                self.handleUpdateView(call: call, result: result)
-            case "setViewProperties":
-                self.handleSetViewProperties(call: call, result: result)
-            case "addChildView":
-                self.handleAddChildView(call: call, result: result)
-            case "removeChildView":
-                self.handleRemoveChildView(call: call, result: result)
-            case "getViewById":
-                self.handleGetViewById(call: call, result: result)
-            case "getChildren":
-                self.handleGetChildren(call: call, result: result)
-            case "changeViewBackgroundColor":
-                self.handleChangeViewBackgroundColor(call: call, result: result)
-            case "setViewVisibility":
-                self.handleSetViewVisibility(call: call, result: result)
-            case "registerEvent":
-                self.handleRegisterEvent(call: call, result: result)
-            case "unregisterEvent":
-                self.handleUnregisterEvent(call: call, result: result)
-            case "getRootView":
-                self.handleGetRootView(call: call, result: result)
-            default:
-                result(FlutterMethodNotImplemented)
-            }
+            self.handle(call, result: result)
         }
         
         setupRootView()
     }
-    
+//    handlers
+    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "createView":
+            self.handleCreateView(call: call, result: result)
+        case "attachView":
+            self.handleAttachView(call: call, result: result)
+        case "deleteView":
+            self.handleDeleteView(call: call, result: result)
+        case "updateView":
+            self.handleUpdateView(call: call, result: result)
+        case "setViewProperties":
+            self.handleSetViewProperties(call: call, result: result)
+        case "addChildView":
+            self.handleAddChildView(call: call, result: result)
+        case "removeChildView":
+            self.handleRemoveChildView(call: call, result: result)
+        case "getViewById":
+            self.handleGetViewById(call: call, result: result)
+        case "getChildren":
+            self.handleGetChildren(call: call, result: result)
+        case "changeViewBackgroundColor":
+            self.handleChangeViewBackgroundColor(call: call, result: result)
+        case "setViewVisibility":
+            self.handleSetViewVisibility(call: call, result: result)
+        case "registerEvent":
+            self.handleRegisterEvent(call: call, result: result)
+        case "unregisterEvent":
+            self.handleUnregisterEvent(call: call, result: result)
+        case "getRootView":
+            self.handleGetRootView(call: call, result: result)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+//    
     private func setupRootView() {
         guard let rootView = getRootView() else { return }
         let rootId = "root_" + UUID().uuidString
