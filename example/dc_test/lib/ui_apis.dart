@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
-  
+
   // Singleton pattern
   static final NativeUIBridge _instance = NativeUIBridge._internal();
   factory NativeUIBridge() => _instance;
@@ -20,7 +20,7 @@ class NativeUIBridge {
         final Map<String, dynamic> args = call.arguments;
         final String viewId = args['viewId'];
         final String eventType = args['eventType'];
-        
+
         if (_eventCallbacks.containsKey(viewId) &&
             _eventCallbacks[viewId]!.containsKey(eventType)) {
           _eventCallbacks[viewId]![eventType]!.call();
@@ -30,7 +30,8 @@ class NativeUIBridge {
   }
 
   // View Management Methods
-  Future<String?> createView(String viewType, {Map<String, dynamic>? properties}) async {
+  Future<String?> createView(String viewType,
+      {Map<String, dynamic>? properties}) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createView', {
         'viewType': viewType,
@@ -68,7 +69,8 @@ class NativeUIBridge {
     }
   }
 
-  Future<bool> updateView(String viewId, Map<String, dynamic> properties) async {
+  Future<bool> updateView(
+      String viewId, Map<String, dynamic> properties) async {
     try {
       final result = await _channel.invokeMethod<bool>('updateView', {
         'viewId': viewId,
@@ -82,13 +84,14 @@ class NativeUIBridge {
   }
 
   // Event Handling
-  Future<bool> registerEvent(String viewId, String eventType, Function callback) async {
+  Future<bool> registerEvent(
+      String viewId, String eventType, Function callback) async {
     try {
       final result = await _channel.invokeMethod<bool>('registerEvent', {
         'viewId': viewId,
         'eventType': eventType,
       });
-      
+
       if (result ?? false) {
         _eventCallbacks[viewId] ??= {};
         _eventCallbacks[viewId]![eventType] = callback;
@@ -107,7 +110,7 @@ class NativeUIBridge {
         'viewId': viewId,
         'eventType': eventType,
       });
-      
+
       if (result ?? false) {
         _eventCallbacks[viewId]?.remove(eventType);
         if (_eventCallbacks[viewId]?.isEmpty ?? false) {
@@ -125,7 +128,8 @@ class NativeUIBridge {
   // Styling Methods
   Future<bool> setViewBackgroundColor(String viewId, String color) async {
     try {
-      final result = await _channel.invokeMethod<bool>('changeViewBackgroundColor', {
+      final result =
+          await _channel.invokeMethod<bool>('changeViewBackgroundColor', {
         'viewId': viewId,
         'color': color,
       });
