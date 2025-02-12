@@ -2,7 +2,7 @@ import UIKit
 import Flutter
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, FlutterPlugin {
     var window: UIWindow?
     var flutterEngine: FlutterEngine?
     var nativeUIManager: NativeUIManager?
@@ -11,51 +11,48 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        // Create window and set up root view controller first
+        // Initialize Flutter engine
+        flutterEngine = FlutterEngine(name: "io.flutter.engine")
+        
+        // Register plugins BEFORE running the engine
+        self.registerPlugins()
+        
+        // Create window and set up root view controller
         window = UIWindow(frame: UIScreen.main.bounds)
         let rootViewController = UIViewController()
-        rootViewController.view.backgroundColor = .white
+        rootViewController.view.backgroundColor = .blue
         window?.rootViewController = rootViewController
         window?.makeKeyAndVisible()
         
-        // Initialize Flutter engine for headless execution
-        flutterEngine = FlutterEngine(name: "io.flutter.engine")
-        
-        // Register plugins before running the engine
-        self.registerPlugins()
-        
-        // Run engine without any UI entrypoint
+        // Run engine
         guard let flutterEngine = flutterEngine,
-              flutterEngine.run(withEntrypoint: nil) else {
+              flutterEngine.run() else {
             fatalError("Failed to run Flutter engine")
         }
         
-        // Initialize and register NativeUIManager after engine is running
+        // Initialize NativeUIManager
         nativeUIManager = NativeUIManager(flutterEngine: flutterEngine)
         
         return true
     }
     
-    private func registerPlugins() {
-        guard let flutterEngine = flutterEngine else { return }
-        GeneratedPluginRegistrant.register(with: flutterEngine)
+    func registerPlugins() {
+        guard let registrar = flutterEngine?.registrar(forPlugin: "NativeUIManager") else { return }
+        
+        // Register the plugin
+        AppDelegate.register(with: registrar)
+    }
+    
+    // MARK: - FlutterPlugin
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        let channel = FlutterMethodChannel(
+            name: "com.dcmaui.framework",
+            binaryMessenger: registrar.messenger()
+        )
+        let instance = NativeUIManager(flutterEngine: registrar.messenger() as? FlutterEngine)
+        channel.setMethodCallHandler(instance?.handle(_:result:))
     }
 }
-
-// Plugin registration
-private class RegisterGeneratedPlugins: NSObject {
-    static func register(with registry: FlutterPluginRegistry) {
-        if let registrar = registry.registrar(forPlugin: "NativeUIManager") {
-            let channel = FlutterMethodChannel(
-                name: "com.dcmaui.framework",
-                binaryMessenger: registrar.messenger()
-            )
-            let instance = NativeUIManager(flutterEngine: registry as? FlutterEngine)
-            channel.setMethodCallHandler(instance.handle(_:result:))
-        }
-    }
-}
-
 
 extension UIColor {
     convenience init?(named hexString: String) {

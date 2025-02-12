@@ -7,20 +7,15 @@ class NativeUIManager: NSObject {
     private var childViews: [String: [String]] = [:]
     private var rootViewId: String?
     
-    init(flutterEngine: FlutterEngine?) {
+    init?(flutterEngine: FlutterEngine?) {
         super.init()
         
-        guard let flutterEngine = flutterEngine else { return }
+        guard let flutterEngine = flutterEngine else { return nil }
         
         methodChannel = FlutterMethodChannel(
             name: "com.dcmaui.framework",
             binaryMessenger: flutterEngine.binaryMessenger
         )
-        
-        methodChannel?.setMethodCallHandler { [weak self] (call, result) in
-            guard let self = self else { return }
-            self.handle(call, result: result)
-        }
         
         setupRootView()
     }
@@ -61,12 +56,21 @@ class NativeUIManager: NSObject {
     }
 //    
     private func setupRootView() {
-        guard let rootView = getRootView() else { return }
-        let rootId = "root_" + UUID().uuidString
-        views[rootId] = rootView
-        childViews[rootId] = []
-        rootViewId = rootId
-    }
+          // Add print statements for debugging
+          print("Setting up root view...")
+          
+          guard let rootView = getRootView() else {
+              print("Failed to get root view")
+              return
+          }
+          
+          let rootId = "root_" + UUID().uuidString
+          views[rootId] = rootView
+          childViews[rootId] = []
+          rootViewId = rootId
+          
+          print("Root view setup complete with ID: \(rootId)")
+      }
     
     func getRootView() -> UIView? {
         if #available(iOS 13.0, *) {

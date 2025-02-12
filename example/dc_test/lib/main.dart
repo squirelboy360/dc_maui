@@ -19,7 +19,7 @@ void _setupLogging() {
 
 Future<void> initializeNativeUI() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     final rootInfo = await bridge.getRootView();
     _logger.info('Root view ready: ${rootInfo?['viewId']}');
@@ -55,15 +55,14 @@ Future<void> initializeNativeUI() async {
     await bridge.updateView(labelId, {'text': 'Click Counter: 0'});
 
     var clicks = 0;
-    
+
     await bridge.registerEvent(buttonId, 'onClick', () async {
       clicks++;
-      await bridge.updateView(labelId, {
-        'text': 'Click Counter: $clicks'
-      });
+      await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
     });
-
   } catch (e) {
     _logger.severe('Native UI initialization failed: $e');
+    _logger.severe('Detailed error in native UI initialization: $e');
+    _logger.severe('Error stack trace: ${StackTrace.current}');
   }
 }
