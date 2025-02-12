@@ -7,32 +7,43 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var flutterEngine: FlutterEngine?
     var nativeUIManager: NativeUIManager?
     
-    func application(
+    @nonobjc func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        // Create window
+        // Create window and set up root view controller first
         window = UIWindow(frame: UIScreen.main.bounds)
-        
-        // Create root view controller
         let rootViewController = UIViewController()
+        rootViewController.view.backgroundColor = .white
         window?.rootViewController = rootViewController
         window?.makeKeyAndVisible()
         
-        // Initialize Flutter Engine
-        flutterEngine = FlutterEngine(name: "io.flutter.engine")
-        flutterEngine?.run(withEntrypoint: nil) // No UI entrypoint needed
+        // Initialize Flutter engine for headless execution
+        let project = FlutterDartProject()
+        flutterEngine = FlutterEngine(name: "io.flutter.engine", project: project, allowHeadlessExecution: true)
         
-        // Initialize NativeUIManager with the flutterEngine
+        // Run engine without any UI entrypoint
+        guard flutterEngine?.run(withEntrypoint: nil) == true else {
+            fatalError("Failed to run Flutter engine")
+        }
+        
+        // Initialize NativeUIManager after engine is running
         nativeUIManager = NativeUIManager(flutterEngine: flutterEngine)
         
         return true
     }
 }
 
-// Extension for UIColor to handle hex strings
+// Add FlutterPluginRegistry conformance to support plugins if needed
+extension AppDelegate: FlutterPlugin {
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        // Plugin registration if needed
+    }
+}
+
+
 extension UIColor {
-    convenience init?(hexString: String) {
+    convenience init?(named hexString: String) {
         let r, g, b, a: CGFloat
         
         if hexString.hasPrefix("#") {
