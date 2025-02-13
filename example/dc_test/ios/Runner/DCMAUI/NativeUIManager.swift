@@ -68,7 +68,23 @@ class NativeUIManager: NSObject, FlutterPlugin {
             guard let self = self else { return }
             
             switch call.method {
-            // Navigation Methods
+            // Add this case first to handle navigation setup
+            case "setupNavigation":
+                if let args = call.arguments as? [String: Any],
+                   let typeStr = args["type"] as? String {
+                    // Create navigation controller if needed
+                    if self.navigationController == nil {
+                        self.setupNavigationController()
+                    }
+                    result(true)
+                    return
+                }
+                result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
+                
+            // Your existing cases...
+            case "createView":
+                self.handleCreateView(call, result: result)
+            // ...other existing cases...
             case "pushScreen", "popScreen", "presentModal",
                  "dismissModal", "setupTabs", "switchTab":
                 self.handleNavigationMethod(call, result: result)
