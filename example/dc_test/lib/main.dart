@@ -1,13 +1,23 @@
-import 'package:dc_test/ui_apis.dart';
-import 'package:flutter/material.dart';
+import 'package:dc_test/components/component_interface.dart';
+import 'package:flutter/material.dart' hide Stack; // Hide Flutter's Stack
 import 'package:logging/logging.dart';
+import 'components/button.dart';
+import 'components/label.dart';
+import 'components/stack.dart';
+import 'navigation_apis.dart';
 
 final _logger = Logger('MainApp');
-final NativeUIBridge bridge = NativeUIBridge();
+final _nav = NavigationAPI();
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // Add this line
   _setupLogging();
-  runApp(const SizedBox()); // Run minimal Flutter app
+  runApp(const MaterialApp(
+    color: Colors.white,
+    home: Center(
+      child: Text("Initializing..."), // Change this to show loading state
+    ),
+  ));
   mainApp();
 }
 
@@ -19,62 +29,143 @@ void _setupLogging() {
 }
 
 Future<void> mainApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-var clicks = 0;
-  // state
-  void increase() {
-    clicks++;
-  }
-
   try {
-    // First get the root view to ensure it's ready
-    final rootInfo = await bridge.getRootView();
-    _logger.info('Root view ready: ${rootInfo?['viewId']}');
+    _logger.info('Initializing app...');
+    await Future.delayed(Duration(milliseconds: 100)); // Add small delay for native setup
 
-    if (rootInfo == null || rootInfo['viewId'] == null) {
-      _logger.severe('Root view not available');
+    // Initialize navigation
+    final success = await _nav.setupNavigation(NavigationType.stack);
+    if (!success) {
+      _logger.severe('Failed to setup navigation');
       return;
     }
 
-    final rootViewId = rootInfo['viewId'] as String;
-
-    // Create and attach views directly to root
-    final stackId = await bridge.createView('StackView');
-    if (stackId == null) {
-      _logger.severe('Failed to create stack view');
-      return;
+    // Create main screen
+    final mainScreen = await buildMainScreen();
+    if (mainScreen != null) {
+      await _nav.push(mainScreen);
+      _logger.info('Main screen pushed');
+    } else {
+      _logger.severe('Failed to build main screen');
     }
-    await bridge.attachView(rootViewId, stackId);
-
-    final buttonId = await bridge.createView('Button');
-    if (buttonId == null) {
-      _logger.severe('Failed to create button view');
-      return;
-    }
-    await bridge.attachView(stackId, buttonId);
-    await bridge.updateView(buttonId, {'title': 'Test Button'});
-    await bridge.setViewBackgroundColor(buttonId, 'blue');
-
-    final labelId = await bridge.createView('Label');
-    if (labelId == null) {
-      _logger.severe('Failed to create label view');
-      return;
-    }
-    await bridge.attachView(stackId, labelId);
-    await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
-
-    // var clicks = 0;
-
-    await bridge.registerEvent(buttonId, 'onClick', () async {
-      increase();
-      _logger.info('Button clicked: $clicks times');
-      await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
-    });
-
-    _logger.info('Native UI setup complete');
-  } catch (e) {
-    _logger.severe('Native UI initialization failed: $e');
-    _logger.severe('Error stack trace: ${StackTrace.current}');
+  } catch (e, stack) {
+    _logger.severe('App initialization failed: $e\n$stack');
   }
+}
+
+Future<String?> buildMainScreen() async {
+  final stack = await Stack.create();
+  if (stack == null) return null;
+
+  // Add label
+  final label = await Label.create();
+  if (label != null) {
+    await label.setText('Welcome to Demo').then((lbl) => lbl.style(
+          fontSize: 24,
+          margin: UIEdgeInsets.all(20),
+          textColor: '#000000',
+        ));
+    await stack.add(label);
+  }
+
+  // Add tab navigation button
+  final tabButton = await Button.create();
+  if (tabButton != null) {
+    await tabButton
+        .setTitle('Show Tabs')
+        .then((btn) => btn.style(
+              backgroundColor: '#007AFF',
+              padding: UIEdgeInsets.all(16),
+              margin: UIEdgeInsets.all(10),
+            ))
+        .then((btn) => btn.onClick(() async {
+              final tabScreen1 = await buildTabScreen1();
+              final tabScreen2 = await buildTabScreen2();
+
+              if (tabScreen1 != null && tabScreen2 != null) {
+                await _nav.setupNavigation(
+                  NavigationType.tab,
+                  tabs: [
+                    TabInfo(screenId: tabScreen1, title: 'Tab 1'),
+                    TabInfo(screenId: tabScreen2, title: 'Tab 2'),
+                  ],
+                );
+              }
+            }));
+    await stack.add(tabButton);
+  }
+
+  // Add modal button
+  final modalButton = await Button.create();
+  if (modalButton != null) {
+    await modalButton
+        .setTitle('Show Modal')
+        .then((btn) => btn.style(
+              backgroundColor: '#FF9500',
+              padding: UIEdgeInsets.all(16),
+              margin: UIEdgeInsets.all(10),
+            ))
+        .then((btn) => btn.onClick(() async {
+              final modalScreen = await buildModalScreen();
+              if (modalScreen != null) {
+                await _nav.presentModal(modalScreen);
+              }
+            }));
+    await stack.add(modalButton);
+  }
+
+  return stack.id;
+}
+
+Future<String?> buildTabScreen1() async {
+  final stack = await Stack.create();
+  if (stack == null) return null;
+
+  final label = await Label.create();
+  if (label != null) {
+    await label.setText('Tab 1').then((lbl) => lbl.style(fontSize: 24));
+    await stack.add(label);
+  }
+
+  return stack.id;
+}
+
+Future<String?> buildTabScreen2() async {
+  final stack = await Stack.create();
+  if (stack == null) return null;
+
+  final label = await Label.create();
+  if (label != null) {
+    await label.setText('Tab 2').then((lbl) => lbl.style(fontSize: 24));
+    await stack.add(label);
+  }
+
+  return stack.id;
+}
+
+Future<String?> buildModalScreen() async {
+  final stack = await Stack.create();
+  if (stack == null) return null;
+
+  final label = await Label.create();
+  if (label != null) {
+    await label.setText('Modal Screen').then((lbl) => lbl.style(fontSize: 24));
+    await stack.add(label);
+  }
+
+  final closeButton = await Button.create();
+  if (closeButton != null) {
+    await closeButton
+        .setTitle('Close')
+        .then((btn) => btn.style(
+              backgroundColor: '#FF3B30',
+              padding: UIEdgeInsets.all(16),
+            ))
+        .then((btn) => btn.onClick(() {
+              _nav.dismissModal();
+            }));
+    await stack.add(closeButton);
+  }
+
+  return stack.id;
 }

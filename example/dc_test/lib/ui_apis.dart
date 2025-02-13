@@ -1,4 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
+
+final _logger = Logger('NativeUIBridge');
 
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
@@ -54,7 +58,7 @@ class NativeUIBridge {
       });
       return viewId;
     } catch (e) {
-      print('Error creating view: $e');
+      _logger.severe('Error creating view: $e');
       return null;
     }
   }
@@ -72,7 +76,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error attaching view: $e');
+      _logger.severe('Error attaching view: $e');
       return false;
     }
   }
@@ -84,7 +88,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error deleting view: $e');
+      _logger.severe('Error deleting view: $e');
       return false;
     }
   }
@@ -110,7 +114,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error updating view: $e');
+      _logger.severe('Error updating view: $e');
       return false;
     }
   }
@@ -139,7 +143,7 @@ class NativeUIBridge {
       }
       return false;
     } catch (e) {
-      print('Error registering event: $e');
+      _logger.severe('Error registering event: $e');
       return false;
     }
   }
@@ -160,7 +164,7 @@ class NativeUIBridge {
       }
       return false;
     } catch (e) {
-      print('Error unregistering event: $e');
+      _logger.severe('Error unregistering event: $e');
       return false;
     }
   }
@@ -180,7 +184,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error setting background color: $e');
+      _logger.severe('Error setting background color: $e');
       return false;
     }
   }
@@ -197,7 +201,99 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error setting visibility: $e');
+      _logger.severe('Error setting visibility: $e');
+      return false;
+    }
+  }
+
+  /// Sets view size
+  /// Native expects:
+  /// - viewId: String
+  /// - width: double
+  /// - height: double
+  Future<bool> setViewSize(String viewId, {
+    required double width,
+    required double height,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewSize', {
+        'viewId': viewId,
+        'width': width,
+        'height': height,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view size: $e');
+      return false;
+    }
+  }
+
+  /// Sets view margins
+  Future<bool> setViewMargin(String viewId, EdgeInsets margins) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewMargin', {
+        'viewId': viewId,
+        'margins': {
+          'top': margins.top,
+          'left': margins.left,
+          'right': margins.right,
+          'bottom': margins.bottom,
+        },
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view margins: $e');
+      return false;
+    }
+  }
+
+  /// Sets view padding
+  Future<bool> setViewPadding(String viewId, EdgeInsets padding) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewPadding', {
+        'viewId': viewId,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'right': padding.right,
+          'bottom': padding.bottom,
+        },
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view padding: $e');
+      return false;
+    }
+  }
+
+  /// Sets view border
+  Future<bool> setViewBorder(String viewId, {
+    required double width,
+    required String color,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewBorder', {
+        'viewId': viewId,
+        'width': width,
+        'color': color,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view border: $e');
+      return false;
+    }
+  }
+
+  /// Sets view corner radius
+  Future<bool> setViewCornerRadius(String viewId, double radius) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewCornerRadius', {
+        'viewId': viewId,
+        'radius': radius,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting corner radius: $e');
       return false;
     }
   }
@@ -206,12 +302,6 @@ class NativeUIBridge {
 
   /// Get native view properties by ID
   /// Returns: Map with properties:
-  /// {
-  ///   viewType: String,
-  ///   properties: Map<String, dynamic>,
-  ///   children: List<String>,
-  ///   parent: String?
-  /// }
   Future<Map<String, dynamic>?> getViewById(String viewId) async {
     try {
       final result = await _channel.invokeMethod('getViewById', {
@@ -219,7 +309,7 @@ class NativeUIBridge {
       });
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error getting view: $e');
+      _logger.severe('Error getting view: $e');
       return null;
     }
   }
@@ -231,7 +321,7 @@ class NativeUIBridge {
       });
       return List<String>.from(result);
     } catch (e) {
-      print('Error getting children: $e');
+      _logger.severe('Error getting children: $e');
       return null;
     }
   }
@@ -241,40 +331,106 @@ class NativeUIBridge {
       final result = await _channel.invokeMethod('getRootView');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error getting root view: $e');
+      _logger.severe('Error getting root view: $e');
       return null;
     }
   }
-}
 
-// Helper classes for type-safe view creation
-class NativeView {
-  final String viewId;
-  final NativeUIBridge _bridge;
-
-  NativeView(this.viewId) : _bridge = NativeUIBridge();
-
-  Future<bool> setBackgroundColor(String color) {
-    return _bridge.setViewBackgroundColor(viewId, color);
+  // Additional UI methods to expose native capabilities
+  
+  // Layout methods
+  Future<bool> setFlex(String viewId, int flex) async {
+    return await _channel.invokeMethod('setFlex', {
+      'viewId': viewId,
+      'flex': flex,
+    }) ?? false;
   }
 
-  Future<bool> setVisibility(bool isVisible) {
-    return _bridge.setViewVisibility(viewId, isVisible);
+  Future<bool> setAlignment(String viewId, String alignment) async {
+    return await _channel.invokeMethod('setAlignment', {
+      'viewId': viewId,
+      'alignment': alignment,
+    }) ?? false;
   }
 
-  Future<bool> delete() {
-    return _bridge.deleteView(viewId);
+  // Stack specific methods
+  Future<bool> setStackPosition(String viewId, {
+    double? top,
+    double? left,
+    double? right,
+    double? bottom,
+  }) async {
+    return await _channel.invokeMethod('setStackPosition', {
+      'viewId': viewId,
+      'top': top,
+      'left': left,
+      'right': right,
+      'bottom': bottom,
+    }) ?? false;
   }
 
-  Future<bool> update(Map<String, dynamic> properties) {
-    return _bridge.updateView(viewId, properties);
+  Future<bool> setZIndex(String viewId, int zIndex) async {
+    return await _channel.invokeMethod('setZIndex', {
+      'viewId': viewId,
+      'zIndex': zIndex,
+    }) ?? false;
   }
 
-  Future<bool> addEventListener(String eventType, Function callback) {
-    return _bridge.registerEvent(viewId, eventType, callback);
+  // Animation methods
+  Future<bool> animate(String viewId, Map<String, dynamic> properties, {
+    int duration = 300,
+    String curve = 'easeInOut',
+  }) async {
+    return await _channel.invokeMethod('animate', {
+      'viewId': viewId,
+      'properties': properties,
+      'duration': duration,
+      'curve': curve,
+    }) ?? false;
   }
 
-  Future<bool> removeEventListener(String eventType) {
-    return _bridge.unregisterEvent(viewId, eventType);
+  // Advanced style methods
+  Future<bool> setGradient(String viewId, {
+    required List<String> colors,
+    List<double>? stops,
+    String type = 'linear',
+    double angle = 0,
+  }) async {
+    return await _channel.invokeMethod('setGradient', {
+      'viewId': viewId,
+      'colors': colors,
+      'stops': stops,
+      'type': type,
+      'angle': angle,
+    }) ?? false;
+  }
+
+  Future<bool> setBlur(String viewId, double radius) async {
+    return await _channel.invokeMethod('setBlur', {
+      'viewId': viewId,
+      'radius': radius,
+    }) ?? false;
+  }
+
+  Future<bool> setMask(String viewId, String maskType) async {
+    return await _channel.invokeMethod('setMask', {
+      'viewId': viewId,
+      'maskType': maskType,
+    }) ?? false;
+  }
+
+  // Gesture handling
+  Future<bool> enableGesture(String viewId, String gestureType) async {
+    return await _channel.invokeMethod('enableGesture', {
+      'viewId': viewId,
+      'gestureType': gestureType,
+    }) ?? false;
+  }
+
+  Future<bool> disableGesture(String viewId, String gestureType) async {
+    return await _channel.invokeMethod('disableGesture', {
+      'viewId': viewId,
+      'gestureType': gestureType,
+    }) ?? false;
   }
 }

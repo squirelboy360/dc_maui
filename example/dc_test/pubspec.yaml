@@ -16,9 +16,23 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   logging: ^1.3.0
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 
+
+flutter_launcher_icons:
+  remove_alpha_ios: true
+  android: 
+     generate: true
+  
+  ios: 
+     generate: true
+  web: 
+     generate: true
+
+  image_path: "assets/app_icon/icon.png"
+  min_sdk_android: 21
