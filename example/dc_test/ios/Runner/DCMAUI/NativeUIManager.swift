@@ -1,25 +1,20 @@
 import UIKit
 import Flutter
 
-class NativeUIManager: NSObject {
+class NativeUIManager: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
     private var views: [String: UIView] = [:]
     private var childViews: [String: [String]] = [:]
     private var rootViewId: String?
-    
-    init?(flutterEngine: FlutterEngine?) {
-        super.init()
-        
-        guard let flutterEngine = flutterEngine else { return nil }
-        
-        methodChannel = FlutterMethodChannel(
-            name: "com.dcmaui.framework",
-            binaryMessenger: flutterEngine.binaryMessenger
-        )
-        
-        setupRootView()
+
+    // Conforming to FlutterPlugin
+    static func register(with registrar: FlutterPluginRegistrar) {
+        let instance = NativeUIManager()
+        instance.methodChannel = FlutterMethodChannel(name: "com.dcmaui.framework", binaryMessenger: registrar.messenger())
+        registrar.addMethodCallDelegate(instance, channel: instance.methodChannel!)
+        instance.setupRootView()
     }
-//    handlers
+
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "createView":
@@ -54,24 +49,63 @@ class NativeUIManager: NSObject {
             result(FlutterMethodNotImplemented)
         }
     }
-//    
-    private func setupRootView() {
-          // Add print statements for debugging
-          print("Setting up root view...")
-          
-          guard let rootView = getRootView() else {
-              print("Failed to get root view")
-              return
-          }
-          
-          let rootId = "root_" + UUID().uuidString
-          views[rootId] = rootView
-          childViews[rootId] = []
-          rootViewId = rootId
-          
-          print("Root view setup complete with ID: \(rootId)")
-      }
+
+    func setupRootView() {
+    // Ensure you get the root view from the views dictionary
+    guard let rootView = getRootView() else {
+        print("Root view is nil")
+        return
+    }
+
+    // Debugging: Confirm root view is initialized and added
+    print("Root view added: \(rootView)")
+
+    // Set background color for debugging to make sure it's visible
+    rootView.backgroundColor = .green // Change as needed for visibility
     
+    // Disable automatic constraints translation (use Auto Layout)
+    rootView.translatesAutoresizingMaskIntoConstraints = false
+
+    // Add the root view to the main window or view controller's view
+    if let window = UIApplication.shared.windows.first {
+        window.addSubview(rootView)
+        
+        // Add layout constraints to ensure the root view fills the screen
+        NSLayoutConstraint.activate([
+            rootView.leadingAnchor.constraint(equalTo: window.leadingAnchor),
+            rootView.trailingAnchor.constraint(equalTo: window.trailingAnchor),
+            rootView.topAnchor.constraint(equalTo: window.topAnchor),
+            rootView.bottomAnchor.constraint(equalTo: window.bottomAnchor)
+        ])
+        
+        print("Root view constraints set successfully.")
+    }
+
+    // Further setup for any child views or additional configurations
+    setupChildViews(for: rootView)
+}
+
+// Assuming you have other child views to set up within the root view
+func setupChildViews(for rootView: UIView) {
+    // Example: Add a UIButton to the root view
+    let button = UIButton(type: .system)
+    button.setTitle("Click Me", for: .normal)
+    button.translatesAutoresizingMaskIntoConstraints = false
+    rootView.addSubview(button)
+
+    // Set constraints for the button
+    NSLayoutConstraint.activate([
+        button.centerXAnchor.constraint(equalTo: rootView.centerXAnchor),
+        button.centerYAnchor.constraint(equalTo: rootView.centerYAnchor)
+    ])
+
+    // Make sure the button's background color is visible for debugging
+    button.backgroundColor = .yellow // Change as needed
+
+    // Add more child views as needed and ensure proper constraints
+}
+
+
     func getRootView() -> UIView? {
         if #available(iOS 13.0, *) {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -84,57 +118,57 @@ class NativeUIManager: NSObject {
             return UIApplication.shared.keyWindow?.rootViewController?.view
         }
     }
-    
+
     @objc private func handleButtonClick(_ sender: UIButton) {
         sendEventToFlutter(view: sender, eventType: "onClick")
     }
-    
+
     @objc private func handleViewTap(_ sender: UITapGestureRecognizer) {
         sendEventToFlutter(view: sender.view, eventType: "onClick")
     }
-    
+
     @objc private func handleLongPress(_ sender: UILongPressGestureRecognizer) {
         if sender.state == .began {
             sendEventToFlutter(view: sender.view, eventType: "onLongPress")
         }
     }
-    
+
     private func sendEventToFlutter(view: UIView?, eventType: String, extraData: [String: Any] = [:]) {
         guard let view = view else { return }
         guard let viewId = views.first(where: { $0.value == view })?.key else { return }
-        
+
         var eventData: [String: Any] = ["viewId": viewId, "eventType": eventType]
         eventData.merge(extraData) { (_, new) in new }
-        
+
         methodChannel?.invokeMethod("onNativeEvent", arguments: eventData)
     }
-    
+
     // MARK: - Handler Methods
-    
+
     func handleGetRootView(call: FlutterMethodCall, result: FlutterResult) {
         guard let rootViewId = self.rootViewId,
               let rootView = views[rootViewId] else {
             result(FlutterError(code: "NO_ROOT_VIEW", message: "Root view not initialized", details: nil))
             return
         }
-        
+
         result([
             "viewId": rootViewId,
             "width": rootView.frame.width,
             "height": rootView.frame.height
         ])
     }
-    
+
     func handleCreateView(call: FlutterMethodCall, result: FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewType = args["viewType"] as? String else {
             result(FlutterError(code: "INVALID_ARGUMENT", message: "Missing viewType", details: nil))
             return
         }
-        
+
         let viewId = UUID().uuidString
         var view: UIView?
-        
+
         switch viewType {
         case "Container":
             view = UIView()
@@ -162,8 +196,11 @@ class NativeUIManager: NSObject {
             result(FlutterError(code: "INVALID_TYPE", message: "Unknown view type: \(viewType)", details: nil))
             return
         }
-        
+
         if let view = view {
+            // Set background color to red for testing
+            view.backgroundColor = .red
+
             view.translatesAutoresizingMaskIntoConstraints = false
             views[viewId] = view
             childViews[viewId] = []
@@ -172,6 +209,7 @@ class NativeUIManager: NSObject {
             result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
         }
     }
+
     
     func handleAttachView(call: FlutterMethodCall, result: FlutterResult) {
         guard let args = call.arguments as? [String: Any],
