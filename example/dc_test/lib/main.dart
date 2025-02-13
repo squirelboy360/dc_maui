@@ -8,7 +8,7 @@ final NativeUIBridge bridge = NativeUIBridge();
 void main() {
   _setupLogging();
   runApp(const SizedBox()); // Run minimal Flutter app
-  initializeNativeUI();
+  mainApp();
 }
 
 void _setupLogging() {
@@ -18,8 +18,14 @@ void _setupLogging() {
   });
 }
 
-Future<void> initializeNativeUI() async {
+Future<void> mainApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+var clicks = 0;
+  // state
+  void increase() {
+    clicks++;
+  }
 
   try {
     // First get the root view to ensure it's ready
@@ -56,12 +62,12 @@ Future<void> initializeNativeUI() async {
       return;
     }
     await bridge.attachView(stackId, labelId);
-    await bridge.updateView(labelId, {'text': 'Click Counter: 40'});
+    await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
 
-    var clicks = 0;
+    // var clicks = 0;
 
     await bridge.registerEvent(buttonId, 'onClick', () async {
-      clicks++;
+      increase();
       _logger.info('Button clicked: $clicks times');
       await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
     });
