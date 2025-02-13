@@ -30,6 +30,21 @@ class NativeUIBridge {
   }
 
   // View Management Methods
+
+  /// Creates a new native view
+  /// Native expects:
+  /// - viewType: String (e.g. 'Button', 'TextView', 'LinearLayout')
+  /// - properties: {
+  ///     text?: String,
+  ///     textSize?: double,
+  ///     backgroundColor?: String (hex color),
+  ///     width?: int,
+  ///     height?: int,
+  ///     padding?: int,
+  ///     margin?: int,
+  ///     isEnabled?: bool
+  ///   }
+  /// Returns: String viewId or null if failed
   Future<String?> createView(String viewType,
       {Map<String, dynamic>? properties}) async {
     try {
@@ -44,6 +59,11 @@ class NativeUIBridge {
     }
   }
 
+  /// Attaches child view to parent view in native hierarchy
+  /// Native expects:
+  /// - parentId: String (must be existing view ID)
+  /// - childId: String (must be existing view ID)
+  /// Returns: bool success
   Future<bool> attachView(String parentId, String childId) async {
     try {
       final result = await _channel.invokeMethod<bool>('attachView', {
@@ -69,6 +89,18 @@ class NativeUIBridge {
     }
   }
 
+  /// Updates properties of existing native view
+  /// Native expects:
+  /// - viewId: String (must be existing view ID) 
+  /// - properties: {
+  ///     text?: String,
+  ///     textSize?: double,
+  ///     backgroundColor?: String (hex),
+  ///     width?: int,
+  ///     height?: int,
+  ///     isEnabled?: bool,
+  ///     isVisible?: bool
+  ///   }
   Future<bool> updateView(
       String viewId, Map<String, dynamic> properties) async {
     try {
@@ -84,6 +116,14 @@ class NativeUIBridge {
   }
 
   // Event Handling
+
+  /// Registers event listener on native view
+  /// Native expects:
+  /// - viewId: String (must be existing view ID)
+  /// - eventType: String (supported events:
+  ///   'click', 'longClick', 'focus', 'blur',
+  ///   'textChanged', 'scrolled')
+  /// Returns: bool success
   Future<bool> registerEvent(
       String viewId, String eventType, Function callback) async {
     try {
@@ -126,6 +166,11 @@ class NativeUIBridge {
   }
 
   // Styling Methods
+
+  /// Sets background color of native view
+  /// Native expects:
+  /// - viewId: String (must be existing view ID)
+  /// - color: String (hex format: '#RRGGBB' or '#AARRGGBB')
   Future<bool> setViewBackgroundColor(String viewId, String color) async {
     try {
       final result =
@@ -140,6 +185,10 @@ class NativeUIBridge {
     }
   }
 
+  /// Sets visibility of native view
+  /// Native expects:
+  /// - viewId: String (must be existing view ID)
+  /// - isVisible: bool (true = View.VISIBLE, false = View.GONE)
   Future<bool> setViewVisibility(String viewId, bool isVisible) async {
     try {
       final result = await _channel.invokeMethod<bool>('setViewVisibility', {
@@ -154,6 +203,15 @@ class NativeUIBridge {
   }
 
   // Hierarchy Methods
+
+  /// Get native view properties by ID
+  /// Returns: Map with properties:
+  /// {
+  ///   viewType: String,
+  ///   properties: Map<String, dynamic>,
+  ///   children: List<String>,
+  ///   parent: String?
+  /// }
   Future<Map<String, dynamic>?> getViewById(String viewId) async {
     try {
       final result = await _channel.invokeMethod('getViewById', {
