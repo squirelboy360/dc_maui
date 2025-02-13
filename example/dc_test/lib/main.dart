@@ -7,6 +7,7 @@ final NativeUIBridge bridge = NativeUIBridge();
 
 void main() {
   _setupLogging();
+  runApp(const SizedBox()); // Run minimal Flutter app
   initializeNativeUI();
 }
 
@@ -21,21 +22,24 @@ Future<void> initializeNativeUI() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // First get the root view to ensure it's ready
     final rootInfo = await bridge.getRootView();
     _logger.info('Root view ready: ${rootInfo?['viewId']}');
 
-    final containerId = await bridge.createView('Container');
-    if (containerId == null) {
-      _logger.severe('Failed to create container view');
+    if (rootInfo == null || rootInfo['viewId'] == null) {
+      _logger.severe('Root view not available');
       return;
     }
 
+    final rootViewId = rootInfo['viewId'] as String;
+
+    // Create and attach views directly to root
     final stackId = await bridge.createView('StackView');
     if (stackId == null) {
       _logger.severe('Failed to create stack view');
       return;
     }
-    await bridge.attachView(containerId, stackId);
+    await bridge.attachView(rootViewId, stackId);
 
     final buttonId = await bridge.createView('Button');
     if (buttonId == null) {
@@ -52,17 +56,19 @@ Future<void> initializeNativeUI() async {
       return;
     }
     await bridge.attachView(stackId, labelId);
-    await bridge.updateView(labelId, {'text': 'Click Counter: 0'});
+    await bridge.updateView(labelId, {'text': 'Click Counter: 40'});
 
     var clicks = 0;
 
     await bridge.registerEvent(buttonId, 'onClick', () async {
       clicks++;
+      _logger.info('Button clicked: $clicks times');
       await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
     });
+
+    _logger.info('Native UI setup complete');
   } catch (e) {
     _logger.severe('Native UI initialization failed: $e');
-    _logger.severe('Detailed error in native UI initialization: $e');
     _logger.severe('Error stack trace: ${StackTrace.current}');
   }
 }
