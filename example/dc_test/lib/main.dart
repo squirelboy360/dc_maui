@@ -5,12 +5,7 @@ import 'package:logging/logging.dart'; // Hide Flutter's Stack
 void main() {
   WidgetsFlutterBinding.ensureInitialized(); // Add this line
   _setupLogging();
-  runApp(const MaterialApp(
-    color: Colors.white,
-    home: Center(
-      child: Text("Initializing..."), // Change this to show loading state
-    ),
-  ));
+
   mainApp();
 }
 

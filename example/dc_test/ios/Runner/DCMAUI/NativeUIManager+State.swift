@@ -152,6 +152,31 @@ extension NativeUIManager {
             break
         }
     }
+    
+    internal func loadNetworkImage(url: String, into imageView: UIImageView) {
+        guard let url = URL(string: url) else { return }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let data = data {
+                DispatchQueue.main.async {
+                    if url.pathExtension.lowercased() == "svg" {
+                        if let svg = SVG(data),
+                           let image = self.renderSVG(svg, size: imageView.bounds.size) {
+                            imageView.image = image
+                        }
+                    } else if let image = UIImage(data: data) {
+                        imageView.image = image
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    private func renderSVG(_ svg: SVG, size: CGSize) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            svg.draw(in: context.cgContext)
+        }
+    }
 }
 
 // Helper extensions

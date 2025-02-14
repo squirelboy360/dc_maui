@@ -21,27 +21,6 @@ enum NativeUIError: Error {
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    // Thread-safe view access
-    private let viewAccessQueue = DispatchQueue(label: "com.dcmaui.viewAccess", attributes: .concurrent)
-    
-    func safeGetView(_ viewId: String) -> UIView? {
-        viewAccessQueue.sync {
-            views[viewId]
-        }
-    }
-    
-    func safeSetView(_ view: UIView, forId viewId: String) {
-        viewAccessQueue.async(flags: .barrier) {
-            self.views[viewId] = view
-        }
-    }
-    
-    func safeRemoveView(_ viewId: String) {
-        viewAccessQueue.async(flags: .barrier) {
-            self.views.removeValue(forKey: viewId)
-        }
-    }
-    
     // Error handling wrapper
     func handleMethodSafely(_ call: FlutterMethodCall, result: @escaping FlutterResult, operation: @escaping () throws -> Any?) {
         DispatchQueue.main.async { [weak self] in
@@ -54,10 +33,10 @@ extension NativeUIManager {
                 let value = try operation()
                 result(value)
             } catch let error as NativeUIError {
-                os_log(.error, log: self.logger, "Operation failed: %{public}@", error.localizedDescription)
+                os_log(.error, "Operation failed: %{public}@", error.localizedDescription)
                 result(FlutterError(code: "OPERATION_FAILED", message: error.localizedDescription, details: nil))
             } catch {
-                os_log(.error, log: self.logger, "Unknown error: %{public}@", error.localizedDescription)
+                os_log(.error, "Unknown error: %{public}@", error.localizedDescription)
                 result(FlutterError(code: "UNKNOWN_ERROR", message: error.localizedDescription, details: nil))
             }
         }

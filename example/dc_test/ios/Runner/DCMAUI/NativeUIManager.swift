@@ -2,6 +2,16 @@ import UIKit
 import Flutter
 import os.log 
 
+extension UIWindow {
+    func topViewController() -> UIViewController? {
+        var top = self.rootViewController
+        while let presented = top?.presentedViewController {
+            top = presented
+        }
+        return top
+    }
+}
+
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
     private let logger = OSLog(subsystem: "com.dcmaui.framework", category: "NativeUIManager") // Use OSLog instead of Logger
@@ -10,9 +20,14 @@ class NativeUIManager: NSObject, FlutterPlugin {
     internal var childViews: [String: [String]] = [:]
     internal var rootViewId: String?
     internal var window: UIWindow?
-    private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
-    private var stateBindings: [String: Set<String>] = [:]
+    internal var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
     internal var navigationController: NativeNavigationController?  // Keep this
+    
+    // Add these properties to main class
+    internal let viewAccessQueue = DispatchQueue(label: "com.dcmaui.viewAccess", attributes: .concurrent)
+    private var viewStates: [String: [String: Any]] = [:]
+    internal var stateBindings: [String: Set<String>] = [:]  // Change to internal
+    internal let accessQueue = DispatchQueue(label: "com.dcmaui.accessQueue", attributes: .concurrent)
     
     static func register(with registrar: FlutterPluginRegistrar) {
         let instance = NativeUIManager()
@@ -47,11 +62,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
             guard let self = self else { return }
             
             switch call.method {
-            // Add this case first to handle navigation setup
             case "setupNavigation":
                 if let args = call.arguments as? [String: Any],
                    let typeStr = args["type"] as? String {
-                    // Create navigation controller if needed
                     if self.navigationController == nil {
                         self.setupNavigationController()
                     }
@@ -60,69 +73,29 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 }
                 result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
                 
-            // Your existing cases...
             case "createView":
                 self.handleCreateView(call, result: result)
-            // ...other existing cases...
+                
             case "pushScreen", "popScreen", "presentModal",
                  "dismissModal", "setupTabs", "switchTab":
                 self.handleNavigationMethod(call, result: result)
                 
-            // View Creation
-            case "createView":
-                self.handleCreateView(call, result: result)
+            // Remove duplicate createView case and combine view-related cases
+            case "attachView", "detachView", "deleteView",
+                 "getRootView", "getViewById", "getChildren",
+                 "updateView", "setViewProperties",
+                 "changeViewBackgroundColor", "setViewVisibility",
+                 "setViewSize", "setViewMargin", "setViewPadding",
+                 "setViewBorder", "setViewCornerRadius",
+                 "setViewShadow", "setViewOpacity", "setViewTransform":
+                self.handleViewMethod(call, result: result)
                 
-            // View Hierarchy
-            case "attachView":
-                self.handleAttachView(call, result: result)
-            case "detachView":
-                self.handleDetachView(call, result: result)
-            case "deleteView":
-                self.handleDeleteView(call, result: result)
-            case "getRootView":
-                self.handleGetRootView(result: result)
-            case "getViewById":
-                self.handleGetViewById(call, result: result)
-            case "getChildren":
-                self.handleGetChildren(call, result: result)
-            
-            // View Properties
-            case "updateView":
-                self.handleUpdateView(call, result: result)
-            case "setViewProperties":
-                self.handleSetViewProperties(call, result: result)
-            case "changeViewBackgroundColor":
-                self.handleChangeViewBackgroundColor(call, result: result)
-            case "setViewVisibility":
-                self.handleSetViewVisibility(call, result: result)
-            case "setViewSize":
-                self.handleSetViewSize(call, result: result)
-            case "setViewMargin":
-                self.handleSetViewMargin(call, result: result)
-            case "setViewPadding":
-                self.handleSetViewPadding(call, result: result)
-            case "setViewBorder":
-                self.handleSetViewBorder(call, result: result)
-            case "setViewCornerRadius":
-                self.handleSetViewCornerRadius(call, result: result)
-            case "setViewShadow":
-                self.handleSetViewShadow(call, result: result)
-            case "setViewOpacity":
-                self.handleSetViewOpacity(call, result: result)
-            case "setViewTransform":
-                self.handleSetViewTransform(call, result: result)
+            case "registerEvent", "unregisterEvent":
+                self.handleEventMethod(call, result: result)
                 
-            // Events
-            case "registerEvent":
-                self.handleRegisterEvent(call, result: result)
-            case "unregisterEvent":
-                self.handleUnregisterEvent(call, result: result)
-                
-            // State Management
             case "onStateChange":
                 self.handleStateChange(call, result: result)
                 
-            // Add to handleMethodCall
             case "showAlert":
                 self.handleShowAlert(call, result: result)
                 
@@ -503,49 +476,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
         ])
             }
             
-            private func handleStateChange(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-                guard let args = call.arguments as? [String: Any],
-                      let key = args["key"] as? String,
-                      let value = args["value"],
-                      let affectedViews = args["affectedViews"] as? [String] else {
-                    result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid state change arguments", details: nil))
-                    return
-                }
-                
-                // Update state bindings
-                stateBindings[key] = Set(affectedViews)
-                
-                // Update views
-                for viewId in affectedViews {
-                    guard let view = views[viewId] else { continue }
-                    
-                    // Apply state update based on view type
-                    switch view {
-                    case let label as UILabel:
-                        label.text = "\(value)"
-                        
-                    case let button as UIButton:
-                        if key.hasSuffix("Title") {
-                            button.setTitle("\(value)", for: .normal)
-                        }
-                        
-                    default:
-                        break
-                    }
-                }
-                
-                // Notify success
-                result(true)
-                
-                // Notify Flutter of successful state update
-                let updateInfo: [String: Any] = [
-                    "key": key,
-                    "value": value,
-                    "updatedViews": affectedViews
-                ]
-                methodChannel?.invokeMethod("onStateUpdateComplete", arguments: updateInfo)
-            }
-            
             @objc private func handleButtonClick(_ sender: UIButton) {
                 guard let viewId = views.first(where: { $0.value == sender })?.key else { return }
                 sendEventToFlutter(viewId: viewId, eventType: "onClick")
@@ -616,7 +546,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    // Add missing view property methods
+    // Keep only the view property methods
     private func handleSetViewSize(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
@@ -834,9 +764,6 @@ extension NativeUIManager {
     }
 
     // Add state tracking
-    private var viewStates: [String: [String: Any]] = [:]
-    private var stateBindings: [String: Set<String>] = [:]
-    
     private func handleStateChange(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let key = args["key"] as? String,
@@ -972,5 +899,55 @@ extension NativeUIManager {
         viewStates[viewId]?.removeValue(forKey: key)
         
         result(true)
+    }
+    
+    // Add handleViewMethod implementation
+    private func handleViewMethod(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "attachView":
+            handleAttachView(call, result: result)
+        case "detachView":
+            handleDetachView(call, result: result)
+        case "deleteView":
+            handleDeleteView(call, result: result)
+        case "updateView":
+            handleUpdateView(call, result: result)
+        case "setViewProperties":
+            handleSetViewProperties(call, result: result)
+        case "changeViewBackgroundColor":
+            handleChangeViewBackgroundColor(call, result: result)
+        case "setViewVisibility":
+            handleSetViewVisibility(call, result: result)
+        case "setViewSize":
+            handleSetViewSize(call, result: result)
+        case "setViewMargin":
+            handleSetViewMargin(call, result: result)
+        case "setViewPadding":
+            handleSetViewPadding(call, result: result)
+        case "setViewBorder":
+            handleSetViewBorder(call, result: result)
+        case "setViewCornerRadius":
+            handleSetViewCornerRadius(call, result: result)
+        case "setViewShadow":
+            handleSetViewShadow(call, result: result)
+        case "setViewOpacity":
+            handleSetViewOpacity(call, result: result)
+        case "setViewTransform":
+            handleSetViewTransform(call, result: result)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    // Add this method to handle events
+    private func handleEventMethod(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "registerEvent":
+            handleRegisterEvent(call, result: result)
+        case "unregisterEvent":
+            handleUnregisterEvent(call, result: result)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
     }
 }

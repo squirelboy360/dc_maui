@@ -11,23 +11,24 @@ class AppDelegate: FlutterAppDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         // Initialize and run the Flutter engine
-        flutterEngine.run(withEntrypoint: nil, initialRoute: "/")
+        flutterEngine.run(withEntrypoint: nil)
         GeneratedPluginRegistrant.register(with: flutterEngine)
         
-        // Register our native UI manager with proper registrar
+        // Register native UI manager
         let registrar = flutterEngine.registrar(forPlugin: "com.dcmaui.framework")
         NativeUIManager.register(with: registrar!)
         
-        // Create Flutter view controller with our engine
-        self.window = UIWindow(frame: UIScreen.main.bounds)
-        let flutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
-        
-        // Configure window
-        self.window.rootViewController = flutterViewController
-        self.window.makeKeyAndVisible()
-        
-        // Allow headless execution
-        flutterEngine.viewController = flutterViewController
+        // Set up window with Flutter view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            let window = UIWindow(windowScene: windowScene)
+            let flutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
+            window.rootViewController = flutterViewController
+            self.window = window
+            window.makeKeyAndVisible()
+            
+            // Allow headless execution
+            flutterEngine.viewController = flutterViewController
+        }
         
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }

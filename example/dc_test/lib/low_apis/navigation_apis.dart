@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 
 final _logger = Logger('NavigationAPI');
 
@@ -82,7 +82,7 @@ class NavigationAPI {
       final success = await _channel.invokeMethod('pushScreen', options);
       if (success == true) {
         _state.addScreen(screenId, props);
-        await _persistNavigationState();
+        // await _persistNavigationState();
         _notifyLifecycle(screenId, ScreenEvent.willAppear);
       }
       return success ?? false;
@@ -207,22 +207,22 @@ class NavigationAPI {
   }
 
   // State Persistence
-  Future<void> _persistNavigationState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_navStateKey, jsonEncode(_state.toJson()));
-  }
+  // Future<void> _persistNavigationState() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setString(_navStateKey, jsonEncode(_state.toJson()));
+  // }
 
-  Future<void> restoreNavigationState() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stateJson = prefs.getString(_navStateKey);
-    if (stateJson != null) {
-      _state = NavigationState.fromJson(jsonDecode(stateJson));
-      // Restore stack
-      for (final screen in _state.screenStack) {
-        await push(screen.id, props: screen.props, animated: false);
-      }
-    }
-  }
+  // Future<void> restoreNavigationState() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final stateJson = prefs.getString(_navStateKey);
+  //   if (stateJson != null) {
+  //     _state = NavigationState.fromJson(jsonDecode(stateJson));
+  //     // Restore stack
+  //     for (final screen in _state.screenStack) {
+  //       await push(screen.id, props: screen.props, animated: false);
+  //     }
+  //   }
+  // }
 
   void _notifyLifecycle(String screenId, ScreenEvent event) {
     _lifecycles[screenId]?.call(event);

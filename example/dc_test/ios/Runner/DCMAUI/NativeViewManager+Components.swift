@@ -1,4 +1,5 @@
 import UIKit
+import AVKit
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
@@ -49,11 +50,12 @@ extension NativeUIManager {
         switch view {
         case let imageView as UIImageView:
             if let url = properties["url"] as? String {
-                loadNetworkImage(url: url, into: imageView)
+                // Use IconRegistry's loadImage implementation
+                IconRegistry.shared.loadImage(from: url, into: imageView)
             } else if let asset = properties["asset"] as? String {
                 imageView.image = UIImage(named: asset)
-            } else if let svg = properties["svg"] as? String {
-                imageView.image = IconRegistry.shared.getIcon(svg)
+            } else if let svgName = properties["svg"] as? String {
+                imageView.image = IconRegistry.shared.getIcon(svgName)
             }
             
         case let playerView as AVPlayerView:
@@ -71,24 +73,6 @@ extension NativeUIManager {
         default:
             break
         }
-    }
-    
-    private func loadNetworkImage(url: String, into imageView: UIImageView) {
-        guard let url = URL(string: url) else { return }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                DispatchQueue.main.async {
-                    if url.pathExtension.lowercased() == "svg" {
-                        if let svgImage = SVGKImage(data: data) {
-                            imageView.image = svgImage.uiImage
-                        }
-                    } else if let image = UIImage(data: data) {
-                        imageView.image = image
-                    }
-                }
-            }
-        }.resume()
     }
     
     // Container Components
@@ -114,20 +98,20 @@ extension NativeUIManager {
     }
     
     // Consolidate gesture handling
-    func addGestureRecognizer(to view: UIView, for eventType: String) -> UIGestureRecognizer? {
-        switch eventType {
-        case "onClick":
-            return UITapGestureRecognizer(target: self, action: #selector(handleViewTap(_:)))
-        case "onLongPress":
-            return UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-        case "onPan":
-            return UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-        case "onPinch":
-            return UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
-        default:
-            return nil
-        }
-    }
+//    func addGestureRecognizer(to view: UIView, for eventType: String) -> UIGestureRecognizer? {
+//        switch eventType {
+//        case "onClick":
+//            return UITapGestureRecognizer(target: self, action: #selector(handleViewTap(_:)))
+//        case "onLongPress":
+//            return UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+//        case "onPan":
+//            return UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+//        case "onPinch":
+//            return UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+//        default:
+//            return nil
+//        }
+//    }
     
     // Add missing handlers for UIComponent properties
     func applyCommonProperties(_ view: UIView, properties: [String: Any]) {
@@ -136,7 +120,7 @@ extension NativeUIManager {
         }
         
         if let transform = properties["transform"] as? [String: Any] {
-            applyTransform(to: view, properties: transform)
+            applyTransform(to: view, transform: transform)
         }
         
         if let clipBehavior = properties["clipBehavior"] as? String {

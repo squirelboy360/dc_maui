@@ -12,20 +12,40 @@ class RecyclableCell: UICollectionViewCell {
     }
 }
 
+// Move struct definition outside extension
+private struct ListViewState {
+    var items: [String] = []
+    var recycledViews: [String: UIView] = [:]
+}
+
 @available(iOS 13.0, *)
 extension NativeUIManager: UICollectionViewDataSource, UICollectionViewDelegate {
-    private struct ListViewState {
-        var items: [String] = []
-        var recycledViews: [String: UIView] = [:]
+    // Use associated object pattern for storage
+    private struct AssociatedKeys {
+        static var listStates = "listStates"
     }
     
-    private var listStates: [String: ListViewState] = [:]
+    private var listStates: [String: ListViewState] {
+        get {
+            if let states = objc_getAssociatedObject(self, &AssociatedKeys.listStates) as? [String: ListViewState] {
+                return states
+            }
+            let states = [String: ListViewState]()
+            objc_setAssociatedObject(self, &AssociatedKeys.listStates, states, .OBJC_ASSOCIATION_RETAIN)
+            return states
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.listStates, newValue, .OBJC_ASSOCIATION_RETAIN)
+        }
+    }
     
     func setupListView(_ collectionView: UICollectionView, viewId: String) {
         collectionView.register(RecyclableCell.self, forCellWithReuseIdentifier: RecyclableCell.reuseIdentifier)
         collectionView.dataSource = self
         collectionView.delegate = self
-        listStates[viewId] = ListViewState()
+        var states = listStates
+        states[viewId] = ListViewState()
+        listStates = states
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {

@@ -3,7 +3,7 @@ import UIKit
 @available(iOS 13.0, *)
 extension NativeUIManager {
     func performMemoryCleanup() {
-        viewAccessQueue.async(flags: .barrier) { [weak self] in
+        accessQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             
             // Clear unused views
@@ -14,20 +14,11 @@ extension NativeUIManager {
             for viewId in unusedViewIds {
                 self.views.removeValue(forKey: viewId)
                 self.childViews.removeValue(forKey: viewId)
-                self.registeredGestureRecognizers.removeValue(forKey: viewId)
-            }
-            
-            // Clear gesture recognizers
-            for (viewId, recognizers) in self.registeredGestureRecognizers {
-                guard let view = self.views[viewId] else {
-                    self.registeredGestureRecognizers.removeValue(forKey: viewId)
-                    continue
-                }
-                
-                for recognizer in recognizers where recognizer.view == nil {
-                    if let index = self.registeredGestureRecognizers[viewId]?.firstIndex(of: recognizer) {
-                        self.registeredGestureRecognizers[viewId]?.remove(at: index)
+                if let recognizers = self.registeredGestureRecognizers[viewId] {
+                    for recognizer in recognizers {
+                        recognizer.view?.removeGestureRecognizer(recognizer)
                     }
+                    self.registeredGestureRecognizers.removeValue(forKey: viewId)
                 }
             }
             

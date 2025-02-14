@@ -39,22 +39,7 @@ extension NativeUIManager {
         
         // Transform
         if let transform = styles["transform"] as? [String: Any] {
-            var transform = CGAffineTransform.identity
-            
-            if let scale = transform["scale"] as? CGFloat {
-                transform = transform.scaledBy(x: scale, y: scale)
-            }
-            if let rotation = transform["rotation"] as? CGFloat {
-                transform = transform.rotated(by: rotation)
-            }
-            if let translation = transform["translation"] as? [String: CGFloat] {
-                transform = transform.translatedBy(
-                    x: translation["x"] ?? 0,
-                    y: translation["y"] ?? 0
-                )
-            }
-            
-            view.transform = transform
+            applyTransform(to: view, transform: transform)
         }
         
         // Gradient
@@ -86,6 +71,30 @@ extension NativeUIManager {
         if let mask = styles["mask"] as? [String: Any] {
             applyMask(to: view, properties: mask)
         }
+    }
+    
+    func applyTransform(to view: UIView, transform: [String: Any]) {
+        var newTransform = CGAffineTransform.identity
+        
+        if let rotation = transform["rotation"] as? CGFloat {
+            newTransform = newTransform.rotated(by: rotation)
+        }
+        
+        if let scale = transform["scale"] as? CGFloat {
+            newTransform = newTransform.scaledBy(x: scale, y: scale)
+        } else {
+            if let scaleX = transform["scaleX"] as? CGFloat,
+               let scaleY = transform["scaleY"] as? CGFloat {
+                newTransform = newTransform.scaledBy(x: scaleX, y: scaleY)
+            }
+        }
+        
+        if let translateX = transform["translateX"] as? CGFloat,
+           let translateY = transform["translateY"] as? CGFloat {
+            newTransform = newTransform.translatedBy(x: translateX, y: translateY)
+        }
+        
+        view.transform = newTransform
     }
     
     private func applyGradient(to view: UIView, properties: [String: Any]) {
