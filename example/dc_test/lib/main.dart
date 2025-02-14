@@ -62,14 +62,25 @@ Future<void> mainApp() async {
     await bridge.updateView(labelId, {'text': 'Click Counter: ${stateManager.clicks}'});
 
     // Register button click handler with state management
-    await bridge.registerEvent(buttonId, 'onClick', () async {
-      // Update state
-      stateManager.incrementClicks();
-      _logger.info('Button clicked: ${stateManager.clicks} times');
-      
-      // Update UI to reflect new state
-      await bridge.updateView(labelId, {'text': 'Click Counter: ${stateManager.clicks}'});
+    final success = await bridge.registerEvent(buttonId, 'onClick', () async {
+      try {
+        // Update state
+        stateManager.incrementClicks();
+        _logger.info('Button clicked: ${stateManager.clicks} times');
+        
+        // Update UI to reflect new state
+        await bridge.updateView(labelId, {'text': 'Click Counter: ${stateManager.clicks}'});
+        return true; // Indicate successful handling
+      } catch (e) {
+        _logger.severe('Error handling button click: $e');
+        return false;
+      }
     });
+
+    if (!success) {
+      _logger.severe('Failed to register button click handler');
+      return;
+    }
 
     _logger.info('Native UI setup complete');
   } catch (e) {

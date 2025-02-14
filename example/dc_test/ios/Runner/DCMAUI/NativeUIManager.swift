@@ -412,7 +412,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
             
             @objc private func handleButtonClick(_ sender: UIButton) {
-                guard let viewId = views.first(where: { $0.value == sender })?.key else { return }
+                guard let viewId = views.first(where: { $0.value == sender })?.key else {
+                    print("Warning: Could not find viewId for clicked button")
+                    return
+                }
+                print("Native button click detected for viewId: \(viewId)")
                 sendEventToFlutter(viewId: viewId, eventType: "onClick")
             }
             
@@ -430,20 +434,27 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
             
             private func sendEventToFlutter(viewId: String, eventType: String) {
+                // Explicitly type the dictionary
                 let eventData: [String: Any] = [
-                    "viewId": viewId,
-                    "eventType": eventType,
-                    "timestamp": Date().timeIntervalSince1970
+                    "viewId": viewId as String,
+                    "eventType": eventType as String,
+                    "timestamp": Date().timeIntervalSince1970 as Double
                 ]
                 
-                // Ensure we're on the main thread when sending events
                 DispatchQueue.main.async { [weak self] in
-                    self?.methodChannel?.invokeMethod("onNativeEvent", arguments: eventData) { result in
-                        // Handle completion if needed
-                        if let error = result as? FlutterError {
-                            print("Error sending event to Flutter: \(error)")
+                    self?.methodChannel?.invokeMethod(
+                        "onNativeEvent",
+                        arguments: eventData as [String: Any],
+                        result: { (result) in
+                            if let error = result as? FlutterError {
+                                print("Warning: Event callback completed with error: \(error.message ?? "unknown")")
+                            } else if FlutterMethodNotImplemented.isEqual(result) {
+                                print("Warning: Event callback not implemented on Flutter side")
+                            } else {
+                                print("Event successfully delivered to Flutter: \(eventType) for view \(viewId)")
+                            }
                         }
-                    }
+                    )
                 }
             }
             

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class NativeUIBridge {
@@ -17,15 +18,26 @@ class NativeUIBridge {
   void _setupEventHandler() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onNativeEvent') {
-        final Map<String, dynamic> args = call.arguments;
-        final String viewId = args['viewId'];
-        final String eventType = args['eventType'];
+        try {
+          // Explicitly cast the arguments to Map<String, dynamic>
+          final args = Map<String, dynamic>.from(call.arguments as Map);
+          final String viewId = args['viewId'] as String;
+          final String eventType = args['eventType'] as String;
 
-        if (_eventCallbacks.containsKey(viewId) &&
-            _eventCallbacks[viewId]!.containsKey(eventType)) {
-          _eventCallbacks[viewId]![eventType]!.call();
+          if (_eventCallbacks.containsKey(viewId) &&
+              _eventCallbacks[viewId]!.containsKey(eventType)) {
+            await _eventCallbacks[viewId]![eventType]!.call();
+            return true;
+          }
+          print('Warning: No callback found for $eventType on view $viewId');
+          return false;
+        } catch (e, stack) {
+          print('Error handling native event: $e');
+          print('Stack trace: $stack');
+          throw FlutterError('Failed to process native event: $e');
         }
       }
+      return null;
     });
   }
 
@@ -91,7 +103,7 @@ class NativeUIBridge {
 
   /// Updates properties of existing native view
   /// Native expects:
-  /// - viewId: String (must be existing view ID) 
+  /// - viewId: String (must be existing view ID)
   /// - properties: {
   ///     text?: String,
   ///     textSize?: double,
@@ -132,11 +144,13 @@ class NativeUIBridge {
         'eventType': eventType,
       });
 
-      if (result ?? false) {
+      if (result == true) {
         _eventCallbacks[viewId] ??= {};
         _eventCallbacks[viewId]![eventType] = callback;
+        print('Successfully registered $eventType for view $viewId');
         return true;
       }
+      print('Failed to register event on native side');
       return false;
     } catch (e) {
       print('Error registering event: $e');
