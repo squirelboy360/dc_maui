@@ -95,7 +95,7 @@ class NativeUIBridge {
 
   /// Updates properties of existing native view
   /// Native expects:
-  /// - viewId: String (must be existing view ID) 
+  /// - viewId: String (must be existing view ID)
   /// - properties: {
   ///     text?: String,
   ///     textSize?: double,
@@ -211,7 +211,8 @@ class NativeUIBridge {
   /// - viewId: String
   /// - width: double
   /// - height: double
-  Future<bool> setViewSize(String viewId, {
+  Future<bool> setViewSize(
+    String viewId, {
     required double width,
     required double height,
   }) async {
@@ -267,7 +268,8 @@ class NativeUIBridge {
   }
 
   /// Sets view border
-  Future<bool> setViewBorder(String viewId, {
+  Future<bool> setViewBorder(
+    String viewId, {
     required double width,
     required String color,
   }) async {
@@ -337,100 +339,177 @@ class NativeUIBridge {
   }
 
   // Additional UI methods to expose native capabilities
-  
+
   // Layout methods
   Future<bool> setFlex(String viewId, int flex) async {
     return await _channel.invokeMethod('setFlex', {
-      'viewId': viewId,
-      'flex': flex,
-    }) ?? false;
+          'viewId': viewId,
+          'flex': flex,
+        }) ??
+        false;
   }
 
   Future<bool> setAlignment(String viewId, String alignment) async {
     return await _channel.invokeMethod('setAlignment', {
-      'viewId': viewId,
-      'alignment': alignment,
-    }) ?? false;
+          'viewId': viewId,
+          'alignment': alignment,
+        }) ??
+        false;
   }
 
   // Stack specific methods
-  Future<bool> setStackPosition(String viewId, {
+  Future<bool> setStackPosition(
+    String viewId, {
     double? top,
     double? left,
     double? right,
     double? bottom,
   }) async {
     return await _channel.invokeMethod('setStackPosition', {
-      'viewId': viewId,
-      'top': top,
-      'left': left,
-      'right': right,
-      'bottom': bottom,
-    }) ?? false;
+          'viewId': viewId,
+          'top': top,
+          'left': left,
+          'right': right,
+          'bottom': bottom,
+        }) ??
+        false;
   }
 
   Future<bool> setZIndex(String viewId, int zIndex) async {
     return await _channel.invokeMethod('setZIndex', {
-      'viewId': viewId,
-      'zIndex': zIndex,
-    }) ?? false;
+          'viewId': viewId,
+          'zIndex': zIndex,
+        }) ??
+        false;
   }
 
   // Animation methods
-  Future<bool> animate(String viewId, Map<String, dynamic> properties, {
+  Future<bool> animate(
+    String viewId,
+    Map<String, dynamic> properties, {
     int duration = 300,
     String curve = 'easeInOut',
   }) async {
     return await _channel.invokeMethod('animate', {
-      'viewId': viewId,
-      'properties': properties,
-      'duration': duration,
-      'curve': curve,
-    }) ?? false;
+          'viewId': viewId,
+          'properties': properties,
+          'duration': duration,
+          'curve': curve,
+        }) ??
+        false;
   }
 
   // Advanced style methods
-  Future<bool> setGradient(String viewId, {
+  Future<bool> setGradient(
+    String viewId, {
     required List<String> colors,
     List<double>? stops,
     String type = 'linear',
     double angle = 0,
   }) async {
     return await _channel.invokeMethod('setGradient', {
-      'viewId': viewId,
-      'colors': colors,
-      'stops': stops,
-      'type': type,
-      'angle': angle,
-    }) ?? false;
+          'viewId': viewId,
+          'colors': colors,
+          'stops': stops,
+          'type': type,
+          'angle': angle,
+        }) ??
+        false;
   }
 
   Future<bool> setBlur(String viewId, double radius) async {
     return await _channel.invokeMethod('setBlur', {
-      'viewId': viewId,
-      'radius': radius,
-    }) ?? false;
+          'viewId': viewId,
+          'radius': radius,
+        }) ??
+        false;
   }
 
   Future<bool> setMask(String viewId, String maskType) async {
     return await _channel.invokeMethod('setMask', {
-      'viewId': viewId,
-      'maskType': maskType,
-    }) ?? false;
+          'viewId': viewId,
+          'maskType': maskType,
+        }) ??
+        false;
   }
 
   // Gesture handling
   Future<bool> enableGesture(String viewId, String gestureType) async {
     return await _channel.invokeMethod('enableGesture', {
-      'viewId': viewId,
-      'gestureType': gestureType,
-    }) ?? false;
+          'viewId': viewId,
+          'gestureType': gestureType,
+        }) ??
+        false;
   }
 
   Future<bool> disableGesture(String viewId, String gestureType) async {
     return await _channel.invokeMethod('disableGesture', {
-      'viewId': viewId,
-      'gestureType': gestureType,
-    }) ?? false;
+          'viewId': viewId,
+          'gestureType': gestureType,
+        }) ??
+        false;
   }
+
+  Future<dynamic> invokeMethod(String method, [dynamic arguments]) async {
+    return await _channel.invokeMethod(method, arguments);
+  }
+
+  // Add missing method for alerts
+  Future<String?> showAlert(
+      String title, String message, List<AlertAction> actions,
+      {String style = 'alert' // or 'actionSheet'
+      }) async {
+    final result = await _channel.invokeMethod('showAlert', {
+      'title': title,
+      'message': message,
+      'actions': actions.map((a) => a.toMap()).toList(),
+      'style': style,
+    });
+    return result as String?;
+  }
+
+  // Add missing component property methods
+  Future<void> setClipBehavior(String id, String behavior) async {
+    await updateView(id, {'clipBehavior': behavior});
+  }
+
+  Future<void> setVisible(String id, bool visible) async {
+    await updateView(id, {'visible': visible});
+  }
+
+  Future<bool> bind(
+      String viewId, String key, Function(dynamic) callback) async {
+    try {
+      final result = await _channel.invokeMethod('bindState', {
+        'viewId': viewId,
+        'key': key,
+      });
+
+      if (result ?? false) {
+        _eventCallbacks[viewId] ??= {};
+        _eventCallbacks[viewId]![key] = callback;
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.severe('Failed to bind state: $e');
+      return false;
+    }
+  }
+}
+
+// Add AlertAction class if not already present
+class AlertAction {
+  final String title;
+  final String style; // 'default', 'cancel', 'destructive'
+
+  const AlertAction({
+    required this.title,
+    this.style = 'default',
+  });
+
+  Map<String, String> toMap() => {
+        'title': title,
+        'style': style,
+      };
 }

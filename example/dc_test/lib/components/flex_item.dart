@@ -7,6 +7,6 @@ class FlexItem<T extends UIComponent> {
   FlexItem(this.component, {this.flex = 1});
   
   Future<void> applyFlex() async {
-    await component.flex(flex);
+    await component.layout(flex: flex);
   }
 }

@@ -122,6 +122,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
             case "onStateChange":
                 self.handleStateChange(call, result: result)
                 
+            // Add to handleMethodCall
+            case "showAlert":
+                self.handleShowAlert(call, result: result)
+                
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -786,5 +790,187 @@ extension NativeUIManager {
             return
         }
         result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
+    }
+
+    // Add method implementation
+    private func handleShowAlert(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let title = args["title"] as? String,
+              let message = args["message"] as? String,
+              let actions = args["actions"] as? [[String: Any]] else {
+            result(false)
+            return
+        }
+        
+        let alertStyle: UIAlertController.Style = 
+            (args["style"] as? String == "actionSheet") ? .actionSheet : .alert
+        
+        let alert = UIAlertController(title: title, message: message, preferredStyle: alertStyle)
+        
+        for action in actions {
+            guard let title = action["title"] as? String else { continue }
+            
+            let style: UIAlertAction.Style
+            switch action["style"] as? String {
+            case "cancel": style = .cancel
+            case "destructive": style = .destructive
+            default: style = .default
+            }
+            
+            let alertAction = UIAlertAction(title: title, style: style) { [weak self] _ in
+                self?.methodChannel?.invokeMethod("onAlertAction", arguments: [
+                    "title": title
+                ])
+            }
+            alert.addAction(alertAction)
+        }
+        
+        if let topVC = UIApplication.shared.keyWindow?.topViewController() {
+            topVC.present(alert, animated: true)
+            result(true)
+        } else {
+            result(false)
+        }
+    }
+
+    // Add state tracking
+    private var viewStates: [String: [String: Any]] = [:]
+    private var stateBindings: [String: Set<String>] = [:]
+    
+    private func handleStateChange(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let key = args["key"] as? String,
+              let value = args["value"] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid state change args", details: nil))
+            return
+        }
+        
+        // Track which views need updates
+        var updatedViews: Set<String> = []
+        
+        // Update state and find affected views
+        for (viewId, states) in viewStates where states.keys.contains(key) {
+            let oldValue = states[key]
+            if !isEqual(oldValue, value) {
+                viewStates[viewId]?[key] = value
+                updatedViews.insert(viewId)
+            }
+        }
+        
+        // Include bound views
+        if let boundViews = stateBindings[key] {
+            updatedViews.formUnion(boundViews)
+        }
+        
+        // Only update changed views
+        for viewId in updatedViews {
+            updateViewWithState(viewId: viewId, key: key, value: value)
+        }
+        
+        result(true)
+        
+        // Notify Flutter about successful update
+        methodChannel?.invokeMethod("onStateUpdateComplete", arguments: [
+            "key": key,
+            "value": value,
+            "updatedViews": Array(updatedViews)
+        ])
+    }
+    
+    private func isEqual(_ lhs: Any?, _ rhs: Any?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil): return true
+        case let (lhs as String, rhs as String): return lhs == rhs
+        case let (lhs as Int, rhs as Int): return lhs == rhs
+        case let (lhs as Double, rhs as Double): return lhs == rhs
+        case let (lhs as Bool, rhs as Bool): return lhs == rhs
+        default: return false
+        }
+    }
+    
+    private func updateViewWithState(viewId: String, key: String, value: Any) {
+        guard let view = views[viewId] else { return }
+        
+        // Apply state update based on view type and state key
+        switch view {
+        case let label as UILabel:
+            if key.hasSuffix("text") {
+                label.text = "\(value)"
+            } else if key.hasSuffix("color") {
+                label.textColor = UIColor(named: "\(value)") ?? .black
+            }
+            
+        case let button as UIButton:
+            if key.hasSuffix("title") {
+                button.setTitle("\(value)", for: .normal)
+            } else if key.hasSuffix("enabled") {
+                button.isEnabled = (value as? Bool) ?? true
+            }
+            
+        case let textField as UITextField:
+            if key.hasSuffix("text") {
+                textField.text = "\(value)"
+            } else if key.hasSuffix("placeholder") {
+                textField.placeholder = "\(value)"
+            }
+            
+        case let imageView as UIImageView:
+            if key.hasSuffix("url"), let urlString = value as? String {
+                loadImage(from: urlString, into: imageView)
+            }
+            
+        default:
+            // Common properties for all views
+            if key.hasSuffix("backgroundColor"), let colorName = value as? String {
+                view.backgroundColor = UIColor(named: colorName)
+            } else if key.hasSuffix("alpha"), let opacity = value as? CGFloat {
+                view.alpha = opacity
+            } else if key.hasSuffix("hidden"), let isHidden = value as? Bool {
+                view.isHidden = isHidden
+            }
+        }
+    }
+    
+    private func loadImage(from urlString: String, into imageView: UIImageView) {
+        guard let url = URL(string: urlString) else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            if let data = data, let image = UIImage(data: data) {
+                DispatchQueue.main.async {
+                    imageView.image = image
+                }
+            }
+        }.resume()
+    }
+    
+    private func handleBindState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let key = args["key"] as? String else {
+            result(false)
+            return
+        }
+        
+        // Initialize state tracking for view if needed
+        viewStates[viewId] = viewStates[viewId] ?? [:]
+        
+        // Add to state bindings
+        stateBindings[key] = stateBindings[key] ?? Set()
+        stateBindings[key]?.insert(viewId)
+        
+        result(true)
+    }
+    
+    private func handleUnbindState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let key = args["key"] as? String else {
+            result(false)
+            return
+        }
+        
+        stateBindings[key]?.remove(viewId)
+        viewStates[viewId]?.removeValue(forKey: key)
+        
+        result(true)
     }
 }

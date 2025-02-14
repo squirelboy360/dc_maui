@@ -18,7 +18,6 @@ class HStack extends UIComponent {
     return this;
   }
 
-  @override
   Future<T> alignment<T extends UIComponent>(Alignment alignment) async {
     await NativeUIBridge().setAlignment(id, alignment.toString());
     return this as T;
@@ -47,7 +46,6 @@ class VStack extends UIComponent {
     return this;
   }
 
-  @override
   Future<T> alignment<T extends UIComponent>(Alignment alignment) async {
     await NativeUIBridge().setAlignment(id, alignment.toString());
     return this as T;

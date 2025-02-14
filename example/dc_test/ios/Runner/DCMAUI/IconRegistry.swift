@@ -5,32 +5,50 @@ import SVGKit
 class IconRegistry {
     static let shared = IconRegistry()
     
-    private var svgCache: [String: UIImage] = [:]
-    private var systemIconCache: [String: UIImage] = [:]
+    private var cache: [String: UIImage] = [:]
     
     func registerSVG(name: String, data: String) {
         if let dataURL = data.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
            let url = URL(string: dataURL),
            let svgImage = SVGKImage(contentsOf: url) {
             svgImage.size = CGSize(width: 24, height: 24) // Default size
-            svgCache[name] = svgImage.uiImage
+            cache[name] = svgImage.uiImage
         }
     }
     
     func getIcon(_ name: String, size: CGSize = CGSize(width: 24, height: 24)) -> UIImage? {
-        // Try system icon first
-        if let systemImage = UIImage(systemName: name)?.withConfiguration(
-            UIImage.SymbolConfiguration(pointSize: size.width)
-        ) {
-            return systemImage
+        if let cached = cache[name] {
+            return cached
         }
         
-        // Then try SVG cache
-        return svgCache[name]
+        // Check if SVG
+        if name.hasSuffix(".svg") {
+            if let svgData = loadAsset(named: name),
+               let image = SVGKImage(data: svgData) {
+                image.size = size
+                let uiImage = image.uiImage
+                cache[name] = uiImage
+                return uiImage
+            }
+        }
+        
+        // Try loading as regular image
+        if let image = UIImage(named: name) {
+            cache[name] = image
+            return image
+        }
+        
+        return nil
+    }
+    
+    private func loadAsset(named name: String) -> Data? {
+        guard let path = Bundle.main.path(forResource: name, ofType: nil) else {
+            return nil
+        }
+        return try? Data(contentsOf: URL(fileURLWithPath: path))
     }
     
     func clearCache() {
-        svgCache.removeAll()
-        systemIconCache.removeAll()
+        cache.removeAll()
     }
 }
