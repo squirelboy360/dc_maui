@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 
+// Add this enum at the top of the file after imports
+enum ScrollDirection { vertical, horizontal }
+
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -178,7 +181,7 @@ class NativeUIBridge {
       }
       return false;
     } catch (e) {
-      print('Error unregistering event: $e');
+      _logger.severe('Error unregistering event: $e');
       return false;
     }
   }
@@ -198,7 +201,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error setting background color: $e');
+      _logger.severe('Error setting background color: $e');
       return false;
     }
   }
@@ -215,7 +218,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error setting visibility: $e');
+      _logger.severe('Error setting visibility: $e');
       return false;
     }
   }
@@ -237,7 +240,7 @@ class NativeUIBridge {
       });
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error getting view: $e');
+      _logger.severe('Error getting view: $e');
       return null;
     }
   }
@@ -249,7 +252,7 @@ class NativeUIBridge {
       });
       return List<String>.from(result);
     } catch (e) {
-      print('Error getting children: $e');
+      _logger.severe('Error getting children: $e');
       return null;
     }
   }
@@ -259,7 +262,35 @@ class NativeUIBridge {
       final result = await _channel.invokeMethod('getRootView');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error getting root view: $e');
+      _logger.severe('Error getting root view: $e');
+      return null;
+    }
+  }
+
+  Future<ListViewController?> createListView({
+    ScrollDirection direction = ScrollDirection.vertical,
+    double spacing = 8.0,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    try {
+      final viewId = await _channel.invokeMethod<String>('createListView', {
+        'direction':
+            direction == ScrollDirection.horizontal ? 'horizontal' : 'vertical',
+        'spacing': spacing,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        },
+      });
+
+      if (viewId != null) {
+        return ListViewController(this, viewId);
+      }
+      return null;
+    } catch (e) {
+      _logger.severe('Error creating list view: $e');
       return null;
     }
   }
@@ -294,5 +325,39 @@ class NativeView {
 
   Future<bool> removeEventListener(String eventType) {
     return _bridge.unregisterEvent(viewId, eventType);
+  }
+}
+
+class ListViewController {
+  final NativeUIBridge _bridge;
+  final String viewId;
+  final List<String> itemIds = [];
+
+  ListViewController(this._bridge, this.viewId);
+
+  Future<bool> addItem(Future<String?> Function() itemBuilder) async {
+    try {
+      final itemId = await itemBuilder();
+      if (itemId != null) {
+        itemIds.add(itemId);
+        await _bridge.attachView(viewId, itemId);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _bridge._logger.severe('Error adding item to list: $e');
+      return false;
+    }
+  }
+
+  Future<bool> removeItem(int index) async {
+    if (index >= 0 && index < itemIds.length) {
+      final itemId = itemIds[index];
+      if (await _bridge.deleteView(itemId)) {
+        itemIds.removeAt(index);
+        return true;
+      }
+    }
+    return false;
   }
 }

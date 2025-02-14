@@ -4,8 +4,9 @@ import Flutter
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
-    private var views: [String: UIView] = [:]
-    private var childViews: [String: [String]] = [:]
+    // Change access level from private to internal
+    internal var views: [String: UIView] = [:]
+    internal var childViews: [String: [String]] = [:]
     private var rootViewId: String?
     private var window: UIWindow?
     private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
@@ -64,6 +65,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
             guard let self = self else { return }
             
             switch call.method {
+            // Add createListView to the switch statement
+            case "createListView":
+                self.handleCreateListView(call, result: result)
+                
             case "getRootView":
                 guard let rootViewId = self.rootViewId,
                       let rootView = self.views[rootViewId] else {
@@ -176,9 +181,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
            
            if let stackView = parentView as? UIStackView {
                stackView.addArrangedSubview(childView)
+           } else if let scrollView = parentView as? UIScrollView {
+               if let stackView = scrollView.subviews.first as? UIStackView {
+                   stackView.addArrangedSubview(childView)
+                   childView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -32).isActive = true
+               }
            } else {
                parentView.addSubview(childView)
-               
                NSLayoutConstraint.activate([
                    childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
                    childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
