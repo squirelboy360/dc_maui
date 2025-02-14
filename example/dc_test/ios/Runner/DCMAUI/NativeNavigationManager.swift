@@ -54,8 +54,21 @@ extension NativeUIManager {
         navController.onPop = { [weak self] screenId in
             self?.handleScreenPop(screenId)
         }
-        window?.rootViewController = navController
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            // Create root navigation controller 
+            window?.windowScene = windowScene
+            window?.rootViewController = navController
+            window?.makeKeyAndVisible()
+            navigationController = navController
+            
+            // Keep reference to root view for UI rendering
+            rootViewId = "root-\(UUID().uuidString)"
+            views[rootViewId!] = navController.view
+            childViews[rootViewId!] = []
+        }
     }
+    
     private func handleSetupNavigation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         // Set up initial navigation controller if not already done
         if navigationController == nil {
@@ -94,6 +107,12 @@ extension NativeUIManager {
             
             let vc = NativeViewController(screenId: screenId, rootView: view)
             vc.title = title
+            
+            // Add icon support
+            if let iconName = tabInfo["icon"] as? String {
+                vc.tabBarItem.image = IconRegistry.shared.getIcon(iconName)
+            }
+            
             return vc
         }
         
@@ -104,9 +123,10 @@ extension NativeUIManager {
     
     // Navigation Methods
     func pushScreen(_ screenId: String, animated: Bool = true) {
-        guard let view = createScreenView(screenId: screenId) else { return }
-        let viewController = NativeViewController(screenId: screenId, rootView: view)
-        navigationController?.pushViewController(viewController, animated: animated)
+        if let view = createScreenView(screenId: screenId) {
+            let viewController = NativeViewController(screenId: screenId, rootView: view)
+            navigationController?.pushViewController(viewController, animated: animated)
+        }
     }
     
     func popScreen(animated: Bool = true) {
@@ -129,11 +149,14 @@ extension NativeUIManager {
     
     // Helper Methods
     private func createScreenView(screenId: String) -> UIView? {
-        let view = UIView()
-        view.backgroundColor = .white
-        // Store view reference
-        views[screenId] = view
-        childViews[screenId] = []
+        guard let view = views[screenId] else {
+            // If view doesn't exist, create new container
+            let containerView = UIView()
+            containerView.backgroundColor = .white
+            views[screenId] = containerView
+            childViews[screenId] = []
+            return containerView
+        }
         return view
     }
     

@@ -2,7 +2,7 @@ import 'component_interface.dart';
 import '../ui_apis.dart';
 
 class Stack extends UIComponent {
-  Stack._create(String id) : super(id);
+  Stack._create(super.id);
 
   static Future<Stack?> create() async {
     final bridge = NativeUIBridge();

@@ -1,6 +1,6 @@
 import UIKit
 import Flutter
-import os.log  // Change this import
+import os.log 
 
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
@@ -34,32 +34,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             window = UIWindow(frame: windowScene.coordinateSpace.bounds)
             window?.windowScene = windowScene
             
-            // Create root view controller
-            let rootVC = UIViewController()
-            rootVC.view.backgroundColor = .white
-            
-            // Create root view with proper frame
-            let rootView = UIView(frame: rootVC.view.bounds)
-            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            rootView.backgroundColor = .white
-            rootVC.view.addSubview(rootView)
-            
-            // Set up window
-            rootViewId = "root-\(UUID().uuidString)"
-            views[rootViewId!] = rootView
-            childViews[rootViewId!] = []
-            
-            window?.rootViewController = rootVC
-            window?.makeKeyAndVisible()
-            
-            // Hide Flutter view by finding the FlutterViewController
-            if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }),
-               let flutterVC = keyWindow.rootViewController as? FlutterViewController {
-                flutterVC.view.isHidden = true
-            }
+            // Create navigation controller as root
+            setupNavigationController()
             
             // Log success
-            print("Native UI window setup complete with root view: \(rootViewId!)")
+            os_log(.info, log: logger, "Native UI window setup complete with root view: %{public}@", rootViewId ?? "none")
         }
     }
 
@@ -793,5 +772,19 @@ extension NativeUIManager {
         
         view.alpha = opacity
         result(true)
+    }
+    
+    private func handleSetupNavigation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if let args = call.arguments as? [String: Any],
+           let typeStr = args["type"] as? String {
+            // Create navigation controller if needed
+            if navigationController == nil {
+                setupNavigationController()
+                os_log(.info, log: logger, "Navigation controller setup complete")
+            }
+            result(true)
+            return
+        }
+        result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
     }
 }
