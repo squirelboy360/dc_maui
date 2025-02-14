@@ -436,7 +436,15 @@ class NativeUIManager: NSObject, FlutterPlugin {
                     "timestamp": Date().timeIntervalSince1970
                 ]
                 
-                methodChannel?.invokeMethod("onNativeEvent", arguments: eventData)
+                // Ensure we're on the main thread when sending events
+                DispatchQueue.main.async { [weak self] in
+                    self?.methodChannel?.invokeMethod("onNativeEvent", arguments: eventData) { result in
+                        // Handle completion if needed
+                        if let error = result as? FlutterError {
+                            print("Error sending event to Flutter: \(error)")
+                        }
+                    }
+                }
             }
             
             private func cleanup() {

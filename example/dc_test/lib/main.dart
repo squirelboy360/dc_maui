@@ -21,11 +21,8 @@ void _setupLogging() {
 Future<void> mainApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-var clicks = 0;
-  // state
-  void increase() {
-    clicks++;
-  }
+  // Create a state manager class instance
+  final stateManager = AppStateManager();
 
   try {
     // First get the root view to ensure it's ready
@@ -62,19 +59,31 @@ var clicks = 0;
       return;
     }
     await bridge.attachView(stackId, labelId);
-    await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
+    await bridge.updateView(labelId, {'text': 'Click Counter: ${stateManager.clicks}'});
 
-    // var clicks = 0;
-
+    // Register button click handler with state management
     await bridge.registerEvent(buttonId, 'onClick', () async {
-      increase();
-      _logger.info('Button clicked: $clicks times');
-      await bridge.updateView(labelId, {'text': 'Click Counter: $clicks'});
+      // Update state
+      stateManager.incrementClicks();
+      _logger.info('Button clicked: ${stateManager.clicks} times');
+      
+      // Update UI to reflect new state
+      await bridge.updateView(labelId, {'text': 'Click Counter: ${stateManager.clicks}'});
     });
 
     _logger.info('Native UI setup complete');
   } catch (e) {
     _logger.severe('Native UI initialization failed: $e');
     _logger.severe('Error stack trace: ${StackTrace.current}');
+  }
+}
+
+// State management class
+class AppStateManager {
+  int _clicks = 0;
+  int get clicks => _clicks;
+
+  void incrementClicks() {
+    _clicks++;
   }
 }
