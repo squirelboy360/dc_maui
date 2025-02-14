@@ -1,5 +1,5 @@
 import 'component_interface.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 class NavigationBar extends UIComponent {
   NavigationBar._create(super.id);

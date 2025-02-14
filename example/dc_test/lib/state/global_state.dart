@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 final _logger = Logger('GlobalState');
 

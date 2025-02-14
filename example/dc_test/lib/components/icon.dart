@@ -1,5 +1,5 @@
 import 'component_interface.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 class Icon extends UIComponent {
   Icon._create(super.id);

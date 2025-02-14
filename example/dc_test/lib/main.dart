@@ -1,9 +1,6 @@
-
 import 'package:dc_test/app/screens/home.dart';
 import 'package:flutter/material.dart' hide Stack;
 import 'package:logging/logging.dart'; // Hide Flutter's Stack
-
-
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized(); // Add this line
@@ -23,5 +20,3 @@ void _setupLogging() {
     debugPrint('${record.level.name}: ${record.message}');
   });
 }
-
-

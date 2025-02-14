@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'component_interface.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 class Label extends UIComponent {
   Label._create(super.id);  // Use super parameter

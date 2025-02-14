@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 abstract class UIComponent {
   final String id;
@@ -101,8 +101,9 @@ abstract class UIComponent {
     // Behavior properties
     if (visible != null) properties['visible'] = visible;
     if (clipBehavior != null) properties['clipBehavior'] = clipBehavior;
-    if (userInteractionEnabled != null)
+    if (userInteractionEnabled != null) {
       properties['userInteractionEnabled'] = userInteractionEnabled;
+    }
     if (contentMode != null) properties['contentMode'] = contentMode.toString();
 
     // Advanced properties

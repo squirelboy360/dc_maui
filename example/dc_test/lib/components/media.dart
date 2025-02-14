@@ -1,5 +1,5 @@
 import 'component_interface.dart';
-import '../ui_apis.dart';
+import '../low_apis/ui_apis.dart';
 
 class Image extends UIComponent {
   Image._create(super.id);
