@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
 
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
+  final _logger = Logger('NativeUIBridge');
 
   // Singleton pattern
   static final NativeUIBridge _instance = NativeUIBridge._internal();
@@ -29,11 +31,11 @@ class NativeUIBridge {
             await _eventCallbacks[viewId]![eventType]!.call();
             return true;
           }
-          print('Warning: No callback found for $eventType on view $viewId');
+          _logger.warning('No callback found for $eventType on view $viewId');
           return false;
         } catch (e, stack) {
-          print('Error handling native event: $e');
-          print('Stack trace: $stack');
+          _logger.severe('Error handling native event: $e');
+          _logger.severe('Stack trace: $stack');
           throw FlutterError('Failed to process native event: $e');
         }
       }
@@ -66,7 +68,7 @@ class NativeUIBridge {
       });
       return viewId;
     } catch (e) {
-      print('Error creating view: $e');
+      _logger.severe('Error creating view: $e');
       return null;
     }
   }
@@ -84,7 +86,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error attaching view: $e');
+      _logger.severe('Error attaching view: $e');
       return false;
     }
   }
@@ -96,7 +98,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error deleting view: $e');
+      _logger.severe('Error deleting view: $e');
       return false;
     }
   }
@@ -122,7 +124,7 @@ class NativeUIBridge {
       });
       return result ?? false;
     } catch (e) {
-      print('Error updating view: $e');
+      _logger.severe('Error updating view: $e');
       return false;
     }
   }
@@ -145,15 +147,17 @@ class NativeUIBridge {
       });
 
       if (result == true) {
+        // Initialize the map for this viewId if it doesn't exist
         _eventCallbacks[viewId] ??= {};
+        // Store the callback - this was missing!
         _eventCallbacks[viewId]![eventType] = callback;
-        print('Successfully registered $eventType for view $viewId');
+        _logger.info('Successfully registered $eventType for view $viewId');
         return true;
       }
-      print('Failed to register event on native side');
+      _logger.warning('Failed to register event on native side');
       return false;
     } catch (e) {
-      print('Error registering event: $e');
+      _logger.severe('Error registering event: $e');
       return false;
     }
   }
