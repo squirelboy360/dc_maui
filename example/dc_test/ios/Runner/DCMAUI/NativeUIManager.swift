@@ -122,6 +122,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleCreateListView(call, result: result)
             case "setViewLayout":
                 self.handleSetViewLayout(call, result: result)
+            case "createScrollView":
+                self.handleCreateScrollView(call, result: result)
+            case "setScrollContent":
+                self.handleSetScrollContent(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }

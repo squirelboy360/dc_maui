@@ -528,6 +528,41 @@ class NativeUIBridge {
       return null;
     }
   }
+
+  Future<String?> createScrollView({
+    bool horizontal = false,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('createScrollView', {
+        'horizontal': horizontal,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        },
+      });
+      return result as String?;
+    } catch (e) {
+      _logger.severe('Error creating scroll view: $e');
+      return null;
+    }
+  }
+
+  Future<bool> setScrollContent(
+      String scrollViewId, String contentViewId) async {
+    try {
+      final result = await _channel.invokeMethod('setScrollContent', {
+        'scrollViewId': scrollViewId,
+        'contentViewId': contentViewId,
+      });
+      return result as bool? ?? false;
+    } catch (e) {
+      _logger.severe('Error setting scroll content: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation

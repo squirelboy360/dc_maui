@@ -21,6 +21,9 @@ class AppState {
 
   // Add listView property
   ListViewController? listView;
+
+  // Add contentStack property
+  String? contentStack;
 }
 
 Future<void> mainApp() async {
@@ -44,16 +47,21 @@ Future<void> mainApp() async {
   await bridge.setViewToFillWidth(
       banner); // Already in _createBanner but ensure it's here
 
-  // Create and configure list view
-  final listView =
-      await bridge.createListView(spacing: 8, padding: EdgeInsets.all(16));
-  if (listView == null) return;
-  await bridge.attachView(mainStack, listView.viewId);
-  await bridge.setViewToFillWidth(listView.viewId); // Add this line
-  await bridge.setViewLayout(listView.viewId,
-      flex: 1); // Add this line to make it fill remaining space
+  // Create horizontal scrollable container
+  final scrollView = await bridge.createScrollView(
+    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  );
+  if (scrollView == null) return;
+  await bridge.attachView(mainStack, scrollView);
+  await bridge.setViewToFillWidth(scrollView);
+  await bridge.setViewLayout(scrollView, flex: 1);
 
-  state.listView = listView;
+  // Create horizontal stack for scroll content
+  final contentStack = await bridge.createHStack(spacing: 16);
+  if (contentStack == null) return;
+  await bridge.setScrollContent(scrollView, contentStack);
+
+  state.contentStack = contentStack;
   _logger.info('UI Setup Complete');
 }
 
@@ -103,7 +111,10 @@ Future<String?> _createBanner(AppState state) async {
     final itemBg = await bridge.createView('View');
     if (itemBg == null) return;
 
-    // First set the background color
+    // Create a fixed-size card for horizontal scrolling
+    await bridge.setViewLayout(itemBg, width: 200, height: 200);
+
+    // Set the background color
     final random = Random();
     final color = Color.fromRGBO(
         random.nextInt(255), random.nextInt(255), random.nextInt(255), 1);
@@ -114,17 +125,14 @@ Future<String?> _createBanner(AppState state) async {
     if (itemLabel == null) return;
     await bridge.attachView(itemBg, itemLabel);
     await bridge.updateView(itemLabel,
-        {'text': 'Item ${state.counter}', 'textColor': Colors.blueGrey});
+        {'text': 'Item ${state.counter}', 'textColor': Colors.white});
     await bridge.setViewLayout(itemLabel,
         width: -1, height: -1); // Make label fill parent
 
-    // Use the listView's addItem method with proper setup
-    await state.listView?.addItem(() async {
-      // Set layout properties before returning the view
-      await bridge.setViewLayout(itemBg, height: 60);
-      await bridge.setViewToFillWidth(itemBg);
-      return itemBg;
-    });
+    // Add the card to the horizontal stack
+    if (state.contentStack != null) {
+      await bridge.attachView(state.contentStack!, itemBg);
+    }
   });
 
   // Set banner layout last, after all children are attached
