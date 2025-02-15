@@ -36,71 +36,93 @@ Future<void> mainApp() async {
 
     final rootViewId = rootInfo['viewId'] as String;
 
-    // Create and attach views directly to root
-    final stackId = await bridge.createView('StackView');
-    if (stackId == null) {
-      _logger.severe('Failed to create stack view');
+    // Create main container as VStack
+    final mainStackId = await bridge.createVStack(
+      spacing: 16,
+      alignment: FlexAlignment.center,
+      padding: EdgeInsets.all(16)
+    );
+    if (mainStackId == null) {
+      _logger.severe('Failed to create main stack view');
       return;
     }
-    await bridge.attachView(rootViewId, stackId);
+    await bridge.attachView(rootViewId, mainStackId);
 
-    // Create a container for dynamic views
-    final containerStackId = await bridge.createView('StackView');
-    if (containerStackId == null) {
-      _logger.severe('Failed to create container stack view');
-      return;
-    }
-    await bridge.attachView(rootViewId, containerStackId);
-    await bridge.setViewBackgroundColor(rootViewId, Colors.white);
+    // Create header with title in HStack
+    final headerStackId = await bridge.createHStack(
+      spacing: 8,
+      alignment: FlexAlignment.center
+    );
+    if (headerStackId == null) return;
+    await bridge.attachView(mainStackId, headerStackId);
 
-    // Create button and label as before
+    // Create button and label in a HStack for controls
+    final controlsStackId = await bridge.createHStack(
+      spacing: 16,
+      alignment: FlexAlignment.spaceBetween
+    );
+    if (controlsStackId == null) return;
+    await bridge.attachView(mainStackId, controlsStackId);
+
+    // Add button
     final buttonId = await bridge.createView('Button');
     if (buttonId == null) return;
-    await bridge.attachView(containerStackId, buttonId);
+    await bridge.attachView(controlsStackId, buttonId);
     await bridge.updateView(buttonId, {'title': 'Add Number Box'});
     await bridge.setViewBackgroundColor(buttonId, Colors.pink);
+    await bridge.setViewLayout(buttonId, width: 150); // Set fixed width for button
 
+    // Add counter label
     final labelId = await bridge.createView('Label');
     if (labelId == null) return;
-    await bridge.attachView(containerStackId, labelId);
-    await bridge
-        .updateView(labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
+    await bridge.attachView(controlsStackId, labelId);
+    await bridge.updateView(
+      labelId, 
+      {'text': 'Total Boxes: ${stateManager.clicks}'}
+    );
+
+    // Create container for dynamic boxes as VStack
+    final boxesStackId = await bridge.createVStack(
+      spacing: 8,
+      alignment: FlexAlignment.center
+    );
+    if (boxesStackId == null) return;
+    await bridge.attachView(mainStackId, boxesStackId);
 
     // Register button click handler
     final success = await bridge.registerEvent(buttonId, 'onClick', () async {
       try {
         stateManager.incrementClicks();
         _logger.info('Creating new number box: ${stateManager.clicks}');
-        // change bg color
-        if (stateManager.clicks % 2 == 0) {
-          await bridge.setViewBackgroundColor(rootViewId, Colors.deepPurple);
-        }else{
-          await bridge.setViewBackgroundColor(rootViewId, Colors.white);
-        }
-        // Create a new stack view for the number box
-        final boxStackId = await bridge.createView('StackView');
-        if (boxStackId == null) {
-          _logger.warning('Failed to create box stack view');
-          return false; // Fix missing return value
-        }
-        await bridge.attachView(containerStackId, boxStackId);
 
-        // Create and style the box view
+        // Create box container as ZStack for layering
+        final boxContainerId = await bridge.createZStack(
+          alignment: FlexAlignment.center
+        );
+        if (boxContainerId == null) return false;
+        await bridge.attachView(boxesStackId, boxContainerId);
+        
+        // Set fixed size for box container
+        await bridge.setViewLayout(boxContainerId, 
+          width: 100, 
+          height: 100
+        );
+
+        // Create background box
         final boxId = await bridge.createView('View');
-        if (boxId == null) {
-          _logger.warning('Failed to create box view');
-          return false; // Fix missing return value
-        }
+        if (boxId == null) return false;
+        await bridge.attachView(boxContainerId, boxId);
+        await bridge.setViewBackgroundColor(boxId, Colors.grey);
+        // Make box fill container
+        await bridge.setViewLayout(boxId,
+          width: 100,
+          height: 100
+        );
 
-        await bridge.attachView(boxStackId, boxId);
-
-        // Create and style the number label
+        // Create number label centered in box
         final numberLabelId = await bridge.createView('Label');
-        if (numberLabelId == null) {
-          _logger.warning('Failed to create number label');
-          return false; // Fix missing return value
-        }
-        await bridge.attachView(boxStackId, numberLabelId);
+        if (numberLabelId == null) return false;
+        await bridge.attachView(boxContainerId, numberLabelId);
         await bridge.updateView(numberLabelId, {
           'text': '${stateManager.clicks}',
           'textColor': Colors.amberAccent,
@@ -108,7 +130,16 @@ Future<void> mainApp() async {
 
         // Update counter label
         await bridge.updateView(
-            labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
+          labelId, 
+          {'text': 'Total Boxes: ${stateManager.clicks}'}
+        );
+
+        // Toggle root background on even/odd
+        if (stateManager.clicks % 2 == 0) {
+          await bridge.setViewBackgroundColor(rootViewId, Colors.deepPurple);
+        } else {
+          await bridge.setViewBackgroundColor(rootViewId, Colors.white);
+        }
 
         return true;
       } catch (e) {

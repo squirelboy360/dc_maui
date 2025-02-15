@@ -7,7 +7,22 @@ enum ScrollDirection { vertical, horizontal }
 
 // Add these enums
 enum FlexDirection { row, column }
-enum FlexAlignment { start, center, end, spaceBetween, spaceAround, spaceEvenly }
+
+enum FlexAlignment {
+  start,
+  center,
+  end,
+  spaceBetween,
+  spaceAround,
+  spaceEvenly
+}
+
+// Add these enums after existing enums
+enum StackType {
+  vertical, // VStack
+  horizontal, // HStack
+  depth // ZStack
+}
 
 // Add this extension near the top of the file
 extension ColorExtension on Color {
@@ -135,7 +150,8 @@ class NativeUIBridge {
       // Convert any Color objects to hex strings
       var processedProperties = Map<String, dynamic>.from(properties);
       if (properties['textColor'] is Color) {
-        processedProperties['textColor'] = (properties['textColor'] as Color).toHexString();
+        processedProperties['textColor'] =
+            (properties['textColor'] as Color).toHexString();
       }
 
       final result = await _channel.invokeMethod<bool>('updateView', {
@@ -323,7 +339,8 @@ class NativeUIBridge {
     }
   }
 
-  Future<bool> setViewLayout(String viewId, {
+  Future<bool> setViewLayout(
+    String viewId, {
     double? width,
     double? height,
     double? flex,
@@ -337,8 +354,10 @@ class NativeUIBridge {
         if (width != null) 'width': width,
         if (height != null) 'height': height,
         if (flex != null) 'flex': flex,
-        if (direction != null) 'direction': direction.toString().split('.').last,
-        if (alignment != null) 'alignment': alignment.toString().split('.').last,
+        if (direction != null)
+          'direction': direction.toString().split('.').last,
+        if (alignment != null)
+          'alignment': alignment.toString().split('.').last,
         if (spacing != null) 'spacing': spacing,
       });
       return result ?? false;
@@ -346,6 +365,72 @@ class NativeUIBridge {
       _logger.severe('Error setting view layout: $e');
       return false;
     }
+  }
+
+  Future<String?> createStackView(
+    StackType type, {
+    double spacing = 8.0,
+    FlexAlignment? alignment,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    try {
+      _logger.info('Creating stack view of type: ${type.toString()}');
+      final viewId = await _channel.invokeMethod<String>('createStackView', {
+        'stackType': type.toString().split('.').last,
+        'spacing': spacing,
+        'alignment': alignment?.toString().split('.').last,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        },
+      });
+      _logger.info('Stack view created with ID: $viewId');
+      return viewId;
+    } catch (e) {
+      _logger.severe('Error creating stack view: $e');
+      return null;
+    }
+  }
+
+  // Helper methods for specific stack types
+  Future<String?> createVStack({
+    double spacing = 8.0,
+    FlexAlignment? alignment,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) {
+    return createStackView(
+      StackType.vertical,
+      spacing: spacing,
+      alignment: alignment,
+      padding: padding,
+    );
+  }
+
+  Future<String?> createHStack({
+    double spacing = 8.0,
+    FlexAlignment? alignment,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) {
+    return createStackView(
+      StackType.horizontal,
+      spacing: spacing,
+      alignment: alignment,
+      padding: padding,
+    );
+  }
+
+  Future<String?> createZStack({
+    FlexAlignment? alignment,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) {
+    return createStackView(
+      StackType.depth,
+      spacing: 0,
+      alignment: alignment,
+      padding: padding,
+    );
   }
 }
 

@@ -1,6 +1,12 @@
 import UIKit
 import Flutter
 
+enum StackType: String {
+    case vertical
+    case horizontal
+    case depth
+}
+
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
@@ -106,6 +112,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleUnregisterEvent(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
+            case "createStackView":
+                self.handleCreateStackView(call, result: result)
+            case "createListView":
+                self.handleCreateListView(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -506,15 +516,99 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
         }
 
-        extension UIView {
-            var parentViewController: UIViewController? {
-                var responder: UIResponder? = self
-                while let nextResponder = responder?.next {
-                    if let viewController = nextResponder as? UIViewController {
-                        return viewController
-                    }
-                    responder = nextResponder
-                }
-                return nil
+@available(iOS 13.0, *)
+extension NativeUIManager {
+    private func handleCreateStackView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let stackTypeString = args["stackType"] as? String,
+              let stackType = StackType(rawValue: stackTypeString) else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid stack type", details: nil))
+            return
+        }
+
+        let stackView: UIView
+        let viewId = "stack-\(stackType.rawValue)-\(UUID().uuidString)"
+
+        switch stackType {
+        case .vertical:
+            let vStack = UIStackView()
+            vStack.axis = .vertical
+            vStack.spacing = args["spacing"] as? CGFloat ?? 8.0
+            stackView = vStack
+            
+        case .horizontal:
+            let hStack = UIStackView()
+            hStack.axis = .horizontal
+            hStack.spacing = args["spacing"] as? CGFloat ?? 8.0
+            stackView = hStack
+            
+        case .depth:
+            // For ZStack, we use a regular view that overlays its subviews
+            let zStack = ZStackView()
+            stackView = zStack
+        }
+
+        if let stackView = stackView as? UIStackView {
+            if let alignment = args["alignment"] as? String {
+                stackView.alignment = convertAlignment(alignment)
             }
         }
+
+        // Apply padding if provided
+        if let padding = args["padding"] as? [String: CGFloat] {
+            stackView.layoutMargins = UIEdgeInsets(
+                top: padding["top"] ?? 0,
+                left: padding["left"] ?? 0,
+                bottom: padding["bottom"] ?? 0,
+                right: padding["right"] ?? 0
+            )
+            if let stackView = stackView as? UIStackView {
+                stackView.isLayoutMarginsRelativeArrangement = true
+            }
+        }
+
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        views[viewId] = stackView
+        childViews[viewId] = []
+        
+        result(viewId)
+    }
+
+    private func convertAlignment(_ alignment: String) -> UIStackView.Alignment {
+        switch alignment {
+        case "start": return .leading
+        case "center": return .center
+        case "end": return .trailing
+        case "stretch": return .fill
+        default: return .fill
+        }
+    }
+}
+
+// Add this custom ZStack view
+class ZStackView: UIView {
+    override func addSubview(_ view: UIView) {
+        super.addSubview(view)
+        
+        view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: trailingAnchor),
+            view.topAnchor.constraint(equalTo: topAnchor),
+            view.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+}
+
+extension UIView {
+    var parentViewController: UIViewController? {
+        var responder: UIResponder? = self
+        while let nextResponder = responder?.next {
+            if let viewController = nextResponder as? UIViewController {
+                return viewController
+            }
+            responder = nextResponder
+        }
+        return nil
+    }
+}
