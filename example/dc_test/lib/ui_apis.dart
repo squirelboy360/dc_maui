@@ -31,6 +31,8 @@ extension ColorExtension on Color {
   }
 }
 
+enum ListViewStyle { list, grid }
+
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -316,14 +318,17 @@ class NativeUIBridge {
   }
 
   Future<ListViewController?> createListView({
-    ScrollDirection direction = ScrollDirection.vertical,
+    ListViewStyle style = ListViewStyle.list,
+    int columns = 1,
     double spacing = 8.0,
     EdgeInsets padding = EdgeInsets.zero,
+    bool enableRefresh = false,
+    bool enablePagination = false,
   }) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createListView', {
-        'direction':
-            direction == ScrollDirection.horizontal ? 'horizontal' : 'vertical',
+        'style': style.toString(),
+        'columns': columns,
         'spacing': spacing,
         'padding': {
           'top': padding.top,
@@ -331,6 +336,8 @@ class NativeUIBridge {
           'bottom': padding.bottom,
           'right': padding.right,
         },
+        'enableRefresh': enableRefresh,
+        'enablePagination': enablePagination,
       });
 
       if (viewId != null) {
@@ -510,6 +517,17 @@ class NativeUIBridge {
   Future<bool> setViewToFillHeight(String viewId) async {
     return setViewLayout(viewId, height: matchParent);
   }
+
+  // Add this helper method for direct method channel invocation
+  Future<T?> invokeMethod<T>(String method, [dynamic arguments]) async {
+    try {
+      final result = await _channel.invokeMethod<T>(method, arguments);
+      return result;
+    } catch (e) {
+      _logger.severe('Error invoking native method $method: $e');
+      return null;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation
@@ -583,5 +601,16 @@ class ListViewController {
       }
     }
     return false;
+  }
+
+  Future<void> setRefreshCallback(Future<void> Function() onRefresh) async {
+    await _bridge.registerEvent(viewId, 'onRefresh', () async {
+      await onRefresh();
+      await _bridge.invokeMethod('endRefreshing', {'viewId': viewId});
+    });
+  }
+
+  Future<void> setPaginationCallback(Future<void> Function() onLoadMore) async {
+    await _bridge.registerEvent(viewId, 'onLoadMore', onLoadMore);
   }
 }
