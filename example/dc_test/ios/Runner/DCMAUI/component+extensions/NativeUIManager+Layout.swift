@@ -17,6 +17,14 @@ enum LayoutSize: String {
     case wrap
 }
 
+enum FlexDirection: String {
+    case row, column
+}
+
+enum FlexAlignment: String {
+    case start, center, end, spaceBetween, spaceAround, spaceEvenly
+}
+
 @available(iOS 13.0, *)
 extension NativeUIManager {
     internal func handleSetViewLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -27,33 +35,53 @@ extension NativeUIManager {
             return
         }
         
-        // Apply axis if view is a stack view
-        if let axis = args["axis"] as? String,
-           let stackView = view as? UIStackView {
-            stackView.axis = axis == "horizontal" ? .horizontal : .vertical
+        // Handle width and height
+        if let width = args["width"] as? Double {
+            if let constraint = view.constraints.first(where: { $0.firstAttribute == .width }) {
+                constraint.isActive = false
+            }
+            view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
         }
         
-        // Apply alignment
-        if let alignment = args["alignment"] as? String {
-            applyAlignment(alignment, to: view)
+        if let height = args["height"] as? Double {
+            if let constraint = view.constraints.first(where: { $0.firstAttribute == .height }) {
+                constraint.isActive = false
+            }
+            view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
         }
         
-        // Apply size constraints
-        if let width = args["width"] as? String {
-            applySizeConstraint(width, for: .width, to: view)
-        }
-        if let height = args["height"] as? String {
-            applySizeConstraint(height, for: .height, to: view)
+        // Handle flex
+        if let flex = args["flex"] as? Double {
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
         }
         
-        // Apply margins
-        if let margin = args["margin"] as? [String: CGFloat] {
-            applyMargin(margin, to: view)
-        }
-        
-        // Apply padding
-        if let padding = args["padding"] as? [String: CGFloat] {
-            applyPadding(padding, to: view)
+        // Handle stack view specific properties
+        if let stackView = view as? UIStackView {
+            if let spacing = args["spacing"] as? Double {
+                stackView.spacing = CGFloat(spacing)
+            }
+            
+            if let direction = args["direction"] as? String {
+                stackView.axis = direction == "horizontal" ? .horizontal : .vertical
+            }
+            
+            if let alignment = args["alignment"] as? String {
+                switch FlexAlignment(rawValue: alignment) {
+                case .start:
+                    stackView.alignment = .leading
+                case .center:
+                    stackView.alignment = .center
+                case .end:
+                    stackView.alignment = .trailing
+                case .spaceBetween:
+                    stackView.distribution = .equalSpacing
+                case .spaceAround, .spaceEvenly:
+                    stackView.distribution = .equalCentering
+                default:
+                    stackView.alignment = .fill
+                }
+            }
         }
         
         result(true)
@@ -167,5 +195,41 @@ extension NativeUIManager {
             )
             stackView.isLayoutMarginsRelativeArrangement = true
         }
+    }
+    
+    private func applyFlex(_ flex: Double, to view: UIView) {
+        if let stackView = view.superview as? UIStackView {
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: stackView.axis == .horizontal ? .horizontal : .vertical)
+            view.setContentCompressionResistancePriority(.init(rawValue: 1000 - Float(flex)), for: stackView.axis == .horizontal ? .horizontal : .vertical)
+        }
+    }
+    
+    private func applyWidth(_ width: Double, to view: UIView) {
+        view.removeConstraints(view.constraints.filter { $0.firstAttribute == .width })
+        
+        if width > 0 {
+            NSLayoutConstraint.activate([
+                view.widthAnchor.constraint(equalToConstant: CGFloat(width))
+            ])
+        }
+    }
+    
+    private func applyHeight(_ height: Double, to view: UIView) {
+        view.removeConstraints(view.constraints.filter { $0.firstAttribute == .height })
+        
+        if height > 0 {
+            NSLayoutConstraint.activate([
+                view.heightAnchor.constraint(equalToConstant: CGFloat(height))
+            ])
+        }
+    }
+}
+
+// Add this extension to fix background color issues
+extension UIView {
+    func setupForBackground() {
+        backgroundColor = .clear
+        layer.masksToBounds = true
+        isOpaque = false
     }
 }

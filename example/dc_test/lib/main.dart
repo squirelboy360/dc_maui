@@ -51,6 +51,7 @@ Future<void> mainApp() async {
       return;
     }
     await bridge.attachView(rootViewId, containerStackId);
+    await bridge.setViewBackgroundColor(rootViewId, Colors.white);
 
     // Create button and label as before
     final buttonId = await bridge.createView('Button');
@@ -70,7 +71,12 @@ Future<void> mainApp() async {
       try {
         stateManager.incrementClicks();
         _logger.info('Creating new number box: ${stateManager.clicks}');
-
+        // change bg color
+        if (stateManager.clicks % 2 == 0) {
+          await bridge.setViewBackgroundColor(rootViewId, Colors.deepPurple);
+        }else{
+          await bridge.setViewBackgroundColor(rootViewId, Colors.white);
+        }
         // Create a new stack view for the number box
         final boxStackId = await bridge.createView('StackView');
         if (boxStackId == null) {
@@ -85,8 +91,8 @@ Future<void> mainApp() async {
           _logger.warning('Failed to create box view');
           return false; // Fix missing return value
         }
+
         await bridge.attachView(boxStackId, boxId);
-        await bridge.setViewBackgroundColor(boxId, Colors.grey);
 
         // Create and style the number label
         final numberLabelId = await bridge.createView('Label');

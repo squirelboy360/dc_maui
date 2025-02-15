@@ -106,10 +106,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleUnregisterEvent(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
-            case "setViewLayout":
-                self.handleSetViewLayout(call, result: result)
-            case "setViewSize":
-                self.handleSetViewSize(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -127,13 +123,18 @@ class NativeUIManager: NSObject, FlutterPlugin {
            let viewId = "\(viewType.lowercased())-\(UUID().uuidString)"
            
            switch viewType {
+           case "View":
+               let containerView = UIView()
+               containerView.setupForBackground()
+               view = containerView
+               
            case "StackView":
                let stackView = UIStackView()
+               stackView.setupForBackground()
                stackView.axis = .vertical
-               stackView.spacing = 20
-               stackView.alignment = .center
-               stackView.distribution = .equalSpacing
-               stackView.backgroundColor = .clear
+               stackView.spacing = 8
+               stackView.alignment = .fill
+               stackView.distribution = .fill
                view = stackView
                
            case "Button":
@@ -162,9 +163,30 @@ class NativeUIManager: NSObject, FlutterPlugin {
            if let view = view {
                views[viewId] = view
                childViews[viewId] = []
+               
+               // Apply initial layout if provided
+               if let layout = args["layout"] as? [String: Any] {
+                   applyLayout(to: view, layout: layout)
+               }
+               
                result(viewId)
            } else {
                result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
+           }
+       }
+
+       private func applyLayout(to view: UIView, layout: [String: Any]) {
+           if let width = layout["width"] as? Double {
+               view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
+           }
+           
+           if let height = layout["height"] as? Double {
+               view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
+           }
+           
+           if let flex = layout["flex"] as? Double {
+               view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
+               view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
            }
        }
 
