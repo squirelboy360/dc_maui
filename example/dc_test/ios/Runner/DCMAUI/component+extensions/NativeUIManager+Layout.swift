@@ -35,56 +35,42 @@ extension NativeUIManager {
             return
         }
         
-        // Handle width and height
-        if let width = args["width"] as? Double {
-            if let constraint = view.constraints.first(where: { $0.firstAttribute == .width }) {
-                constraint.isActive = false
+        // Remove existing constraints
+        view.constraints.forEach { constraint in
+            if constraint.firstAttribute == .width || constraint.firstAttribute == .height {
+                view.removeConstraint(constraint)
             }
+        }
+        
+        if let width = args["width"] as? Double {
             view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
         }
         
         if let height = args["height"] as? Double {
-            if let constraint = view.constraints.first(where: { $0.firstAttribute == .height }) {
-                constraint.isActive = false
-            }
             view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
         }
         
-        // Handle flex
-        if let flex = args["flex"] as? Double {
-            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
-            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
-        }
-        
-        // Handle stack view specific properties
         if let stackView = view as? UIStackView {
             if let spacing = args["spacing"] as? Double {
                 stackView.spacing = CGFloat(spacing)
             }
             
-            if let direction = args["direction"] as? String {
-                stackView.axis = direction == "horizontal" ? .horizontal : .vertical
-            }
-            
             if let alignment = args["alignment"] as? String {
-                switch FlexAlignment(rawValue: alignment) {
-                case .start:
-                    stackView.alignment = .leading
-                case .center:
-                    stackView.alignment = .center
-                case .end:
-                    stackView.alignment = .trailing
-                case .spaceBetween:
-                    stackView.distribution = .equalSpacing
-                case .spaceAround, .spaceEvenly:
-                    stackView.distribution = .equalCentering
-                default:
-                    stackView.alignment = .fill
-                }
+                stackView.alignment = convertStackAlignment(alignment)
             }
         }
         
         result(true)
+    }
+    
+    private func convertStackAlignment(_ alignment: String) -> UIStackView.Alignment {
+        switch alignment {
+        case "start": return .leading
+        case "center": return .center
+        case "end": return .trailing
+        case "stretch": return .fill
+        default: return .fill
+        }
     }
     
     internal func handleSetViewSize(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -222,14 +208,5 @@ extension NativeUIManager {
                 view.heightAnchor.constraint(equalToConstant: CGFloat(height))
             ])
         }
-    }
-}
-
-// Add this extension to fix background color issues
-extension UIView {
-    func setupForBackground() {
-        backgroundColor = .clear
-        layer.masksToBounds = true
-        isOpaque = false
     }
 }

@@ -116,6 +116,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleCreateStackView(call, result: result)
             case "createListView":
                 self.handleCreateListView(call, result: result)
+            case "setViewLayout":
+                self.handleSetViewLayout(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -514,6 +516,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             deinit {
                 cleanup()
             }
+            
         }
 
 @available(iOS 13.0, *)
@@ -582,33 +585,5 @@ extension NativeUIManager {
         case "stretch": return .fill
         default: return .fill
         }
-    }
-}
-
-// Add this custom ZStack view
-class ZStackView: UIView {
-    override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-        
-        view.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            view.leadingAnchor.constraint(equalTo: leadingAnchor),
-            view.trailingAnchor.constraint(equalTo: trailingAnchor),
-            view.topAnchor.constraint(equalTo: topAnchor),
-            view.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-    }
-}
-
-extension UIView {
-    var parentViewController: UIViewController? {
-        var responder: UIResponder? = self
-        while let nextResponder = responder?.next {
-            if let viewController = nextResponder as? UIViewController {
-                return viewController
-            }
-            responder = nextResponder
-        }
-        return nil
     }
 }
