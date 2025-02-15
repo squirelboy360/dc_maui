@@ -4,7 +4,6 @@ import Flutter
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
-    // Change access level from private to internal
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
     private var rootViewId: String?
@@ -65,10 +64,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
             guard let self = self else { return }
             
             switch call.method {
-            // Add createListView to the switch statement
-            case "createListView":
-                self.handleCreateListView(call, result: result)
-                
             case "getRootView":
                 guard let rootViewId = self.rootViewId,
                       let rootView = self.views[rootViewId] else {
@@ -181,13 +176,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
            
            if let stackView = parentView as? UIStackView {
                stackView.addArrangedSubview(childView)
-           } else if let scrollView = parentView as? UIScrollView {
-               if let stackView = scrollView.subviews.first as? UIStackView {
-                   stackView.addArrangedSubview(childView)
-                   childView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -32).isActive = true
-               }
            } else {
                parentView.addSubview(childView)
+               
                NSLayoutConstraint.activate([
                    childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
                    childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
@@ -228,6 +219,14 @@ class NativeUIManager: NSObject, FlutterPlugin {
               let view = views[viewId] else {
             result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
             return
+        }
+        
+        // Handle color properties
+        if let backgroundColor = properties["backgroundColor"] as? String {
+            applyColorToView(view, colorString: backgroundColor, colorType: .background)
+        }
+        if let textColor = properties["textColor"] as? String {
+            applyColorToView(view, colorString: textColor, colorType: .text)
         }
         
         if let button = view as? UIButton {
@@ -321,20 +320,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        switch colorString.lowercased() {
-        case "red": view.backgroundColor = .red
-        case "blue": view.backgroundColor = .blue
-        case "green": view.backgroundColor = .green
-        case "yellow": view.backgroundColor = .yellow
-        case "black": view.backgroundColor = .black
-        case "white": view.backgroundColor = .white
-        case "clear": view.backgroundColor = .clear
-        default:
-            if let color = UIColor(named: colorString) {
-                view.backgroundColor = color
-            }
-        }
-        
+        applyColorToView(view, colorString: colorString)
         result(true)
     }
 

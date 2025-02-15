@@ -5,6 +5,13 @@ import 'package:logging/logging.dart';
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
+// Add this extension near the top of the file
+extension ColorExtension on Color {
+  String toHexString() {
+    return '#${(value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  }
+}
+
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -121,9 +128,15 @@ class NativeUIBridge {
   Future<bool> updateView(
       String viewId, Map<String, dynamic> properties) async {
     try {
+      // Convert any Color objects to hex strings
+      var processedProperties = Map<String, dynamic>.from(properties);
+      if (properties['textColor'] is Color) {
+        processedProperties['textColor'] = (properties['textColor'] as Color).toHexString();
+      }
+
       final result = await _channel.invokeMethod<bool>('updateView', {
         'viewId': viewId,
-        'properties': properties,
+        'properties': processedProperties,
       });
       return result ?? false;
     } catch (e) {
@@ -192,13 +205,24 @@ class NativeUIBridge {
   /// Native expects:
   /// - viewId: String (must be existing view ID)
   /// - color: String (hex format: '#RRGGBB' or '#AARRGGBB')
-  Future<bool> setViewBackgroundColor(String viewId, String color) async {
+  Future<bool> setViewBackgroundColor(String viewId, dynamic color) async {
     try {
-      final result =
-          await _channel.invokeMethod<bool>('changeViewBackgroundColor', {
-        'viewId': viewId,
-        'color': color,
-      });
+      String colorString;
+      if (color is Color) {
+        colorString = color.toHexString();
+      } else if (color is String) {
+        colorString = color;
+      } else {
+        throw ArgumentError('Color must be either a Color object or a String');
+      }
+
+      final result = await _channel.invokeMethod<bool>(
+        'changeViewBackgroundColor',
+        {
+          'viewId': viewId,
+          'color': colorString,
+        },
+      );
       return result ?? false;
     } catch (e) {
       _logger.severe('Error setting background color: $e');

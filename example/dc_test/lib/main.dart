@@ -44,27 +44,26 @@ Future<void> mainApp() async {
     }
     await bridge.attachView(rootViewId, stackId);
 
+    // Create a container for dynamic views
+    final containerStackId = await bridge.createView('StackView');
+    if (containerStackId == null) {
+      _logger.severe('Failed to create container stack view');
+      return;
+    }
+    await bridge.attachView(rootViewId, containerStackId);
+
     // Create button and label as before
     final buttonId = await bridge.createView('Button');
     if (buttonId == null) return;
-    await bridge.attachView(stackId, buttonId);
+    await bridge.attachView(containerStackId, buttonId);
     await bridge.updateView(buttonId, {'title': 'Add Number Box'});
     await bridge.setViewBackgroundColor(buttonId, 'blue');
 
     final labelId = await bridge.createView('Label');
     if (labelId == null) return;
-    await bridge.attachView(stackId, labelId);
-    await bridge.updateView(labelId, {'text': 'Total Boxes: 0'});
-
-    // Create scrollable list
-    final listViewController = await bridge.createListView(
-      direction: ScrollDirection.vertical,
-      spacing: 10,
-      padding: const EdgeInsets.all(16),
-    );
-
-    if (listViewController == null) return;
-    await bridge.attachView(stackId, listViewController.viewId);
+    await bridge.attachView(containerStackId, labelId);
+    await bridge
+        .updateView(labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
 
     // Register button click handler
     final success = await bridge.registerEvent(buttonId, 'onClick', () async {
@@ -72,33 +71,38 @@ Future<void> mainApp() async {
         stateManager.incrementClicks();
         _logger.info('Creating new number box: ${stateManager.clicks}');
 
-        // Create new box
-        await listViewController.addItem(() async {
-          // Create box stack
-          final boxStackId = await bridge.createView('StackView');
-          if (boxStackId == null) return null;
+        // Create a new stack view for the number box
+        final boxStackId = await bridge.createView('StackView');
+        if (boxStackId == null) {
+          _logger.warning('Failed to create box stack view');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(containerStackId, boxStackId);
 
-          // Create colored box
-          final boxId = await bridge.createView('View');
-          if (boxId == null) return null;
-          await bridge.attachView(boxStackId, boxId);
-          await bridge.setViewBackgroundColor(boxId, 'red');
+        // Create and style the box view
+        final boxId = await bridge.createView('View');
+        if (boxId == null) {
+          _logger.warning('Failed to create box view');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(boxStackId, boxId);
+        await bridge.setViewBackgroundColor(boxId, 'red');
 
-          // Create number label
-          final numberLabelId = await bridge.createView('Label');
-          if (numberLabelId == null) return null;
-          await bridge.attachView(boxStackId, numberLabelId);
-          await bridge.updateView(numberLabelId, {
-            'text': '${stateManager.clicks}',
-            'textColor': 'white',
-          });
-
-          // Update counter
-          await bridge.updateView(
-              labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
-
-          return boxStackId;
+        // Create and style the number label
+        final numberLabelId = await bridge.createView('Label');
+        if (numberLabelId == null) {
+          _logger.warning('Failed to create number label');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(boxStackId, numberLabelId);
+        await bridge.updateView(numberLabelId, {
+          'text': '${stateManager.clicks}',
+          'textColor': 'white',
         });
+
+        // Update counter label
+        await bridge.updateView(
+            labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
 
         return true;
       } catch (e) {
