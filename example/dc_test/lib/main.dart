@@ -57,7 +57,7 @@ Future<void> mainApp() async {
     if (buttonId == null) return;
     await bridge.attachView(containerStackId, buttonId);
     await bridge.updateView(buttonId, {'title': 'Add Number Box'});
-    await bridge.setViewBackgroundColor(buttonId, 'blue');
+    await bridge.setViewBackgroundColor(buttonId, Colors.pink);
 
     final labelId = await bridge.createView('Label');
     if (labelId == null) return;
@@ -86,7 +86,7 @@ Future<void> mainApp() async {
           return false; // Fix missing return value
         }
         await bridge.attachView(boxStackId, boxId);
-        await bridge.setViewBackgroundColor(boxId, 'red');
+        await bridge.setViewBackgroundColor(boxId, Colors.grey);
 
         // Create and style the number label
         final numberLabelId = await bridge.createView('Label');
@@ -97,7 +97,7 @@ Future<void> mainApp() async {
         await bridge.attachView(boxStackId, numberLabelId);
         await bridge.updateView(numberLabelId, {
           'text': '${stateManager.clicks}',
-          'textColor': 'white',
+          'textColor': Colors.amberAccent,
         });
 
         // Update counter label

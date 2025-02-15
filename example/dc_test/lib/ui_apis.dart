@@ -5,6 +5,11 @@ import 'package:logging/logging.dart';
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
+// Add these enums after imports
+enum LayoutAxis { horizontal, vertical }
+enum LayoutAlignment { start, center, end, stretch }
+enum LayoutSize { fill, wrap }
+
 // Add this extension near the top of the file
 extension ColorExtension on Color {
   String toHexString() {
@@ -318,6 +323,55 @@ class NativeUIBridge {
       return null;
     }
   }
+
+  Future<bool> setViewLayout(String viewId, {
+    LayoutAxis? axis,
+    LayoutAlignment? alignment,
+    LayoutSize? width,
+    LayoutSize? height,
+    EdgeInsets? margin,
+    EdgeInsets? padding,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewLayout', {
+        'viewId': viewId,
+        'axis': axis?.toString().split('.').last,
+        'alignment': alignment?.toString().split('.').last,
+        'width': width?.toString().split('.').last,
+        'height': height?.toString().split('.').last,
+        'margin': margin != null ? {
+          'top': margin.top,
+          'left': margin.left,
+          'bottom': margin.bottom,
+          'right': margin.right,
+        } : null,
+        'padding': padding != null ? {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        } : null,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view layout: $e');
+      return false;
+    }
+  }
+
+  Future<bool> setViewSize(String viewId, {double? width, double? height}) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setViewSize', {
+        'viewId': viewId,
+        'width': width,
+        'height': height,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error setting view size: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation
@@ -349,6 +403,29 @@ class NativeView {
 
   Future<bool> removeEventListener(String eventType) {
     return _bridge.unregisterEvent(viewId, eventType);
+  }
+
+  Future<bool> setLayout({
+    LayoutAxis? axis,
+    LayoutAlignment? alignment,
+    LayoutSize? width,
+    LayoutSize? height,
+    EdgeInsets? margin,
+    EdgeInsets? padding,
+  }) {
+    return _bridge.setViewLayout(
+      viewId,
+      axis: axis,
+      alignment: alignment,
+      width: width,
+      height: height,
+      margin: margin,
+      padding: padding,
+    );
+  }
+
+  Future<bool> setSize({double? width, double? height}) {
+    return _bridge.setViewSize(viewId, width: width, height: height);
   }
 }
 

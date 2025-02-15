@@ -106,6 +106,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleUnregisterEvent(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
+            case "setViewLayout":
+                self.handleSetViewLayout(call, result: result)
+            case "setViewSize":
+                self.handleSetViewSize(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
