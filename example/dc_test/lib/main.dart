@@ -61,10 +61,8 @@ Future<String?> _createBanner(AppState state) async {
   final banner = await bridge.createView('View');
   if (banner == null) return null;
 
-  // Set banner background and height
+  // Set banner background
   await bridge.setViewBackgroundColor(banner, Colors.blue[800]);
-  await bridge.setViewLayout(banner, height: 100);
-  await bridge.setViewToFillWidth(banner);
 
   // Create and configure content stack
   final content = await bridge.createHStack(
@@ -72,8 +70,12 @@ Future<String?> _createBanner(AppState state) async {
       alignment: FlexAlignment.spaceBetween,
       padding: EdgeInsets.symmetric(horizontal: 16));
   if (content == null) return null;
+
+  // First attach the content to banner
   await bridge.attachView(banner, content);
-  await bridge.setViewToFillParent(content); // Change this line
+
+  // Then set the content layout
+  await bridge.setViewToFillParent(content);
 
   final leadingBtn = await bridge.createView('Button');
   if (leadingBtn == null) return null;
@@ -101,23 +103,33 @@ Future<String?> _createBanner(AppState state) async {
     final itemBg = await bridge.createView('View');
     if (itemBg == null) return;
 
+    // First set the background color
     final random = Random();
     final color = Color.fromRGBO(
         random.nextInt(255), random.nextInt(255), random.nextInt(255), 1);
-
     await bridge.setViewBackgroundColor(itemBg, color);
-    await bridge.setViewLayout(itemBg, height: 60);
-    await bridge.setViewToFillWidth(itemBg);
 
+    // Create and configure the label
     final itemLabel = await bridge.createView('Label');
     if (itemLabel == null) return;
     await bridge.attachView(itemBg, itemLabel);
     await bridge.updateView(itemLabel,
         {'text': 'Item ${state.counter}', 'textColor': Colors.blueGrey});
+    await bridge.setViewLayout(itemLabel,
+        width: -1, height: -1); // Make label fill parent
 
-    // Use the listView from state
-    state.listView?.addItem(() async => itemBg);
+    // Use the listView's addItem method with proper setup
+    await state.listView?.addItem(() async {
+      // Set layout properties before returning the view
+      await bridge.setViewLayout(itemBg, height: 60);
+      await bridge.setViewToFillWidth(itemBg);
+      return itemBg;
+    });
   });
+
+  // Set banner layout last, after all children are attached
+  await bridge.setViewLayout(banner, height: 100);
+  await bridge.setViewToFillWidth(banner);
 
   return banner;
 }

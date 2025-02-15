@@ -8,26 +8,22 @@ extension NativeUIManager {
             return
         }
 
-        let scrollView = UIScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        
-        let stackView = UIStackView()
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(stackView)
+        let listView = DCScrollableStackView(frame: .zero)
+        listView.translatesAutoresizingMaskIntoConstraints = false
         
         // Configure direction
         if let direction = args["direction"] as? String {
-            stackView.axis = direction == "horizontal" ? .horizontal : .vertical
+            listView.axis = direction == "horizontal" ? .horizontal : .vertical
         }
         
         // Configure spacing
         if let spacing = args["spacing"] as? CGFloat {
-            stackView.spacing = spacing
+            listView.spacing = spacing
         }
         
         // Configure padding
         if let padding = args["padding"] as? [String: CGFloat] {
-            scrollView.contentInset = UIEdgeInsets(
+            listView.contentInset = UIEdgeInsets(
                 top: padding["top"] ?? 0,
                 left: padding["left"] ?? 0,
                 bottom: padding["bottom"] ?? 0,
@@ -35,23 +31,8 @@ extension NativeUIManager {
             )
         }
 
-        // Setup stackView constraints
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            
-            // Make stack width equal to scroll view for vertical scrolling
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-        ])
-        
-        // Configure stack
-        stackView.alignment = .center
-        stackView.distribution = .equalSpacing
-        
         let viewId = "listview-\(UUID().uuidString)"
-        views[viewId] = scrollView
+        views[viewId] = listView
         childViews[viewId] = []
         
         result(viewId)
@@ -59,11 +40,18 @@ extension NativeUIManager {
 }
 
 private class DCScrollableStackView: UIScrollView {
-    private let stackView = UIStackView()
+    private(set) var stackView: UIStackView = {
+        let stack = UIStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.alignment = .fill
+        stack.distribution = .fill
+        return stack
+    }()
     
     var axis: NSLayoutConstraint.Axis = .vertical {
         didSet {
             stackView.axis = axis
+            updateConstraintsForAxis()
         }
     }
     
@@ -83,30 +71,52 @@ private class DCScrollableStackView: UIScrollView {
     }
     
     private func setupStackView() {
-        stackView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stackView)
         
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            // This constraint ensures proper scrolling
-            stackView.widthAnchor.constraint(equalTo: widthAnchor)
+            stackView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor),
+            
+            // Ensure stack view width matches scroll view width for vertical scrolling
+            stackView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor)
         ])
         
         // Default configuration
-        stackView.axis = .vertical
-        stackView.alignment = .fill
         stackView.distribution = .fill
-        stackView.spacing = 8
+        stackView.alignment = .fill
+        spacing = 8
+        
+        // Enable scrolling
+        alwaysBounceVertical = true
+        showsVerticalScrollIndicator = true
+    }
+    
+    private func updateConstraintsForAxis() {
+        if axis == .vertical {
+            stackView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor).isActive = true
+        } else {
+            stackView.heightAnchor.constraint(equalTo: frameLayoutGuide.heightAnchor).isActive = true
+        }
     }
     
     override func addSubview(_ view: UIView) {
-        if view != stackView {
-            stackView.addArrangedSubview(view)
-        } else {
+        if view === stackView {
             super.addSubview(view)
+        } else {
+            stackView.addArrangedSubview(view)
+        }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Update content size
+        if axis == .vertical {
+            contentSize = CGSize(width: bounds.width, height: stackView.frame.height)
+        } else {
+            contentSize = CGSize(width: stackView.frame.width, height: bounds.height)
         }
     }
 }
