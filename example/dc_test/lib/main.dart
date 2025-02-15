@@ -94,7 +94,8 @@ Future<void> mainApp() async {
         await bridge.attachView(boxesStackId, boxContainerId);
 
         // Set fixed size for box container
-        await bridge.setViewLayout(boxContainerId, width: 100, height: 100);
+        await bridge.setViewLayout(boxContainerId,
+            width: await bridge.getScreenWidth(), height: 100);
 
         // Create background box
         final boxId = await bridge.createView('View');

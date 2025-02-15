@@ -69,6 +69,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
+            // First try to handle value API methods
+            self.addValueAPIMethodHandlers(call, result: result)
+            
+            // Then proceed with existing switch statement
             switch call.method {
             case "getRootView":
                 guard let rootViewId = self.rootViewId,

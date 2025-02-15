@@ -432,6 +432,68 @@ class NativeUIBridge {
       padding: padding,
     );
   }
+
+  Future<double> getScreenWidth() async {
+    try {
+      final width = await _channel.invokeMethod<double>('getScreenWidth');
+      return width ?? 0.0;
+    } catch (e) {
+      _logger.severe('Error getting screen width: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> getScreenHeight() async {
+    try {
+      final height = await _channel.invokeMethod<double>('getScreenHeight');
+      return height ?? 0.0;
+    } catch (e) {
+      _logger.severe('Error getting screen height: $e');
+      return 0.0;
+    }
+  }
+
+  Future<Map<String, dynamic>> getDeviceMetrics() async {
+    try {
+      final metrics = await _channel.invokeMethod<Map>('getDeviceMetrics');
+      return Map<String, dynamic>.from(metrics ?? {});
+    } catch (e) {
+      _logger.severe('Error getting device metrics: $e');
+      return {};
+    }
+  }
+
+  Future<bool> isDarkMode() async {
+    try {
+      final isDark = await _channel.invokeMethod<bool>('isDarkMode');
+      return isDark ?? false;
+    } catch (e) {
+      _logger.severe('Error checking dark mode: $e');
+      return false;
+    }
+  }
+
+  Future<double> getStatusBarHeight() async {
+    try {
+      final height = await _channel.invokeMethod<double>('getStatusBarHeight');
+      return height ?? 0.0;
+    } catch (e) {
+      _logger.severe('Error getting status bar height: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> getSafeAreaInsets(String edge) async {
+    try {
+      final inset = await _channel.invokeMethod<double>('getSafeAreaInset', {
+        'edge': edge, // top, bottom, left, right
+      });
+      return inset ?? 0.0;
+    } catch (e) {
+      _logger.severe('Error getting safe area inset: $e');
+      return 0.0;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation
