@@ -94,8 +94,7 @@ Future<void> mainApp() async {
         await bridge.attachView(boxesStackId, boxContainerId);
 
         // Set fixed size for box container
-        await bridge.setViewLayout(boxContainerId,
-            width: await bridge.getScreenWidth(), height: 100);
+        await bridge.setViewLayout(boxContainerId, width: 100, height: 100);
 
         // Create background box
         final boxId = await bridge.createView('View');
@@ -103,7 +102,8 @@ Future<void> mainApp() async {
         await bridge.attachView(boxContainerId, boxId);
         await bridge.setViewBackgroundColor(boxId, Colors.grey);
         // Make box fill container
-        await bridge.setViewLayout(boxId, width: 100, height: 50);
+        await bridge.setViewLayout(boxId,
+            width: await bridge.getScreenWidth(), height: 50);
 
         // Create number label centered in box
         final numberLabelId = await bridge.createView('Label');
