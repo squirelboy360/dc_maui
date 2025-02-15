@@ -5,6 +5,109 @@ import 'package:logging/logging.dart';
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
+// Add these enums after existing ones
+enum MainAxisAlignment {
+  start,
+  center,
+  end,
+  spaceBetween,
+  spaceAround,
+  spaceEvenly
+}
+
+enum CrossAxisAlignment { start, center, end, stretch, baseline }
+
+// Add Size related enums and classes
+enum SizeType {
+  fixed, // Exact size in points
+  flex, // Proportional size (flex factor)
+  wrap, // Size to content
+  matchParent // Fill available space
+}
+
+class ViewSize {
+  final SizeType type;
+  final double? value; // Used for fixed size or flex factor
+
+  const ViewSize.fixed(double size)
+      : type = SizeType.fixed,
+        value = size;
+  const ViewSize.flex(double factor)
+      : type = SizeType.flex,
+        value = factor;
+  const ViewSize.wrap()
+      : type = SizeType.wrap,
+        value = null;
+  const ViewSize.matchParent()
+      : type = SizeType.matchParent,
+        value = null;
+
+  Map<String, dynamic> toMap() => {
+        'type': type.name,
+        'value': value,
+      };
+}
+
+// Add these static constructors to ViewSize
+extension ViewSizeUtils on ViewSize {
+  static ViewSize get fillWidth => const ViewSize.matchParent();
+  static ViewSize get fillHeight => const ViewSize.matchParent();
+  static ViewSize height(double value) => ViewSize.fixed(value);
+  static ViewSize width(double value) => ViewSize.fixed(value);
+}
+
+class Layout {
+  final MainAxisAlignment mainAxisAlignment;
+  final CrossAxisAlignment crossAxisAlignment;
+  final double spacing;
+  final ViewSize? width;
+  final ViewSize? height;
+  final EdgeInsets margin;
+  final EdgeInsets padding;
+  final dynamic backgroundColor; // Support both Color and String
+
+  const Layout({
+    this.mainAxisAlignment = MainAxisAlignment.start,
+    this.crossAxisAlignment = CrossAxisAlignment.center,
+    this.spacing = 8.0,
+    this.width,
+    this.height,
+    this.margin = EdgeInsets.zero,
+    this.padding = EdgeInsets.zero,
+    this.backgroundColor,
+  });
+
+  Map<String, dynamic> toMap() {
+    String? colorString;
+    if (backgroundColor is Color) {
+      colorString = (backgroundColor as Color).toHexString();
+    } else if (backgroundColor is String) {
+      colorString = backgroundColor as String;
+    }
+
+    return {
+      'mainAxisAlignment': mainAxisAlignment.name,
+      'crossAxisAlignment': crossAxisAlignment.name,
+      'spacing': spacing,
+      'width': width?.toMap(),
+      'height': height?.toMap(),
+      'margin': {
+        'top': margin.top,
+        'left': margin.left,
+        'bottom': margin.bottom,
+        'right': margin.right,
+      },
+      'padding': {
+        'top': padding.top,
+        'left': padding.left,
+        'bottom': padding.bottom,
+        'right': padding.right,
+      },
+      if (colorString != null) 'backgroundColor': colorString,
+    };
+  }
+}
+
 // Add this extension near the top of the file
 extension ColorExtension on Color {
   String toHexString() {
@@ -70,10 +173,11 @@ class NativeUIBridge {
   ///   }
   /// Returns: String viewId or null if failed
   Future<String?> createView(String viewType,
-      {Map<String, dynamic>? properties}) async {
+      {Map<String, dynamic>? properties, Layout? layout}) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createView', {
         'viewType': viewType,
+        'layout': layout?.toMap(),
         ...?properties,
       });
       return viewId;
@@ -131,7 +235,8 @@ class NativeUIBridge {
       // Convert any Color objects to hex strings
       var processedProperties = Map<String, dynamic>.from(properties);
       if (properties['textColor'] is Color) {
-        processedProperties['textColor'] = (properties['textColor'] as Color).toHexString();
+        processedProperties['textColor'] =
+            (properties['textColor'] as Color).toHexString();
       }
 
       final result = await _channel.invokeMethod<bool>('updateView', {
