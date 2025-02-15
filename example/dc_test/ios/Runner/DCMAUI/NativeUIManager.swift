@@ -203,30 +203,33 @@ class NativeUIManager: NSObject, FlutterPlugin {
        }
 
        private func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-           guard let args = call.arguments as? [String: Any],
-                 let parentId = args["parentId"] as? String,
-                 let childId = args["childId"] as? String,
-                 let parentView = views[parentId],
-                 let childView = views[childId] else {
-               result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
-               return
-           }
-           
-           if let stackView = parentView as? UIStackView {
-               stackView.addArrangedSubview(childView)
-           } else {
-               parentView.addSubview(childView)
-               
-               NSLayoutConstraint.activate([
-                   childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-                   childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
-                   childView.widthAnchor.constraint(lessThanOrEqualTo: parentView.widthAnchor, constant: -32)
-               ])
-           }
-           
-           childViews[parentId]?.append(childId)
-           result(true)
-       }
+    guard let args = call.arguments as? [String: Any],
+          let parentId = args["parentId"] as? String,
+          let childId = args["childId"] as? String,
+          let parentView = views[parentId],
+          let childView = views[childId] else {
+        result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
+        return
+    }
+    
+    // Different attachment behavior based on parent view type
+    if let stackView = parentView as? UIStackView {
+        stackView.addArrangedSubview(childView)
+    } else if parentView is ZStackView {
+        parentView.addSubview(childView)
+        // ZStackView will handle its own constraints in addSubview
+    } else {
+        parentView.addSubview(childView)
+        // Default centering behavior for regular views
+        NSLayoutConstraint.activate([
+            childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+            childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor)
+        ])
+    }
+    
+    childViews[parentId]?.append(childId)
+    result(true)
+}
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
