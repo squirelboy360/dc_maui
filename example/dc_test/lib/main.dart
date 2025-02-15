@@ -39,7 +39,7 @@ Future<void> mainApp() async {
     // Create main container as VStack
     final mainStackId = await bridge.createVStack(
         spacing: 16,
-        alignment: FlexAlignment.center,
+        alignment: FlexAlignment.spaceEvenly,
         padding: EdgeInsets.all(16));
     if (mainStackId == null) {
       _logger.severe('Failed to create main stack view');
