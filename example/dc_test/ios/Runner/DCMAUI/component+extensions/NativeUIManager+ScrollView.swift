@@ -9,6 +9,19 @@ extension NativeUIManager {
             return
         }
 
+        // Extract scroll axis configuration
+        let axis: ScrollAxis
+        if let axisString = args["axis"] as? String {
+            switch axisString {
+            case "vertical": axis = .vertical
+            case "horizontal": axis = .horizontal
+            case "free": axis = .free
+            default: axis = .vertical
+            }
+        } else {
+            axis = .vertical
+        }
+
         // Extract padding
         let padding = args["padding"] as? [String: CGFloat] ?? [:]
         let insets = UIEdgeInsets(
@@ -18,17 +31,9 @@ extension NativeUIManager {
             right: padding["right"] ?? 0
         )
 
-        // Create scroll view with padding
-        let scrollView = DCScrollView(padding: insets)
+        // Create scroll view with axis and padding
+        let scrollView = DCScrollView(axis: axis, padding: insets)
         
-        // Configure scroll direction
-        if let isHorizontal = args["horizontal"] as? Bool {
-            scrollView.alwaysBounceHorizontal = isHorizontal
-            scrollView.alwaysBounceVertical = !isHorizontal
-            scrollView.showsHorizontalScrollIndicator = isHorizontal
-            scrollView.showsVerticalScrollIndicator = !isHorizontal
-        }
-
         // Generate view ID and store
         let viewId = "scrollview-\(UUID().uuidString)"
         views[viewId] = scrollView

@@ -33,6 +33,13 @@ extension ColorExtension on Color {
 
 enum ListViewStyle { list, grid }
 
+// Add this enum after existing enums
+enum ScrollAxis {
+  vertical,
+  horizontal,
+  free
+}
+
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -530,12 +537,12 @@ class NativeUIBridge {
   }
 
   Future<String?> createScrollView({
-    bool horizontal = false,
+    ScrollAxis axis = ScrollAxis.vertical,
     EdgeInsets padding = EdgeInsets.zero,
   }) async {
     try {
       final result = await _channel.invokeMethod('createScrollView', {
-        'horizontal': horizontal,
+        'axis': axis.toString().split('.').last,
         'padding': {
           'top': padding.top,
           'left': padding.left,

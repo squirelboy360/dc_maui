@@ -47,8 +47,9 @@ Future<void> mainApp() async {
   await bridge.setViewToFillWidth(
       banner); // Already in _createBanner but ensure it's here
 
-  // Create horizontal scrollable container
+  // Create vertical scrollable container
   final scrollView = await bridge.createScrollView(
+    axis: ScrollAxis.vertical,
     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
   );
   if (scrollView == null) return;
@@ -56,8 +57,8 @@ Future<void> mainApp() async {
   await bridge.setViewToFillWidth(scrollView);
   await bridge.setViewLayout(scrollView, flex: 1);
 
-  // Create horizontal stack for scroll content
-  final contentStack = await bridge.createHStack(spacing: 16);
+  // Change HStack to VStack to match vertical scrolling
+  final contentStack = await bridge.createVStack(spacing: 16);
   if (contentStack == null) return;
   await bridge.setScrollContent(scrollView, contentStack);
 
@@ -70,7 +71,7 @@ Future<String?> _createBanner(AppState state) async {
   if (banner == null) return null;
 
   // Set banner background
-  await bridge.setViewBackgroundColor(banner, Colors.blue[800]);
+  await bridge.setViewBackgroundColor(banner, Colors.deepPurple);
 
   // Create and configure content stack
   final content = await bridge.createHStack(
@@ -112,7 +113,7 @@ Future<String?> _createBanner(AppState state) async {
     if (itemBg == null) return;
 
     // Create a fixed-size card for horizontal scrolling
-    await bridge.setViewLayout(itemBg, width: 200, height: 200);
+    await bridge.setViewLayout(itemBg, width: -1, height: 100); // Fill width, fixed height
 
     // Set the background color
     final random = Random();
