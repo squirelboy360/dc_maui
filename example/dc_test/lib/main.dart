@@ -1,108 +1,134 @@
-import 'dart:math';
 import 'package:dc_test/ui_apis.dart';
-import 'package:flutter/material.dart'
-    show Colors, runApp, SizedBox, WidgetsFlutterBinding, EdgeInsets;
+import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 
-final _bridge = NativeUIBridge();
-final _random = Random();
-final _colors = [
-  Colors.red,
-  Colors.blue,
-  Colors.green,
-  Colors.purple,
-  Colors.orange,
-  Colors.teal,
-  Colors.amber,
-  Colors.indigo
-];
+final _logger = Logger('MainApp');
+final NativeUIBridge bridge = NativeUIBridge();
 
 void main() {
-  runApp(const SizedBox());
+  _setupLogging();
+  runApp(const SizedBox()); // Run minimal Flutter app
   mainApp();
+}
+
+void _setupLogging() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name}: ${record.message}');
+  });
 }
 
 Future<void> mainApp() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final counter = ValueNotifier(0);
 
-  final rootInfo = await _bridge.getRootView();
-  if (rootInfo == null || rootInfo['viewId'] == null) return;
+  // Create a state manager class instance
+  final stateManager = AppStateManager();
 
-  final mainStack = await _bridge.createView('StackView',
-      layout: Layout(
-        mainAxisAlignment: MainAxisAlignment.start,
-        width: ViewSizeUtils.fillWidth,
-        height: ViewSizeUtils.fillHeight,
-      ));
-  await _bridge.attachView(rootInfo['viewId'] as String, mainStack!);
+  try {
+    // First get the root view to ensure it's ready
+    final rootInfo = await bridge.getRootView();
+    _logger.info('Root view ready: ${rootInfo?['viewId']}');
 
-  final topBar = await _bridge.createView('StackView',
-      layout: Layout(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        width: ViewSizeUtils.fillWidth,
-        height: ViewSizeUtils.height(100),
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        backgroundColor: Colors.grey[200],
-      ));
-  await _bridge.attachView(mainStack, topBar!);
+    if (rootInfo == null || rootInfo['viewId'] == null) {
+      _logger.severe('Root view not available');
+      return;
+    }
 
-  final leadingButton = await _bridge.createView(
-    'Button',
-    layout: Layout(height: ViewSizeUtils.height(44)),
-  );
-  await _bridge.attachView(topBar, leadingButton!);
-  await _bridge.updateView(leadingButton, {'title': 'Menu'});
+    final rootViewId = rootInfo['viewId'] as String;
 
-  final titleLabel = await _bridge.createView('Label');
-  await _bridge.attachView(topBar, titleLabel!);
-  await _bridge.updateView(titleLabel, {'text': 'Count: 0'});
+    // Create and attach views directly to root
+    final stackId = await bridge.createView('StackView');
+    if (stackId == null) {
+      _logger.severe('Failed to create stack view');
+      return;
+    }
+    await bridge.attachView(rootViewId, stackId);
 
-  final listView = await _bridge.createListView(
-    direction: ScrollDirection.vertical,
-    spacing: 12,
-    padding: EdgeInsets.all(16),
-  );
-  await _bridge.attachView(mainStack, listView!.viewId);
+    // Create a container for dynamic views
+    final containerStackId = await bridge.createView('StackView');
+    if (containerStackId == null) {
+      _logger.severe('Failed to create container stack view');
+      return;
+    }
+    await bridge.attachView(rootViewId, containerStackId);
 
-  final actionButton = await _bridge.createView(
-    'Button',
-    layout: Layout(height: ViewSizeUtils.height(44)),
-  );
-  await _bridge.attachView(topBar, actionButton!);
-  await _bridge.updateView(actionButton, {'title': 'Add'});
-  await _bridge.setViewBackgroundColor(actionButton, Colors.blue);
+    // Create button and label as before
+    final buttonId = await bridge.createView('Button');
+    if (buttonId == null) return;
+    await bridge.attachView(containerStackId, buttonId);
+    await bridge.updateView(buttonId, {'title': 'Add Number Box'});
+    await bridge.setViewBackgroundColor(buttonId, 'blue');
 
-  await _bridge.registerEvent(actionButton, 'onClick', () async {
-    counter.value++;
-    await _bridge.updateView(titleLabel, {'text': 'Count: ${counter.value}'});
+    final labelId = await bridge.createView('Label');
+    if (labelId == null) return;
+    await bridge.attachView(containerStackId, labelId);
+    await bridge
+        .updateView(labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
 
-    await listView.addItem(() async {
-      final itemStack = await _bridge.createView('StackView',
-          layout: Layout(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            padding: EdgeInsets.all(16),
-            backgroundColor: _colors[_random.nextInt(_colors.length)],
-            height: ViewSizeUtils.height(60),
-            width: ViewSizeUtils.fillWidth,
-          ));
+    // Register button click handler
+    final success = await bridge.registerEvent(buttonId, 'onClick', () async {
+      try {
+        stateManager.incrementClicks();
+        _logger.info('Creating new number box: ${stateManager.clicks}');
 
-      if (itemStack == null) return null;
+        // Create a new stack view for the number box
+        final boxStackId = await bridge.createView('StackView');
+        if (boxStackId == null) {
+          _logger.warning('Failed to create box stack view');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(containerStackId, boxStackId);
 
-      final itemLabel = await _bridge.createView('Label');
-      await _bridge.attachView(itemStack, itemLabel!);
-      await _bridge.updateView(itemLabel, {
-        'text': 'Item #${counter.value}',
-        'textColor': Colors.white,
-      });
+        // Create and style the box view
+        final boxId = await bridge.createView('View');
+        if (boxId == null) {
+          _logger.warning('Failed to create box view');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(boxStackId, boxId);
+        await bridge.setViewBackgroundColor(boxId, 'red');
 
-      return itemStack;
+        // Create and style the number label
+        final numberLabelId = await bridge.createView('Label');
+        if (numberLabelId == null) {
+          _logger.warning('Failed to create number label');
+          return false; // Fix missing return value
+        }
+        await bridge.attachView(boxStackId, numberLabelId);
+        await bridge.updateView(numberLabelId, {
+          'text': '${stateManager.clicks}',
+          'textColor': 'white',
+        });
+
+        // Update counter label
+        await bridge.updateView(
+            labelId, {'text': 'Total Boxes: ${stateManager.clicks}'});
+
+        return true;
+      } catch (e) {
+        _logger.severe('Error handling button click: $e');
+        return false;
+      }
     });
-  });
+
+    if (!success) {
+      _logger.severe('Failed to register button click handler');
+      return;
+    }
+
+    _logger.info('Native UI setup complete');
+  } catch (e) {
+    _logger.severe('Native UI initialization failed: $e');
+    _logger.severe('Error stack trace: ${StackTrace.current}');
+  }
 }
 
-class ValueNotifier<T> {
-  T _value;
-  T get value => _value;
-  set value(T newValue) => _value = newValue;
-  ValueNotifier(this._value);
+// State management class
+class AppStateManager {
+  int _clicks = 0;
+  int get clicks => _clicks;
+
+  void incrementClicks() {
+    _clicks++;
+  }
 }

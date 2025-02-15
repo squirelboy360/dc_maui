@@ -126,17 +126,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
            case "StackView":
                let stackView = UIStackView()
                stackView.axis = .vertical
+               stackView.spacing = 20
+               stackView.alignment = .center
+               stackView.distribution = .equalSpacing
                stackView.backgroundColor = .clear
-               
-               // Apply layout if provided
-               if let layout = args["layout"] as? [String: Any] {
-                   configureStackViewLayout(stackView, layout: layout)
-               } else {
-                   // Default configuration
-                   stackView.alignment = .center
-                   stackView.distribution = .equalSpacing
-                   stackView.spacing = 8
-               }
                view = stackView
                
            case "Button":
