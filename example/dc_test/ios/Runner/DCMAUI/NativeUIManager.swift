@@ -216,6 +216,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
         return
     }
     
+    childView.translatesAutoresizingMaskIntoConstraints = false
+    
     // Different attachment behavior based on parent view type
     if let stackView = parentView as? UIStackView {
         stackView.addArrangedSubview(childView)

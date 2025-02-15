@@ -35,6 +35,10 @@ class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
 
+  // Add these constants
+  static const double matchParent = -1.0;
+  static const double wrapContent = -2.0;
+
   // Singleton pattern
   static final NativeUIBridge _instance = NativeUIBridge._internal();
   factory NativeUIBridge() => _instance;
@@ -493,6 +497,18 @@ class NativeUIBridge {
       _logger.severe('Error getting safe area inset: $e');
       return 0.0;
     }
+  }
+
+  Future<bool> setViewToFillParent(String viewId) async {
+    return setViewLayout(viewId, width: matchParent, height: matchParent);
+  }
+
+  Future<bool> setViewToFillWidth(String viewId) async {
+    return setViewLayout(viewId, width: matchParent);
+  }
+
+  Future<bool> setViewToFillHeight(String viewId) async {
+    return setViewLayout(viewId, height: matchParent);
   }
 }
 

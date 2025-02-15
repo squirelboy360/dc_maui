@@ -30,8 +30,9 @@ extension NativeUIManager {
     internal func handleSetViewLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
+              let view = views[viewId],
+              let superview = view.superview else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID or no superview", details: nil))
             return
         }
         
@@ -43,11 +44,21 @@ extension NativeUIManager {
         }
         
         if let width = args["width"] as? Double {
-            view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
+            if width == -1 { // matchParent
+                view.leadingAnchor.constraint(equalTo: superview.leadingAnchor).isActive = true
+                view.trailingAnchor.constraint(equalTo: superview.trailingAnchor).isActive = true
+            } else if width > 0 {
+                view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
+            }
         }
         
         if let height = args["height"] as? Double {
-            view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
+            if height == -1 { // matchParent
+                view.topAnchor.constraint(equalTo: superview.topAnchor).isActive = true
+                view.bottomAnchor.constraint(equalTo: superview.bottomAnchor).isActive = true
+            } else if height > 0 {
+                view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
+            }
         }
         
         if let stackView = view as? UIStackView {
