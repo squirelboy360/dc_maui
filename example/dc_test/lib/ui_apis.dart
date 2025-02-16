@@ -2,30 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 
-// Add logger at the top
-final _logger = Logger('NativeUIBridge');
-
-// Add this extension for safe view operations
-extension SafeView on Future<String?> {
-  Future<String> safeView([String fallbackText = 'Not Implemented']) async {
-    final viewId = await this;
-    if (viewId == null) {
-      _logger.warning('View creation failed, using fallback: $fallbackText');
-      // Create a fallback label view
-      final fallback = await NativeUIBridge().createView('Label');
-      await NativeUIBridge().updateView(fallback!, {
-        'text': fallbackText,
-        'textColor': '#FF0000',
-      });
-      return fallback!;
-    }
-    return viewId;
-  }
-}
-
-// Add ScrollAxis enum before ScrollDirection
-enum ScrollAxis { vertical, horizontal, free }
-
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
@@ -57,6 +33,121 @@ extension ColorExtension on Color {
 
 enum ListViewStyle { list, grid }
 
+// Add this enum after existing enums
+enum ScrollAxis { vertical, horizontal, free }
+
+// Layout system enums and types
+enum LayoutType { flex, absolute, relative }
+
+enum LayoutAlign { auto, start, center, end, stretch, baseline }
+
+// Yoga-compatible layout enums
+enum YogaAlign {
+  auto,
+  flexStart,
+  center,
+  flexEnd,
+  stretch,
+  baseline,
+  spaceBetween,
+  spaceAround
+}
+
+enum YogaFlexDirection { row, column, rowReverse, columnReverse }
+
+enum YogaJustify {
+  flexStart,
+  center,
+  flexEnd,
+  spaceBetween,
+  spaceAround,
+  spaceEvenly
+}
+
+enum YogaPositionType { relative, absolute }
+
+enum YogaDisplay { flex, none }
+
+// Yoga-compatible layout configuration
+class LayoutConfig {
+  final String type;
+  final dynamic width; // Can be double or String (for percentages)
+  final dynamic height; // Can be double or String (for percentages)
+  final EdgeInsets? margin;
+  final EdgeInsets? padding;
+  final Offset? position;
+  final double? flex;
+  final double? flexGrow;
+  final double? flexShrink;
+  final double? flexBasis;
+  final String? flexDirection;
+  final String? justifyContent;
+  final String? alignItems;
+  final String? alignSelf;
+  final double? minWidth;
+  final double? minHeight;
+  final double? maxWidth;
+  final double? maxHeight;
+
+  const LayoutConfig({
+    this.type = 'flex',
+    this.width,
+    this.height,
+    this.margin,
+    this.padding,
+    this.position,
+    this.flex,
+    this.flexGrow,
+    this.flexShrink,
+    this.flexBasis,
+    this.flexDirection,
+    this.justifyContent,
+    this.alignItems,
+    this.alignSelf,
+    this.minWidth,
+    this.minHeight,
+    this.maxWidth,
+    this.maxHeight,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
+        if (margin != null)
+          'margin': {
+            'top': margin?.top,
+            'right': margin?.right,
+            'bottom': margin?.bottom,
+            'left': margin?.left,
+          },
+        if (padding != null)
+          'padding': {
+            'top': padding?.top,
+            'right': padding?.right,
+            'bottom': padding?.bottom,
+            'left': padding?.left,
+          },
+        if (position != null)
+          'position': {
+            'x': position?.dx,
+            'y': position?.dy,
+          },
+        if (flex != null) 'flex': flex,
+        if (flexGrow != null) 'flexGrow': flexGrow,
+        if (flexShrink != null) 'flexShrink': flexShrink,
+        if (flexBasis != null) 'flexBasis': flexBasis,
+        if (flexDirection != null) 'flexDirection': flexDirection,
+        if (justifyContent != null) 'justifyContent': justifyContent,
+        if (alignItems != null) 'alignItems': alignItems,
+        if (alignSelf != null) 'alignSelf': alignSelf,
+        if (minWidth != null) 'minWidth': minWidth,
+        if (minHeight != null) 'minHeight': minHeight,
+        if (maxWidth != null) 'maxWidth': maxWidth,
+        if (maxHeight != null) 'maxHeight': maxHeight,
+      };
+}
+
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -66,9 +157,9 @@ class NativeUIBridge {
   static const double wrapContent = -2.0;
 
   // Singleton pattern
-  static final NativeUIBridge _instance = NativeUIBridge._internal();
+  static final NativeUIBridge _instance = NativeUIBridge._();
   factory NativeUIBridge() => _instance;
-  NativeUIBridge._internal() {
+  NativeUIBridge._() {
     _setupEventHandler();
   }
 
@@ -130,33 +221,6 @@ class NativeUIBridge {
       _logger.severe('Error creating view: $e');
       return null;
     }
-  }
-
-  // Update create methods to use the safe extension
-  Future<String> createSafeView(String viewType,
-      {Map<String, dynamic>? properties}) async {
-    return createView(viewType, properties: properties).safeView();
-  }
-
-  Future<String> createSafeStack(
-    StackType type, {
-    double spacing = 8.0,
-    FlexAlignment? alignment,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) async {
-    return createStackView(type,
-            spacing: spacing, alignment: alignment, padding: padding)
-        .safeView('Stack Creation Failed');
-  }
-
-  // Example usage in your todo app:
-  Future<String> createSafeButton(String title,
-      {Color? backgroundColor}) async {
-    return createView('Button', properties: {
-      'title': title,
-      if (backgroundColor != null)
-        'backgroundColor': backgroundColor.toHexString(),
-    }).safeView('Button Creation Failed');
   }
 
   /// Attaches child view to parent view in native hierarchy
@@ -613,6 +677,80 @@ class NativeUIBridge {
       _logger.severe('Error setting scroll content: $e');
       return false;
     }
+  }
+
+  // Single unified layout method
+  Future<bool> setLayout(String viewId, LayoutConfig config) async {
+    try {
+      final result = await _channel.invokeMethod('applyLayout', {
+        'viewId': viewId,
+        ...config.toJson(),
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error applying layout: $e');
+      return false;
+    }
+  }
+
+  // Convenience methods
+  Future<bool> centerInParent(String viewId) {
+    return setLayout(
+        viewId,
+        const LayoutConfig(
+          alignSelf: 'center',
+          justifyContent: 'center',
+        ));
+  }
+
+  Future<bool> fillParent(String viewId) {
+    return setLayout(
+        viewId,
+        const LayoutConfig(
+          width: '100%',
+          height: '100%',
+        ));
+  }
+
+  Future<bool> setAbsoluteLayout(
+    String viewId, {
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    EdgeInsets? margin,
+  }) {
+    return setLayout(
+        viewId,
+        LayoutConfig(
+          type: 'absolute',
+          position: x != null || y != null ? Offset(x ?? 0, y ?? 0) : null,
+          width: width,
+          height: height,
+          margin: margin,
+        ));
+  }
+
+  Future<bool> setFlexLayout(
+    String viewId, {
+    String? direction,
+    String? justify,
+    String? alignItems,
+    double? flex,
+    EdgeInsets? margin,
+    EdgeInsets? padding,
+  }) {
+    return setLayout(
+        viewId,
+        LayoutConfig(
+          type: 'flex',
+          flexDirection: direction,
+          justifyContent: justify,
+          alignItems: alignItems,
+          flex: flex,
+          margin: margin,
+          padding: padding,
+        ));
   }
 }
 
