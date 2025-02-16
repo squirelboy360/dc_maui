@@ -26,7 +26,8 @@ Future<void> mainApp() async {
   final rootId = (await bridge.getRootView())!['viewId'] as String;
 
   // Create main stack with full width
-  final mainStack = await bridge.createSafeStack(StackType.vertical, spacing: 0);
+  final mainStack =
+      await bridge.createSafeStack(StackType.vertical, spacing: 0);
   await bridge.attachView(rootId, mainStack);
   await bridge.setViewToFillParent(mainStack);
 
@@ -57,14 +58,14 @@ Future<void> mainApp() async {
   });
   await bridge.setViewToFillWidth(titleLabel);
 
-  // Add button with fixed width and left alignment
+  // Add button with proper layout
   final addButton = await bridge.createSafeButton('Add New Todo');
   await bridge.attachView(headerStack, addButton);
-  await bridge.setViewBackgroundColor(addButton, Colors.blue);
+  await bridge.setViewBackgroundColor(addButton, Colors.amber);
   await bridge.setViewLayout(
-    addButton, 
+    addButton,
     width: 150,
-    alignment: FlexAlignment.start, // Add this
+    alignment: FlexAlignment.center, // This aligns within parent
   );
 
   // Create scroll view
@@ -88,21 +89,23 @@ Future<void> mainApp() async {
     print('Add button clicked'); // Debug log
     final todo = TodoItem(text: 'Todo ${state.todos.length + 1}');
     state.todos.add(todo);
-    
+
     final itemView = await createTodoItemView(bridge, state, todo);
     todo.viewId = itemView;
-    
-    print('Attaching new todo item to stack: ${state.contentStack}'); // Debug log
+
+    print(
+        'Attaching new todo item to stack: ${state.contentStack}'); // Debug log
     await bridge.attachView(state.contentStack!, itemView);
   });
 }
 
+// Fix todo items to fill width
 Future<String> createTodoItemView(
     NativeUIBridge bridge, AppState state, TodoItem todo) async {
   final itemContainer = await bridge.createSafeView('View');
   await bridge.setViewBackgroundColor(itemContainer, Colors.grey[200]);
   await bridge.setViewLayout(itemContainer, height: 60);
-  await bridge.setViewToFillWidth(itemContainer);
+  await bridge.setViewToFillWidth(itemContainer); // Make sure item fills width
 
   final rowStack = await bridge.createSafeStack(
     StackType.horizontal,
@@ -116,7 +119,7 @@ Future<String> createTodoItemView(
   // Create buttons with fixed sizes
   final checkbox = await bridge.createSafeButton(todo.isCompleted ? '✓' : '○');
   await bridge.attachView(rowStack, checkbox);
-  await bridge.setViewLayout(checkbox, width: 40, height: 40);
+  await bridge.setViewLayout(checkbox, width: 65, height: 65);
   await bridge.setViewBackgroundColor(
       checkbox, todo.isCompleted ? Colors.green : Colors.grey);
 

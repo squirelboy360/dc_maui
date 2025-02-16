@@ -34,50 +34,59 @@ extension NativeUIManager {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
             return
         }
-        
-        // Ensure view has been added to hierarchy before setting constraints
-        DispatchQueue.main.async { [self] in  // Add [self] capture list
-            if view.superview == nil {
-                result(FlutterError(code: "NO_SUPERVIEW", message: "View must be attached before setting layout", details: nil))
+
+        DispatchQueue.main.async {
+            // Ensure view has a superview
+            guard let superview = view.superview else {
+                result(FlutterError(code: "NO_SUPERVIEW", message: "View must be attached", details: nil))
                 return
             }
-            
+
             // Remove existing constraints
             view.constraints.forEach { constraint in
                 if constraint.firstAttribute == .width || constraint.firstAttribute == .height {
                     view.removeConstraint(constraint)
                 }
             }
-            
-            // Set new constraints
+
+            // Handle width
             if let width = args["width"] as? Double {
                 if width == -1 { // matchParent
-                    view.leadingAnchor.constraint(equalTo: view.superview!.leadingAnchor).isActive = true
-                    view.trailingAnchor.constraint(equalTo: view.superview!.trailingAnchor).isActive = true
+                    NSLayoutConstraint.activate([
+                        view.leadingAnchor.constraint(equalTo: superview.leadingAnchor),
+                        view.trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+                    ])
                 } else if width > 0 {
                     view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
                 }
             }
-            
+
+            // Handle height
             if let height = args["height"] as? Double {
                 if height == -1 { // matchParent
-                    view.topAnchor.constraint(equalTo: view.superview!.topAnchor).isActive = true
-                    view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor).isActive = true
+                    NSLayoutConstraint.activate([
+                        view.topAnchor.constraint(equalTo: superview.topAnchor),
+                        view.bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                    ])
                 } else if height > 0 {
                     view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
                 }
             }
-            
-            if let stackView = view as? UIStackView {
-                if let spacing = args["spacing"] as? Double {
-                    stackView.spacing = CGFloat(spacing)
-                }
-                
-                if let alignment = args["alignment"] as? String {
-                    stackView.alignment = self.convertStackAlignment(alignment)  // Explicitly use self
+
+            // Handle alignment
+            if let alignment = args["alignment"] as? String {
+                switch alignment {
+                case "center":
+                    view.centerXAnchor.constraint(equalTo: superview.centerXAnchor).isActive = true
+                case "start":
+                    view.leadingAnchor.constraint(equalTo: superview.leadingAnchor).isActive = true
+                case "end":
+                    view.trailingAnchor.constraint(equalTo: superview.trailingAnchor).isActive = true
+                default:
+                    break
                 }
             }
-            
+
             result(true)
         }
     }
