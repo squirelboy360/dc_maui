@@ -148,7 +148,8 @@ struct LayoutConfig {
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    private func applyYogaLayout(to view: UIView, config: LayoutConfig) {
+    // Change from private to internal
+    internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
         let node = YGNodeNew()
         defer { YGNodeFree(node) }
         

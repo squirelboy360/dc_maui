@@ -599,4 +599,25 @@ extension NativeUIManager {
         default: return .fill
         }
     }
+
+    private func handleSetViewLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let view = views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
+            return
+        }
+        
+        // Create layout config from arguments
+        let config = LayoutConfig(from: args)
+        
+        // Apply the layout
+        applyYogaLayout(to: view, config: config)
+        
+        // Trigger layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        result(true)
+    }
 }
