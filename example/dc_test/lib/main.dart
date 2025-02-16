@@ -6,24 +6,25 @@ import 'package:logging/logging.dart';
 final _logger = Logger('MainApp');
 final NativeUIBridge bridge = NativeUIBridge();
 
+class TodoItem {
+  String text;
+  bool isCompleted;
+  String? viewId;
+
+  TodoItem({required this.text, this.isCompleted = false});
+}
+
+class AppState {
+  List<TodoItem> todos = [];
+  String? contentStack;
+}
+
 void main() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen(
       (record) => debugPrint('${record.level.name}: ${record.message}'));
   runApp(const SizedBox());
   mainApp();
-}
-
-class AppState {
-  int _counter = 0;
-  int get counter => _counter;
-  void increment() => _counter++;
-
-  // Add listView property
-  ListViewController? listView;
-
-  // Add contentStack property
-  String? contentStack;
 }
 
 Future<void> mainApp() async {
@@ -38,107 +39,140 @@ Future<void> mainApp() async {
   final mainStack = await bridge.createVStack(spacing: 0);
   if (mainStack == null) return;
   await bridge.attachView(rootId, mainStack);
-  await bridge.setViewToFillParent(mainStack); // Add this line
+  await bridge.setViewToFillParent(mainStack);
 
-  // Create banner and ensure it fills width
-  final banner = await _createBanner(state);
-  if (banner == null) return;
-  await bridge.attachView(mainStack, banner);
-  await bridge.setViewToFillWidth(
-      banner); // Already in _createBanner but ensure it's here
+  // Create header
+  final header = await bridge.createView('View');
+  if (header == null) return;
+  await bridge.attachView(mainStack, header);
+  await bridge.setViewBackgroundColor(header, Colors.deepPurple);
+  await bridge.setViewLayout(header, height: 120);
+  await bridge.setViewToFillWidth(header);
 
-  // Create vertical scrollable container
+  // Create header stack with proper padding
+  final headerStack = await bridge.createVStack(
+    spacing: 16,
+    padding: EdgeInsets.fromLTRB(16, 40, 16, 16),
+  );
+  if (headerStack == null) return;
+  await bridge.attachView(header, headerStack);
+  await bridge.setViewToFillParent(headerStack);
+
+  // Add title label
+  final titleLabel = await bridge.createView('Label');
+  if (titleLabel == null) return;
+  await bridge.attachView(headerStack, titleLabel);
+  await bridge.updateView(titleLabel, {
+    'text': 'Todo App',
+    'textColor': Colors.white,
+  });
+  await bridge.setViewToFillWidth(titleLabel);
+
+  // Add button
+  final addButton = await bridge.createView('Button');
+  if (addButton == null) return;
+  await bridge.attachView(headerStack, addButton);
+  await bridge.updateView(addButton, {'title': 'Add New Todo'});
+  await bridge.setViewBackgroundColor(addButton, Colors.blue);
+  await bridge.setViewToFillWidth(addButton);
+
+  // Create scroll container for todos
   final scrollView = await bridge.createScrollView(
     axis: ScrollAxis.vertical,
-    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    padding: EdgeInsets.all(16),
   );
   if (scrollView == null) return;
   await bridge.attachView(mainStack, scrollView);
   await bridge.setViewToFillWidth(scrollView);
   await bridge.setViewLayout(scrollView, flex: 1);
 
-  // Change HStack to VStack to match vertical scrolling
-  final contentStack = await bridge.createVStack(spacing: 16);
-  if (contentStack == null) return;
-  await bridge.setScrollContent(scrollView, contentStack);
+  // Create todo list stack
+  final todoList = await bridge.createVStack(spacing: 8);
+  if (todoList == null) return;
+  await bridge.setScrollContent(scrollView, todoList);
+  await bridge.setViewToFillWidth(todoList);
+  state.contentStack = todoList;
 
-  state.contentStack = contentStack;
-  _logger.info('UI Setup Complete');
+  // Add button click handler
+  await bridge.registerEvent(addButton, 'onClick', () async {
+    final todo = TodoItem(text: 'Todo ${state.todos.length + 1}');
+    state.todos.add(todo);
+    
+    final todoView = await createTodoItemView(state, todo);
+    if (todoView == null) return;
+    
+    todo.viewId = todoView;
+    await bridge.attachView(state.contentStack!, todoView);
+  });
 }
 
-Future<String?> _createBanner(AppState state) async {
-  final banner = await bridge.createView('View');
-  if (banner == null) return null;
+Future<String?> createTodoItemView(AppState state, TodoItem todo) async {
+  final itemContainer = await bridge.createView('View');
+  if (itemContainer == null) return null;
 
-  // Set banner background
-  await bridge.setViewBackgroundColor(banner, Colors.deepPurple);
+  await bridge.setViewBackgroundColor(itemContainer, Colors.grey[200]);
+  await bridge.setViewToFillWidth(itemContainer);
+  await bridge.setViewLayout(itemContainer, height: 60);
 
-  // Create and configure content stack
-  final content = await bridge.createHStack(
-      spacing: 16,
-      alignment: FlexAlignment.spaceBetween,
-      padding: EdgeInsets.symmetric(horizontal: 16));
-  if (content == null) return null;
+  final rowStack = await bridge.createHStack(
+    spacing: 16,
+    alignment: FlexAlignment.spaceBetween,
+    padding: EdgeInsets.symmetric(horizontal: 16),
+  );
+  if (rowStack == null) return null;
+  
+  await bridge.attachView(itemContainer, rowStack);
+  await bridge.setViewToFillParent(rowStack);
 
-  // First attach the content to banner
-  await bridge.attachView(banner, content);
+  // Create checkbox button
+  final checkbox = await bridge.createView('Button');
+  if (checkbox == null) return null;
+  await bridge.attachView(rowStack, checkbox);
+  await bridge.updateView(checkbox, {'title': todo.isCompleted ? '✓' : '○'});
+  await bridge.setViewBackgroundColor(
+    checkbox,
+    todo.isCompleted ? Colors.green : Colors.grey,
+  );
+  await bridge.setViewLayout(checkbox, width: 40, height: 40);
 
-  // Then set the content layout
-  await bridge.setViewToFillParent(content);
+  // Create label
+  final label = await bridge.createView('Label');
+  if (label == null) return null;
+  await bridge.attachView(rowStack, label);
+  await bridge.updateView(label, {
+    'text': todo.text,
+    'textColor': todo.isCompleted ? Colors.grey : Colors.black,
+  });
+  await bridge.setViewLayout(label, flex: 1);
 
-  final leadingBtn = await bridge.createView('Button');
-  if (leadingBtn == null) return null;
-  await bridge.attachView(content, leadingBtn);
-  await bridge.updateView(leadingBtn, {'title': 'Menu'});
-  await bridge.setViewBackgroundColor(leadingBtn, Colors.pink);
+  // Create delete button
+  final deleteBtn = await bridge.createView('Button');
+  if (deleteBtn == null) return null;
+  await bridge.attachView(rowStack, deleteBtn);
+  await bridge.updateView(deleteBtn, {'title': '×'});
+  await bridge.setViewBackgroundColor(deleteBtn, Colors.red);
+  await bridge.setViewLayout(deleteBtn, width: 40, height: 40);
 
-  final titleLabel = await bridge.createView('Label');
-  if (titleLabel == null) return null;
-  await bridge.attachView(content, titleLabel);
-  await bridge.updateView(titleLabel,
-      {'text': 'App Count: ${state.counter}', 'textColor': Colors.yellow});
+  // Add checkbox handler
+  await bridge.registerEvent(checkbox, 'onClick', () async {
+    todo.isCompleted = !todo.isCompleted;
+    await bridge.updateView(checkbox, {'title': todo.isCompleted ? '✓' : '○'});
+    await bridge.setViewBackgroundColor(
+      checkbox,
+      todo.isCompleted ? Colors.green : Colors.grey,
+    );
+    await bridge.updateView(label, {
+      'textColor': todo.isCompleted ? Colors.grey : Colors.black,
+    });
+  });
 
-  final trailingBtn = await bridge.createView('Button');
-  if (trailingBtn == null) return null;
-  await bridge.attachView(content, trailingBtn);
-  await bridge.updateView(trailingBtn, {'title': 'Add'});
-  await bridge.setViewBackgroundColor(trailingBtn, Colors.blue);
-
-  await bridge.registerEvent(trailingBtn, 'onClick', () async {
-    state.increment();
-    await bridge
-        .updateView(titleLabel, {'text': 'App Count: ${state.counter}'});
-
-    final itemBg = await bridge.createView('View');
-    if (itemBg == null) return;
-
-    // Create a fixed-size card for horizontal scrolling
-    await bridge.setViewLayout(itemBg, width: -1, height: 100); // Fill width, fixed height
-
-    // Set the background color
-    final random = Random();
-    final color = Color.fromRGBO(
-        random.nextInt(255), random.nextInt(255), random.nextInt(255), 1);
-    await bridge.setViewBackgroundColor(itemBg, color);
-
-    // Create and configure the label
-    final itemLabel = await bridge.createView('Label');
-    if (itemLabel == null) return;
-    await bridge.attachView(itemBg, itemLabel);
-    await bridge.updateView(itemLabel,
-        {'text': 'Item ${state.counter}', 'textColor': Colors.white});
-    await bridge.setViewLayout(itemLabel,
-        width: -1, height: -1); // Make label fill parent
-
-    // Add the card to the horizontal stack
-    if (state.contentStack != null) {
-      await bridge.attachView(state.contentStack!, itemBg);
+  // Add delete handler
+  await bridge.registerEvent(deleteBtn, 'onClick', () async {
+    if (todo.viewId != null) {
+      await bridge.deleteView(todo.viewId!);
+      state.todos.remove(todo);
     }
   });
 
-  // Set banner layout last, after all children are attached
-  await bridge.setViewLayout(banner, height: 100);
-  await bridge.setViewToFillWidth(banner);
-
-  return banner;
+  return itemContainer;
 }
