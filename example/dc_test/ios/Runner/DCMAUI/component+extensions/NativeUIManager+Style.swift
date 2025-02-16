@@ -66,9 +66,13 @@ struct ImageStyle {
 
 extension UIView {
     func apply(_ style: ViewStyle) {
+        print("Applying style to view: \(self)")
+        print("Style properties: \(style)")
+        
         // Background
         if let color = style.backgroundColor {
             backgroundColor = color
+            print("Applied background color: \(color)")
         }
         
         // Opacity
@@ -146,6 +150,7 @@ extension UIView {
         
         // Gradient
         if let gradient = style.gradient {
+            print("Applying gradient: \(gradient)")
             gradient.apply(to: self)
         }
     }

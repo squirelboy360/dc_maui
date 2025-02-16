@@ -31,22 +31,22 @@ class NativeUIManager: NSObject, FlutterPlugin {
           }
       }
     private func setupRootView() {
+        print("Setting up root view")
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            // Create a new window with the correct frame
             window = UIWindow(frame: windowScene.coordinateSpace.bounds)
             window?.windowScene = windowScene
             
-            // Create root view controller
             let rootVC = UIViewController()
             rootVC.view.backgroundColor = .white
+            print("Root view controller frame: \(rootVC.view.frame)")
             
-            // Create root view with proper frame
             let rootView = UIView(frame: rootVC.view.bounds)
             rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             rootView.backgroundColor = .white
+            print("Root view frame: \(rootView.frame)")
+            
             rootVC.view.addSubview(rootView)
             
-            // Set up window
             rootViewId = "root-\(UUID().uuidString)"
             views[rootViewId!] = rootView
             childViews[rootViewId!] = []
@@ -54,14 +54,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
             window?.rootViewController = rootVC
             window?.makeKeyAndVisible()
             
-            // Hide Flutter view by finding the FlutterViewController
-            if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }),
-               let flutterVC = keyWindow.rootViewController as? FlutterViewController {
-                flutterVC.view.isHidden = true
-            }
-            
-            // Log success
-            print("Native UI window setup complete with root view: \(rootViewId!)")
+            print("Root view setup complete with ID: \(rootViewId!)")
+            print("Window frame: \(window?.frame ?? .zero)")
         }
     }
 
@@ -126,6 +120,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleCreateScrollView(call, result: result)
             case "setScrollContent":
                 self.handleSetScrollContent(call, result: result)
+            case "applyLayout":  // Add this case to handle layout application
+                self.applyLayout(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -133,113 +129,126 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func handleCreateView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-           guard let args = call.arguments as? [String: Any],
-                 let viewType = args["viewType"] as? String else {
-               result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing viewType", details: nil))
-               return
-           }
-           
-           let view: UIView?
-           let viewId = "\(viewType.lowercased())-\(UUID().uuidString)"
-           
-           switch viewType {
-           case "View":
-               let containerView = UIView()
-               containerView.setupForBackground()
-               view = containerView
-               
-           case "StackView":
-               let stackView = UIStackView()
-               stackView.setupForBackground()
-               stackView.axis = .vertical
-               stackView.spacing = 8
-               stackView.alignment = .fill
-               stackView.distribution = .fill
-               view = stackView
-               
-           case "Button":
-               let button = UIButton(type: .system)
-               button.setTitle(args["title"] as? String ?? "Button", for: .normal)
-               button.backgroundColor = .systemBlue
-               button.setTitleColor(.white, for: .normal)
-               button.layer.cornerRadius = 8
-               button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
-               view = button
-               
-           case "Label":
-               let label = UILabel()
-               label.text = args["text"] as? String ?? ""
-               label.textAlignment = .center
-               label.numberOfLines = 0
-               label.font = .systemFont(ofSize: 17)
-               view = label
-               
-           default:
-               view = UIView()
-           }
-           
-           view?.translatesAutoresizingMaskIntoConstraints = false
-           
-           if let view = view {
-               views[viewId] = view
-               childViews[viewId] = []
-               
-               // Apply initial layout if provided
-               if let layout = args["layout"] as? [String: Any] {
-                   applyLayout(to: view, layout: layout)
-               }
-               
-               result(viewId)
-           } else {
-               result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
-           }
-       }
-
-       private func applyLayout(to view: UIView, layout: [String: Any]) {
-           if let width = layout["width"] as? Double {
-               view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
-           }
-           
-           if let height = layout["height"] as? Double {
-               view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
-           }
-           
-           if let flex = layout["flex"] as? Double {
-               view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
-               view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
-           }
-       }
-
-       private func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard let args = call.arguments as? [String: Any],
-          let parentId = args["parentId"] as? String,
-          let childId = args["childId"] as? String,
-          let parentView = views[parentId],
-          let childView = views[childId] else {
-        result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
-        return
+        print("Creating view with arguments: \(String(describing: call.arguments))")
+        
+        guard let args = call.arguments as? [String: Any],
+              let viewType = args["viewType"] as? String else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing viewType", details: nil))
+            return
+        }
+        
+        let view: UIView?
+        let viewId = "\(viewType.lowercased())-\(UUID().uuidString)"
+        
+        switch viewType {
+        case "View":
+            let containerView = UIView(frame: .zero)
+            containerView.backgroundColor = .clear
+            view = containerView
+            
+        case "Label":
+            let label = UILabel()
+            label.text = (args["properties"] as? [String: Any])?["text"] as? String
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            label.adjustsFontSizeToFitWidth = true
+            view = label
+            
+        case "Button":
+            let button = UIButton(type: .system)
+            if let properties = args["properties"] as? [String: Any] {
+                button.setTitle(properties["text"] as? String, for: .normal)
+                if let textStyle = (properties["textStyle"] as? [String: Any]) {
+                    if let fontSize = textStyle["fontSize"] as? CGFloat {
+                        button.titleLabel?.font = .systemFont(ofSize: fontSize)
+                    }
+                }
+            }
+            button.backgroundColor = .systemBlue
+            button.setTitleColor(.white, for: .normal)
+            button.layer.masksToBounds = true
+            view = button
+            
+        default:
+            view = UIView()
+        }
+        
+        view?.translatesAutoresizingMaskIntoConstraints = false
+        
+        if let view = view {
+            views[viewId] = view
+            childViews[viewId] = []
+            
+            // Important: Apply styles before layout
+            if let properties = args["properties"] as? [String: Any] {
+                let style = NativeViewStyle(from: properties)
+                style.apply(to: view)
+            }
+            
+            // Apply layout with proper parent bounds
+            if let layout = args["layout"] as? [String: Any] {
+                let config = LayoutConfig(from: layout)
+                if let superview = view.superview {
+                    view.frame = CGRect(origin: .zero, size: superview.bounds.size)
+                } else {
+                    view.frame = UIScreen.main.bounds
+                }
+                applyYogaLayout(to: view, config: config)
+            }
+            
+            result(viewId)
+        } else {
+            result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
+        }
     }
-    
-    childView.translatesAutoresizingMaskIntoConstraints = false
-    
-    // Different attachment behavior based on parent view type
-    if let stackView = parentView as? UIStackView {
-        stackView.addArrangedSubview(childView)
-    } else if parentView is ZStackView {
-        parentView.addSubview(childView)
-        // ZStackView will handle its own constraints in addSubview
-    } else {
-        parentView.addSubview(childView)
-        // Default centering behavior for regular views
-        NSLayoutConstraint.activate([
-            childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-            childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor)
-        ])
+
+    private func applyLayout(to view: UIView, layout: [String: Any]) {
+        if let width = layout["width"] as? Double {
+            view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
+        }
+        
+        if let height = layout["height"] as? Double {
+            view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
+        }
+        
+        if let flex = layout["flex"] as? Double {
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
+        }
     }
-    
-    childViews[parentId]?.append(childId)
-    result(true)
-}
+
+    private func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        print("Attaching view with arguments: \(String(describing: call.arguments))")
+        
+        guard let args = call.arguments as? [String: Any],
+              let parentId = args["parentId"] as? String,
+              let childId = args["childId"] as? String,
+              let parentView = views[parentId],
+              let childView = views[childId] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
+            return
+        }
+        
+        childView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Different attachment behavior based on parent view type
+        if let stackView = parentView as? UIStackView {
+            stackView.addArrangedSubview(childView)
+        } else if parentView is ZStackView {
+            parentView.addSubview(childView)
+            // ZStackView will handle its own constraints in addSubview
+        } else {
+            parentView.addSubview(childView)
+            // Default centering behavior for regular views
+            NSLayoutConstraint.activate([
+                childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
+                childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor)
+            ])
+        }
+        
+        childViews[parentId]?.append(childId)
+        result(true)
+    }
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
@@ -272,37 +281,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        // Handle color properties
-        if let backgroundColor = properties["backgroundColor"] as? String {
-            applyColorToView(view, colorString: backgroundColor, colorType: .background)
-        }
-        if let textColor = properties["textColor"] as? String {
-            applyColorToView(view, colorString: textColor, colorType: .text)
-        }
+        let style = NativeViewStyle(from: properties)
+        style.apply(to: view)
         
-        if let button = view as? UIButton {
-            if let title = properties["title"] as? String {
-                button.setTitle(title, for: .normal)
-            }
-        } else if let label = view as? UILabel {
-            if let text = properties["text"] as? String {
-                label.text = text
-            }
-        } else if let textField = view as? UITextField {
-            if let text = properties["text"] as? String {
-                textField.text = text
-            }
-            if let placeholder = properties["placeholder"] as? String {
-                textField.placeholder = placeholder
-            }
-        } else if let stackView = view as? UIStackView {
-            if let spacing = properties["spacing"] as? CGFloat {
-                stackView.spacing = spacing
-            }
-            if let axis = properties["axis"] as? String {
-                stackView.axis = axis == "horizontal" ? .horizontal : .vertical
-            }
-        }
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
         
         result(true)
     }
@@ -608,16 +591,17 @@ extension NativeUIManager {
             return
         }
         
-        // Create layout config from arguments
-        let config = LayoutConfig(from: args)
-        
-        // Apply the layout
-        applyYogaLayout(to: view, config: config)
-        
-        // Trigger layout update
+        // Create layout config from arguments        let config = LayoutConfig(from: args)                // Apply the layout        applyYogaLayout(to: view, config: config)                // Trigger layout update
         view.setNeedsLayout()
         view.layoutIfNeeded()
         
         result(true)
+    }
+}
+
+extension UIView {
+    func setupForBackground() {
+        backgroundColor = .clear
+        clipsToBounds = true
     }
 }

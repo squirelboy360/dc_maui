@@ -45,24 +45,53 @@ struct LayoutConfig {
     var bottom: YGValue?
     
     init(from dict: [String: Any]) {
-        // Parse width/height
-        if let widthStr = dict["width"] as? String {
-            if (widthStr.hasSuffix("%")) {
-                let value = Float(widthStr.dropLast()) ?? 100
+        print("Initializing LayoutConfig with: \(dict)")
+        
+        // Handle width
+        if let widthDict = dict["width"] as? [String: Any] {
+            let value = Float(truncating: widthDict["value"] as? NSNumber ?? 0)
+            let unitString = widthDict["unit"] as? String ?? "point"
+            
+            switch unitString {
+            case "percent":
                 width = YGValue(value: value, unit: .percent)
-            } else if let numWidth = Float(widthStr) {
-                width = YGValue(value: numWidth, unit: .point)
+                print("Setting percent width: \(value)%")
+            case "point":
+                width = YGValue(value: value, unit: .point)
+                print("Setting point width: \(value)pt")
+            case "auto":
+                width = YGValue(value: Float.nan, unit: .auto)
+                print("Setting auto width")
+            default:
+                width = YGValue(value: Float.nan, unit: .undefined)
+                print("Setting undefined width")
             }
         }
         
-        if let heightStr = dict["height"] as? String {
-            if (heightStr.hasSuffix("%")) {
-                let value = Float(heightStr.dropLast()) ?? 100
+        // Handle height
+        if let heightDict = dict["height"] as? [String: Any] {
+            let value = Float(truncating: heightDict["value"] as? NSNumber ?? 0)
+            let unitString = heightDict["unit"] as? String ?? "point"
+            
+            switch unitString {
+            case "percent":
                 height = YGValue(value: value, unit: .percent)
-            } else if let numHeight = Float(heightStr) {
-                height = YGValue(value: numHeight, unit: .point)
+                print("Setting percent height: \(value)%")
+            case "point":
+                height = YGValue(value: value, unit: .point)
+                print("Setting point height: \(value)pt")
+            case "auto":
+                height = YGValue(value: Float.nan, unit: .auto)
+                print("Setting auto height")
+            default:
+                height = YGValue(value: Float.nan, unit: .undefined)
+                print("Setting undefined height")
             }
         }
+        
+        // Add explicit debug logging
+        print("Parsed width: \(width)")
+        print("Parsed height: \(height)")
         
         // Position type
         if let positionStr = dict["position"] as? String {
@@ -148,88 +177,114 @@ struct LayoutConfig {
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    // Change from private to internal
     internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-        let node = YGNodeNew()
-        defer { YGNodeFree(node) }
+        guard let rootNode = YGNodeNew() else { return }
+        defer { YGNodeFree(rootNode) }
         
-        // Direction and alignment
+        guard let viewNode = YGNodeNew() else { return }
+        defer { YGNodeFree(viewNode) }
+        
+        // Build the yoga node tree
+        buildYogaNodeTree(for: view, node: viewNode)
+        YGNodeInsertChild(rootNode, viewNode, 0)
+        
+        // Apply layout config to view's node
+        configureYogaNode(viewNode, with: config)
+        
+        // Calculate layout using parent's dimensions
+        let parentWidth = view.superview?.bounds.width ?? UIScreen.main.bounds.width
+        let parentHeight = view.superview?.bounds.height ?? UIScreen.main.bounds.height
+        
+        print("Calculating layout with parent dimensions: \(parentWidth) x \(parentHeight)")
+        YGNodeCalculateLayout(rootNode, Float(parentWidth), Float(parentHeight), .LTR)
+        
+        // Apply calculated layout recursively
+        applyYogaLayout(from: viewNode, to: view)
+        
+        // Clean up child nodes
+        cleanupYogaNodes(for: view)
+    }
+    
+    private func buildYogaNodeTree(for view: UIView, node: YGNodeRef) {
+        for subview in view.subviews {
+            guard let childNode = YGNodeNew() else { continue }
+            buildYogaNodeTree(for: subview, node: childNode)
+            // Fix: Convert UInt32 to Int for YGNodeInsertChild
+            let childCount = Int(YGNodeGetChildCount(node))
+            YGNodeInsertChild(node, childNode, childCount)
+        }
+    }
+    
+    private func configureYogaNode(_ node: YGNodeRef, with config: LayoutConfig) {
+        // Width/Height
+        switch config.width.unit {
+        case .percent:
+            YGNodeStyleSetWidthPercent(node, config.width.value)
+        case .point:
+            YGNodeStyleSetWidth(node, config.width.value)
+        case .auto:
+            YGNodeStyleSetWidthAuto(node)
+        default:
+            break
+        }
+        
+        switch config.height.unit {
+        case .percent:
+            YGNodeStyleSetHeightPercent(node, config.height.value)
+        case .point:
+            YGNodeStyleSetHeight(node, config.height.value)
+        case .auto:
+            YGNodeStyleSetHeightAuto(node)
+        default:
+            break
+        }
+        
+        // Flex properties
         YGNodeStyleSetFlexDirection(node, config.flexDirection)
         YGNodeStyleSetJustifyContent(node, config.justifyContent)
         YGNodeStyleSetAlignItems(node, config.alignItems)
         YGNodeStyleSetAlignSelf(node, config.alignSelf)
         
-        // Width and height
-        YGNodeStyleSetWidth(node, config.width.value)
-        YGNodeStyleSetHeight(node, config.height.value)
-        
-        // Min/max dimensions
-        if let minWidth = config.minWidth {
-            YGNodeStyleSetMinWidth(node, minWidth.value)
-        }
-        if let minHeight = config.minHeight {
-            YGNodeStyleSetMinHeight(node, minHeight.value)
-        }
-        if let maxWidth = config.maxWidth {
-            YGNodeStyleSetMaxWidth(node, maxWidth.value)
-        }
-        if let maxHeight = config.maxHeight {
-            YGNodeStyleSetMaxHeight(node, maxHeight.value)
-        }
-        
-        // Flex properties
         if let flex = config.flex {
             YGNodeStyleSetFlex(node, flex)
         }
-        if let flexGrow = config.flexGrow {
-            YGNodeStyleSetFlexGrow(node, flexGrow)
-        }
-        if let flexShrink = config.flexShrink {
-            YGNodeStyleSetFlexShrink(node, flexShrink)
-        }
-        if let flexBasis = config.flexBasis {
-            YGNodeStyleSetFlexBasis(node, flexBasis.value)
-        }
         
-        // Position type and values
-        YGNodeStyleSetPositionType(node, config.position)
-        if let left = config.left {
-            YGNodeStyleSetPosition(node, .left, left.value)
-        }
-        if let top = config.top {
-            YGNodeStyleSetPosition(node, .top, top.value)
-        }
-        if let right = config.right {
-            YGNodeStyleSetPosition(node, .right, right.value)
-        }
-        if let bottom = config.bottom {
-            YGNodeStyleSetPosition(node, .bottom, bottom.value)
-        }
-        
-        // Margins
+        // Margins and padding
         YGNodeStyleSetMargin(node, .left, Float(config.margin.left))
         YGNodeStyleSetMargin(node, .top, Float(config.margin.top))
         YGNodeStyleSetMargin(node, .right, Float(config.margin.right))
         YGNodeStyleSetMargin(node, .bottom, Float(config.margin.bottom))
         
-        // Padding
         YGNodeStyleSetPadding(node, .left, Float(config.padding.left))
         YGNodeStyleSetPadding(node, .top, Float(config.padding.top))
         YGNodeStyleSetPadding(node, .right, Float(config.padding.right))
         YGNodeStyleSetPadding(node, .bottom, Float(config.padding.bottom))
-        
-        // Calculate layout
-        YGNodeCalculateLayout(node, Float.nan, Float.nan, .LTR)
-        
-        // Apply calculated layout to view
+    }
+    
+    private func applyYogaLayout(from node: YGNodeRef, to view: UIView) {
         let frame = CGRect(
             x: CGFloat(YGNodeLayoutGetLeft(node)),
             y: CGFloat(YGNodeLayoutGetTop(node)),
-            width: CGFloat(YGNodeLayoutGetWidth(node)),
-            height: CGFloat(YGNodeLayoutGetHeight(node))
+            width: max(1, CGFloat(YGNodeLayoutGetWidth(node))),
+            height: max(1, CGFloat(YGNodeLayoutGetHeight(node)))
         )
         
+        print("Applying frame \(frame) to view: \(view)")
         view.frame = frame
+        
+        // Apply layout to children
+        for (index, subview) in view.subviews.enumerated() {
+            let childIndex = UInt32(index)
+            if let childNode = YGNodeGetChild(node, Int(childIndex)) {
+                applyYogaLayout(from: childNode, to: subview)
+            }
+        }
+    }
+    
+    private func cleanupYogaNodes(for view: UIView) {
+        for subview in view.subviews {
+            cleanupYogaNodes(for: subview)
+        }
     }
     
     internal func applyLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

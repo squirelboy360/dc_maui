@@ -29,17 +29,18 @@ Future<void> startApp() async {
   if (mainContainer == null) return;
   await bridge.attachView(rootId, mainContainer);
 
-  // Type-safe layout
+  // IMPORTANT: Change how we pass YGValue to match iOS expectations
   await bridge.setLayout(
-      mainContainer,
-      LayoutConfig(
-        position: YGPositionType.relative,
-        display: YGDisplay.flex,
-        flexDirection: YGFlexDirection.column,
-        width: YGValue.percent(100), // Use YGValue constructor
-        height: YGValue.percent(100), // Use YGValue constructor
-        alignItems: YGAlign.center,
-      ));
+    mainContainer,
+    LayoutConfig(
+      position: YGPositionType.relative,
+      display: YGDisplay.flex,
+      flexDirection: YGFlexDirection.column,
+      width: YGValue(100, YGUnit.percent), // Changed to match iOS parsing
+      height: YGValue(100, YGUnit.percent), // Changed to match iOS parsing
+      alignItems: YGAlign.center,
+    ),
+  );
 
   // Type-safe styling
   await bridge.updateView(
@@ -58,16 +59,17 @@ Future<void> startApp() async {
   await bridge.attachView(mainContainer, card);
 
   await bridge.setLayout(
-      card,
-      LayoutConfig(
-        display: YGDisplay.flex,
-        flexDirection: YGFlexDirection.column,
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        width: YGValue.points(300), // Use YGValue constructor
-        margin: const EdgeInsets.only(top: 100),
-        padding: const EdgeInsets.all(32),
-      ));
+    card,
+    LayoutConfig(
+      display: YGDisplay.flex,
+      flexDirection: YGFlexDirection.column,
+      alignItems: YGAlign.center,
+      justifyContent: YGJustify.center,
+      width: YGValue(300, YGUnit.point), // Changed to match iOS parsing
+      margin: EdgeInsets.only(top: 100),
+      padding: EdgeInsets.all(32),
+    ),
+  );
 
   await bridge.updateView(
       card,
@@ -106,14 +108,15 @@ Future<void> startApp() async {
   await bridge.attachView(card, counterDisplay);
 
   await bridge.setLayout(
-      counterDisplay,
-      LayoutConfig(
-        width: YGValue.points(160), // Convert int to YGValue
-        height: YGValue.points(160), // Convert int to YGValue
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        margin: const EdgeInsets.symmetric(vertical: 24),
-      ));
+    counterDisplay,
+    LayoutConfig(
+      width: YGValue(160, YGUnit.point), // Changed to match iOS parsing
+      height: YGValue(160, YGUnit.point), // Changed to match iOS parsing
+      alignItems: YGAlign.center,
+      justifyContent: YGJustify.center,
+      margin: EdgeInsets.symmetric(vertical: 24),
+    ),
+  );
 
   await bridge.updateView(
       counterDisplay,
@@ -143,13 +146,14 @@ Future<void> startApp() async {
   await bridge.attachView(card, buttonsContainer);
 
   await bridge.setLayout(
-      buttonsContainer,
-      LayoutConfig(
-        flexDirection: YGFlexDirection.row,
-        justifyContent: YGJustify.spaceBetween,
-        width: YGValue.percent(100), // Convert string percentage to YGValue
-        margin: const EdgeInsets.only(top: 24),
-      ));
+    buttonsContainer,
+    LayoutConfig(
+      flexDirection: YGFlexDirection.row,
+      justifyContent: YGJustify.spaceBetween,
+      width: YGValue(100, YGUnit.percent), // Changed to match iOS parsing
+      margin: EdgeInsets.only(top: 24),
+    ),
+  );
 
   // Create button with styling
   Future<String?> createStyledButton(String text, bool isPrimary) async {
@@ -157,11 +161,12 @@ Future<void> startApp() async {
     if (button == null) return null;
 
     await bridge.setLayout(
-        button,
-        LayoutConfig(
-          width: YGValue.points(60), // Convert int to YGValue
-          height: YGValue.points(60), // Convert int to YGValue
-        ));
+      button,
+      LayoutConfig(
+        width: YGValue(60, YGUnit.point), // Changed to match iOS parsing
+        height: YGValue(60, YGUnit.point), // Changed to match iOS parsing
+      ),
+    );
 
     await bridge.updateView(
         button,
