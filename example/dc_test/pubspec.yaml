@@ -18,7 +18,6 @@ dependencies:
   logging: ^1.2.0
   flutter_launcher_icons: ^0.14.3
   forui_assets: ^0.9.1
-  shared_preferences: ^2.5.2
 
 
 dev_dependencies:

@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart' hide TextStyle;  // Hide Flutter's TextStyle
+import 'package:flutter/material.dart' hide TextStyle;
 import 'package:logging/logging.dart';
-
-// Import our custom types with prefixes to avoid conflicts
-import 'package:dc_test/core/types/layout/yoga_types.dart' as yoga;
+import 'package:dc_test/core/types/layout/yoga_types.dart';
 import 'package:dc_test/layout/layout_config.dart';
 import 'package:dc_test/style/view_style.dart';
 import 'package:dc_test/ui_apis.dart';
@@ -35,12 +33,12 @@ Future<void> startApp() async {
   await bridge.setLayout(
       mainContainer,
       LayoutConfig(
-        position: yoga.YogaPositionType.relative,
-        display: yoga.YogaDisplay.flex,
-        flexDirection: yoga.YogaFlexDirection.column,
-        width: '100%',
-        height: '100%',
-        alignItems: yoga.YogaAlign.center,
+        position: YGPositionType.relative,
+        display: YGDisplay.flex,
+        flexDirection: YGFlexDirection.column,
+        width: YGValue.percent(100), // Use YGValue constructor
+        height: YGValue.percent(100), // Use YGValue constructor
+        alignItems: YGAlign.center,
       ));
 
   // Type-safe styling
@@ -62,11 +60,11 @@ Future<void> startApp() async {
   await bridge.setLayout(
       card,
       LayoutConfig(
-        display: yoga.YogaDisplay.flex,
-        flexDirection: yoga.YogaFlexDirection.column,
-        alignItems: yoga.YogaAlign.center,
-        justifyContent: yoga.YogaJustify.center,
-        width: 300,
+        display: YGDisplay.flex,
+        flexDirection: YGFlexDirection.column,
+        alignItems: YGAlign.center,
+        justifyContent: YGJustify.center,
+        width: YGValue.points(300), // Use YGValue constructor
         margin: const EdgeInsets.only(top: 100),
         padding: const EdgeInsets.all(32),
       ));
@@ -110,10 +108,10 @@ Future<void> startApp() async {
   await bridge.setLayout(
       counterDisplay,
       LayoutConfig(
-        width: 160,
-        height: 160,
-        alignItems: yoga.YogaAlign.center,
-        justifyContent: yoga.YogaJustify.center,
+        width: YGValue.points(160), // Convert int to YGValue
+        height: YGValue.points(160), // Convert int to YGValue
+        alignItems: YGAlign.center,
+        justifyContent: YGJustify.center,
         margin: const EdgeInsets.symmetric(vertical: 24),
       ));
 
@@ -147,9 +145,9 @@ Future<void> startApp() async {
   await bridge.setLayout(
       buttonsContainer,
       LayoutConfig(
-        flexDirection: yoga.YogaFlexDirection.row,
-        justifyContent: yoga.YogaJustify.spaceBetween,
-        width: '100%',
+        flexDirection: YGFlexDirection.row,
+        justifyContent: YGJustify.spaceBetween,
+        width: YGValue.percent(100), // Convert string percentage to YGValue
         margin: const EdgeInsets.only(top: 24),
       ));
 
@@ -160,9 +158,9 @@ Future<void> startApp() async {
 
     await bridge.setLayout(
         button,
-        const LayoutConfig(
-          width: 60,
-          height: 60,
+        LayoutConfig(
+          width: YGValue.points(60), // Convert int to YGValue
+          height: YGValue.points(60), // Convert int to YGValue
         ));
 
     await bridge.updateView(

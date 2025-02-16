@@ -1,6 +1,3 @@
-import 'dart:ui';
-
-import 'package:dc_test/ui_apis.dart';
 import 'package:flutter/material.dart' hide TextStyle;
 
 class TextStyle {

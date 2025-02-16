@@ -27,10 +27,13 @@ enum StackType {
   depth // ZStack
 }
 
-// Add this extension near the top of the file
+// Update Color extension to use new API
 extension ColorExtension on Color {
   String toHexString() {
-    return '#${(value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final r = red.toRadixString(16).padLeft(2, '0');
+    final g = green.toRadixString(16).padLeft(2, '0');
+    final b = blue.toRadixString(16).padLeft(2, '0');
+    return '#$r$g$b';
   }
 }
 
@@ -595,17 +598,17 @@ class NativeUIBridge {
     return setLayout(
         viewId,
         LayoutConfig(
-          alignSelf: YogaAlign.center,
-          justifyContent: YogaJustify.center,
+          alignSelf: YGAlign.center,
+          justifyContent: YGJustify.center,
         ));
   }
 
   Future<bool> fillParent(String viewId) {
     return setLayout(
         viewId,
-        const LayoutConfig(
-          width: '100%',
-          height: '100%',
+        LayoutConfig(
+          width: YGValue.percent(100), // Use YGValue constructor
+          height: YGValue.percent(100), // Use YGValue constructor
         ));
   }
 
@@ -620,18 +623,20 @@ class NativeUIBridge {
     return setLayout(
         viewId,
         LayoutConfig(
-          position: YogaPositionType.absolute,
-          width: width,
-          height: height,
+          position: YGPositionType.absolute,
+          width: width != null
+              ? YGValue.points(width)
+              : null, // Convert numbers to YGValue
+          height: height != null ? YGValue.points(height) : null,
           margin: margin,
         ));
   }
 
   Future<bool> setFlexLayout(
     String viewId, {
-    YogaFlexDirection? direction,
-    YogaJustify? justify,
-    YogaAlign? alignItems,
+    YGFlexDirection? direction,
+    YGJustify? justify,
+    YGAlign? alignItems,
     double? flex,
     EdgeInsets? margin,
     EdgeInsets? padding,
