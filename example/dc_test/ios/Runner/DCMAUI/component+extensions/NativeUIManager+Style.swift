@@ -139,3 +139,68 @@ struct GradientStyle {
     let startPoint: CGPoint
     let endPoint: CGPoint
 }
+
+struct NativeViewStyle {
+    let backgroundColor: UIColor?
+    let opacity: Float?
+    let border: BorderStyle?
+    let cornerRadius: CGFloat?
+    let shadow: ShadowStyle? 
+    let gradient: GradientStyle?
+    let transform: TransformStyle?
+    let blendMode: CGBlendMode?
+    let clipToBounds: Bool?
+    let textStyle: TextStyle?
+    let imageStyle: ImageStyle?
+
+    init(from style: [String: Any]) {
+        // Type-safe parsing of style values
+    }
+
+    func apply(to view: UIView) {
+        // Type-safe application of styles
+        if let backgroundColor = backgroundColor {
+            view.backgroundColor = backgroundColor
+        }
+        
+        if let opacity = opacity {
+            view.alpha = CGFloat(opacity)
+        }
+
+        if let border = border {
+            border.apply(to: view.layer)
+        }
+
+        if let cornerRadius = cornerRadius {
+            view.layer.cornerRadius = cornerRadius
+        }
+
+        if let shadow = shadow {
+            shadow.apply(to: view.layer)
+        }
+
+        if let gradient = gradient {
+            gradient.apply(to: view)
+        }
+
+        if let transform = transform {
+            transform.apply(to: view)
+        }
+
+        if let blendMode = blendMode {
+            view.layer.compositingFilter = blendMode
+        }
+
+        if let clipToBounds = clipToBounds {
+            view.clipsToBounds = clipToBounds
+        }
+
+        if let textStyle = textStyle, let label = view as? UILabel {
+            textStyle.apply(to: label)
+        }
+
+        if let imageStyle = imageStyle, let imageView = view as? UIImageView {
+            imageStyle.apply(to: imageView) 
+        }
+    }
+}

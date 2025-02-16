@@ -1,7 +1,6 @@
 import 'package:dc_test/core/types/layout/yoga_types.dart';
 import 'package:flutter/material.dart';
 
-
 class LayoutConfig {
   final YogaPositionType? position;
   final YogaDisplay? display;
@@ -11,19 +10,12 @@ class LayoutConfig {
   final YogaAlign? alignSelf;
   final double? flexGrow;
   final double? flexShrink;
-  final dynamic width;  // Can be double or String for percentages
-  final dynamic height; // Can be double or String for percentages
-  final double? minWidth;
-  final double? minHeight;
-  final double? maxWidth;
-  final double? maxHeight;
+  final dynamic width;
+  final dynamic height;
   final EdgeInsets? margin;
   final EdgeInsets? padding;
-  final Offset? absolutePosition;
-  final double? aspectRatio;
-  final bool? expanded;
-  final int? flex;
-  
+  final double? flex;
+
   const LayoutConfig({
     this.position,
     this.display,
@@ -35,15 +27,8 @@ class LayoutConfig {
     this.flexShrink,
     this.width,
     this.height,
-    this.minWidth,
-    this.minHeight,
-    this.maxWidth,
-    this.maxHeight,
     this.margin,
     this.padding,
-    this.absolutePosition,
-    this.aspectRatio,
-    this.expanded,
     this.flex,
   });
 
@@ -58,10 +43,6 @@ class LayoutConfig {
     if (flexShrink != null) 'flexShrink': flexShrink,
     if (width != null) 'width': width,
     if (height != null) 'height': height,
-    if (minWidth != null) 'minWidth': minWidth,
-    if (minHeight != null) 'minHeight': minHeight,
-    if (maxWidth != null) 'maxWidth': maxWidth,
-    if (maxHeight != null) 'maxHeight': maxHeight,
     if (margin != null) 'margin': {
       'top': margin!.top,
       'right': margin!.right,
@@ -74,12 +55,6 @@ class LayoutConfig {
       'bottom': padding!.bottom,
       'left': padding!.left,
     },
-    if (absolutePosition != null) 'absolutePosition': {
-      'x': absolutePosition!.dx,
-      'y': absolutePosition!.dy,
-    },
-    if (aspectRatio != null) 'aspectRatio': aspectRatio,
-    if (expanded != null) 'expanded': expanded,
     if (flex != null) 'flex': flex,
   };
 }

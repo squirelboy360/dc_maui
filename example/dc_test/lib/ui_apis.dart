@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'layout/layout_config.dart';
+import 'style/view_style.dart';
+import 'core/types/layout/yoga_types.dart'; // Add this import
 
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
@@ -41,113 +44,7 @@ enum LayoutType { flex, absolute, relative }
 
 enum LayoutAlign { auto, start, center, end, stretch, baseline }
 
-// Yoga-compatible layout enums
-enum YogaAlign {
-  auto,
-  flexStart,
-  center,
-  flexEnd,
-  stretch,
-  baseline,
-  spaceBetween,
-  spaceAround
-}
-
-enum YogaFlexDirection { row, column, rowReverse, columnReverse }
-
-enum YogaJustify {
-  flexStart,
-  center,
-  flexEnd,
-  spaceBetween,
-  spaceAround,
-  spaceEvenly
-}
-
-enum YogaPositionType { relative, absolute }
-
-enum YogaDisplay { flex, none }
-
 // Yoga-compatible layout configuration
-class LayoutConfig {
-  final String type;
-  final dynamic width; // Can be double or String (for percentages)
-  final dynamic height; // Can be double or String (for percentages)
-  final EdgeInsets? margin;
-  final EdgeInsets? padding;
-  final Offset? position;
-  final double? flex;
-  final double? flexGrow;
-  final double? flexShrink;
-  final double? flexBasis;
-  final String? flexDirection;
-  final String? justifyContent;
-  final String? alignItems;
-  final String? alignSelf;
-  final double? minWidth;
-  final double? minHeight;
-  final double? maxWidth;
-  final double? maxHeight;
-
-  const LayoutConfig({
-    this.type = 'flex',
-    this.width,
-    this.height,
-    this.margin,
-    this.padding,
-    this.position,
-    this.flex,
-    this.flexGrow,
-    this.flexShrink,
-    this.flexBasis,
-    this.flexDirection,
-    this.justifyContent,
-    this.alignItems,
-    this.alignSelf,
-    this.minWidth,
-    this.minHeight,
-    this.maxWidth,
-    this.maxHeight,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'type': type,
-        if (width != null) 'width': width,
-        if (height != null) 'height': height,
-        if (margin != null)
-          'margin': {
-            'top': margin?.top,
-            'right': margin?.right,
-            'bottom': margin?.bottom,
-            'left': margin?.left,
-          },
-        if (padding != null)
-          'padding': {
-            'top': padding?.top,
-            'right': padding?.right,
-            'bottom': padding?.bottom,
-            'left': padding?.left,
-          },
-        if (position != null)
-          'position': {
-            'x': position?.dx,
-            'y': position?.dy,
-          },
-        if (flex != null) 'flex': flex,
-        if (flexGrow != null) 'flexGrow': flexGrow,
-        if (flexShrink != null) 'flexShrink': flexShrink,
-        if (flexBasis != null) 'flexBasis': flexBasis,
-        if (flexDirection != null) 'flexDirection': flexDirection,
-        if (justifyContent != null) 'justifyContent': justifyContent,
-        if (alignItems != null) 'alignItems': alignItems,
-        if (alignSelf != null) 'alignSelf': alignSelf,
-        if (minWidth != null) 'minWidth': minWidth,
-        if (minHeight != null) 'minHeight': minHeight,
-        if (maxWidth != null) 'maxWidth': maxWidth,
-        if (maxHeight != null) 'maxHeight': maxHeight,
-      };
-}
-
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -697,9 +594,9 @@ class NativeUIBridge {
   Future<bool> centerInParent(String viewId) {
     return setLayout(
         viewId,
-        const LayoutConfig(
-          alignSelf: 'center',
-          justifyContent: 'center',
+        LayoutConfig(
+          alignSelf: YogaAlign.center,
+          justifyContent: YogaJustify.center,
         ));
   }
 
@@ -723,8 +620,7 @@ class NativeUIBridge {
     return setLayout(
         viewId,
         LayoutConfig(
-          type: 'absolute',
-          position: x != null || y != null ? Offset(x ?? 0, y ?? 0) : null,
+          position: YogaPositionType.absolute,
           width: width,
           height: height,
           margin: margin,
@@ -733,9 +629,9 @@ class NativeUIBridge {
 
   Future<bool> setFlexLayout(
     String viewId, {
-    String? direction,
-    String? justify,
-    String? alignItems,
+    YogaFlexDirection? direction,
+    YogaJustify? justify,
+    YogaAlign? alignItems,
     double? flex,
     EdgeInsets? margin,
     EdgeInsets? padding,
@@ -743,7 +639,6 @@ class NativeUIBridge {
     return setLayout(
         viewId,
         LayoutConfig(
-          type: 'flex',
           flexDirection: direction,
           justifyContent: justify,
           alignItems: alignItems,

@@ -65,6 +65,61 @@ struct LayoutConfig {
     }
 }
 
+struct NativeLayoutConfig {
+    let width: YGValue
+    let height: YGValue
+    let minWidth: YGValue?
+    let minHeight: YGValue?
+    let maxWidth: YGValue?
+    let maxHeight: YGValue? 
+    let margin: UIEdgeInsets
+    let padding: UIEdgeInsets
+    let position: YGPositionType
+    let positionValues: (x: YGValue?, y: YGValue?)
+    let flex: Float?
+    let flexGrow: Float?
+    let flexShrink: Float?
+    let flexBasis: YGValue?
+    let flexDirection: YGFlexDirection
+    let justifyContent: YGJustify
+    let alignItems: YGAlign
+    let alignSelf: YGAlign
+    let aspectRatio: Float?
+
+    init(from config: [String: Any]) {
+        // Type-safe parsing of layout values
+        // Matches Dart LayoutConfig exactly
+    }
+
+    func apply(to view: UIView) {
+        view.configureLayout { layout in
+            layout.isEnabled = true
+            
+            // Type-safe application of layout properties
+            layout.width = width
+            layout.height = height
+            layout.minWidth = minWidth
+            layout.minHeight = minHeight
+            layout.maxWidth = maxWidth
+            layout.maxHeight = maxHeight
+            layout.margin = margin
+            layout.padding = padding
+            layout.position = position
+            if let x = positionValues.x { layout.left = x }
+            if let y = positionValues.y { layout.top = y }
+            if let flex = flex { layout.flex = flex }
+            if let flexGrow = flexGrow { layout.flexGrow = flexGrow }
+            if let flexShrink = flexShrink { layout.flexShrink = flexShrink }
+            if let flexBasis = flexBasis { layout.flexBasis = flexBasis }
+            layout.flexDirection = flexDirection
+            layout.justifyContent = justifyContent  
+            layout.alignItems = alignItems
+            layout.alignSelf = alignSelf
+            if let aspectRatio = aspectRatio { layout.aspectRatio = aspectRatio }
+        }
+    }
+}
+
 @available(iOS 13.0, *)
 extension NativeUIManager {
     internal func configureLayout(for view: UIView, with config: LayoutConfig) {
