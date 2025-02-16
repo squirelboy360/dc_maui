@@ -2,6 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 
+// Add logger at the top
+final _logger = Logger('NativeUIBridge');
+
+// Add this extension for safe view operations
+extension SafeView on Future<String?> {
+  Future<String> safeView([String fallbackText = 'Not Implemented']) async {
+    final viewId = await this;
+    if (viewId == null) {
+      _logger.warning('View creation failed, using fallback: $fallbackText');
+      // Create a fallback label view
+      final fallback = await NativeUIBridge().createView('Label');
+      await NativeUIBridge().updateView(fallback!, {
+        'text': fallbackText,
+        'textColor': '#FF0000',
+      });
+      return fallback!;
+    }
+    return viewId;
+  }
+}
+
+// Add ScrollAxis enum before ScrollDirection
+enum ScrollAxis { vertical, horizontal, free }
+
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
@@ -32,13 +56,6 @@ extension ColorExtension on Color {
 }
 
 enum ListViewStyle { list, grid }
-
-// Add this enum after existing enums
-enum ScrollAxis {
-  vertical,
-  horizontal,
-  free
-}
 
 class NativeUIBridge {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
@@ -113,6 +130,33 @@ class NativeUIBridge {
       _logger.severe('Error creating view: $e');
       return null;
     }
+  }
+
+  // Update create methods to use the safe extension
+  Future<String> createSafeView(String viewType,
+      {Map<String, dynamic>? properties}) async {
+    return createView(viewType, properties: properties).safeView();
+  }
+
+  Future<String> createSafeStack(
+    StackType type, {
+    double spacing = 8.0,
+    FlexAlignment? alignment,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    return createStackView(type,
+            spacing: spacing, alignment: alignment, padding: padding)
+        .safeView('Stack Creation Failed');
+  }
+
+  // Example usage in your todo app:
+  Future<String> createSafeButton(String title,
+      {Color? backgroundColor}) async {
+    return createView('Button', properties: {
+      'title': title,
+      if (backgroundColor != null)
+        'backgroundColor': backgroundColor.toHexString(),
+    }).safeView('Button Creation Failed');
   }
 
   /// Attaches child view to parent view in native hierarchy

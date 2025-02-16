@@ -164,6 +164,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
                button.setTitleColor(.white, for: .normal)
                button.layer.cornerRadius = 8
                button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+               button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
                view = button
                
            case "Label":
@@ -459,10 +460,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
             
             @objc private func handleButtonClick(_ sender: UIButton) {
                 guard let viewId = views.first(where: { $0.value == sender })?.key else {
-                    print("Warning: Could not find viewId for clicked button")
+                    print("⚠️ Could not find viewId for clicked button")
                     return
                 }
-                print("Native button click detected for viewId: \(viewId)")
+                print("📱 Native button click detected for viewId: \(viewId)")
                 sendEventToFlutter(viewId: viewId, eventType: "onClick")
             }
             
