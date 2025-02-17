@@ -46,6 +46,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             let rootView = UIView(frame: rootVC.view.bounds)
             rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             rootView.backgroundColor = .white
+            rootView.yoga.isEnabled = true // Enable yoga on root
+            rootView.yoga.flexDirection = .column
+            rootView.yoga.width = YGValue(value: Float(rootVC.view.bounds.width), unit: .point)
+            rootView.yoga.height = YGValue(value: Float(rootVC.view.bounds.height), unit: .point)
+            
             print("Root view frame: \(rootView.frame)")
             
             rootVC.view.addSubview(rootView)
@@ -233,23 +238,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
         }
         
         childView.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Different attachment behavior based on parent view type
-        if let stackView = parentView as? UIStackView {
-            stackView.addArrangedSubview(childView)
-        } else if parentView is ZStackView {
-            parentView.addSubview(childView)
-            // ZStackView will handle its own constraints in addSubview
-        } else {
-            parentView.addSubview(childView)
-            // Default centering behavior for regular views
-            NSLayoutConstraint.activate([
-                childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-                childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor)
-            ])
-        }
-        
+        childView.yoga.isEnabled = true // Enable yoga on child
+        parentView.addSubview(childView)
         childViews[parentId]?.append(childId)
+        
+        // Trigger layout calculation
+        parentView.yoga.applyLayout(preservingOrigin: false)
+        
         result(true)
     }
 
@@ -429,7 +424,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
         result(true)
     }
 
-    private func handleGetRootView(result: @escaping FlutterResult) {
+    internal func handleGetRootView(result: @escaping FlutterResult) {
         guard let rootViewId = self.rootViewId,
               let rootView = views[rootViewId] else {
             result(FlutterError(code: "NO_ROOT_VIEW", message: "Root view not initialized", details: nil))
@@ -595,6 +590,25 @@ extension NativeUIManager {
         }
         
         // Create layout config from arguments        let config = LayoutConfig(from: args)                // Apply the layout        applyYogaLayout(to: view, config: config)                // Trigger layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        result(true)
+    }
+
+    private func applyLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let layoutConfig = args as? [String: Any],
+              let view = views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for layout", details: nil))
+            return
+        }
+        
+        let config = LayoutConfig(from: layoutConfig)
+        applyYogaLayout(to: view, config: config)
+        
+        // Trigger layout update
         view.setNeedsLayout()
         view.layoutIfNeeded()
         

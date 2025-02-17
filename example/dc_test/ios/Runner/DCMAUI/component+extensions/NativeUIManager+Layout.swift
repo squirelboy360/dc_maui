@@ -185,44 +185,41 @@ extension NativeUIManager {
             currentView = currentView?.superview
         }
 
-        // Configure root view (superview) if it exists
-        if let superview = view.superview {
-            superview.yoga.isEnabled = true
-            superview.yoga.width = YGValue(value: Float(superview.bounds.width), unit: .point)
-            superview.yoga.height = YGValue(value: Float(superview.bounds.height), unit: .point)
-            superview.yoga.flexDirection = .column
-            superview.yoga.alignItems = .stretch // Let children take full width
-        }
-
-        // Configure the target view
+        // Configure target view
         view.configureLayout { layout in
-            // Reset existing layout
-            layout.display = .flex
+            // Reset layout state
+            layout.isEnabled = true
             
-            // Set dimensions with proper units
-            if config.width.unit == .percent {
+            // Set dimensions
+            switch config.width.unit {
+            case .percent:
                 layout.width = YGValue(value: config.width.value, unit: .percent)
-                print("Setting percent width: \(config.width.value)")
-            } else if config.width.unit == .point {
+                print("Setting width: \(config.width.value)%")
+            case .point:
                 layout.width = YGValue(value: config.width.value, unit: .point)
-                print("Setting point width: \(config.width.value)")
-            } else {
+                print("Setting width: \(config.width.value)pt")
+            case .auto:
                 layout.width = .auto
                 print("Setting auto width")
+            default:
+                layout.width = .auto
             }
-
-            if config.height.unit == .percent {
+            
+            switch config.height.unit {
+            case .percent:
                 layout.height = YGValue(value: config.height.value, unit: .percent)
-                print("Setting percent height: \(config.height.value)")
-            } else if config.height.unit == .point {
+                print("Setting height: \(config.height.value)%")
+            case .point:
                 layout.height = YGValue(value: config.height.value, unit: .point)
-                print("Setting point height: \(config.height.value)")
-            } else {
+                print("Setting height: \(config.height.value)pt")
+            case .auto:
                 layout.height = .auto
                 print("Setting auto height")
+            default:
+                layout.height = .auto
             }
 
-            // Set core layout properties
+            // Core layout properties
             layout.flexDirection = config.flexDirection
             layout.justifyContent = config.justifyContent
             layout.alignItems = config.alignItems
@@ -232,50 +229,63 @@ extension NativeUIManager {
                 layout.flex = CGFloat(flex)
             }
 
-            // Set margins explicitly
-            layout.marginLeft = YGValue(value: Float(config.margin.left), unit: .point)
-            layout.marginTop = YGValue(value: Float(config.margin.top), unit: .point)
-            layout.marginRight = YGValue(value: Float(config.margin.right), unit: .point)
-            layout.marginBottom = YGValue(value: Float(config.margin.bottom), unit: .point)
+            // Set margins
+            if config.margin != .zero {
+                layout.marginLeft = YGValue(value: Float(config.margin.left), unit: .point)
+                layout.marginTop = YGValue(value: Float(config.margin.top), unit: .point)
+                layout.marginRight = YGValue(value: Float(config.margin.right), unit: .point)
+                layout.marginBottom = YGValue(value: Float(config.margin.bottom), unit: .point)
+            }
 
-            // Set padding explicitly
-            layout.paddingLeft = YGValue(value: Float(config.padding.left), unit: .point)
-            layout.paddingTop = YGValue(value: Float(config.padding.top), unit: .point)
-            layout.paddingRight = YGValue(value: Float(config.padding.right), unit: .point)
-            layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
+            // Set padding
+            if config.padding != .zero {
+                layout.paddingLeft = YGValue(value: Float(config.padding.left), unit: .point)
+                layout.paddingTop = YGValue(value: Float(config.padding.top), unit: .point)
+                layout.paddingRight = YGValue(value: Float(config.padding.right), unit: .point)
+                layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
+            }
         }
 
-        // Enable yoga for all child views
-        for subview in view.subviews {
-            subview.yoga.isEnabled = true
+        // Calculate layout from root
+        if let rootView = getRootView(for: view) {
+            print("Calculating layout from root: \(rootView)")
+            rootView.yoga.applyLayout(preservingOrigin: false)
+            
+            // Force UI update
+            DispatchQueue.main.async {
+                rootView.setNeedsLayout()
+                rootView.layoutIfNeeded()
+            }
         }
-
-        // Calculate and apply layout from the highest yoga-enabled ancestor
-        var rootView = view
-        while let parent = rootView.superview, parent.yoga.isEnabled {
-            rootView = parent
-        }
-        
-        print("Calculating layout from root view: \(rootView)")
-        rootView.yoga.applyLayout(preservingOrigin: false)
     }
 
-
-    internal func applyLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
-            return
+    internal func getRootView(for view: UIView) -> UIView? {
+        var current = view
+        while let parent = current.superview {
+            if !parent.yoga.isEnabled {
+                return current
+            }
+            current = parent
         }
-        
-        let config = LayoutConfig(from: args)
-        applyYogaLayout(to: view, config: config)
-        result(true)
+        return current
     }
+}
 
-    // Add this helper method
-    private func storeLayoutConfig(_ config: LayoutConfig, for viewId: String) {
-        layoutConfigs[viewId] = config
+// Helper extension for color conversion
+extension UIColor {
+    convenience init?(from hexString: String?) {
+        guard let hexString = hexString else { return nil }
+        var hexSanitized = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+        
+        var rgb: UInt64 = 0
+        
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+        
+        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+        let blue = CGFloat(rgb & 0x0000FF) / 255.0
+        
+        self.init(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }
