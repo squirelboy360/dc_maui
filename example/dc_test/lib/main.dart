@@ -1,10 +1,11 @@
 import 'package:dc_test/core/types/events.dart';
+import 'package:dc_test/core/types/view/view_types.dart';
 import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
 import 'package:logging/logging.dart';
 import 'package:dc_test/core/types/layout/yoga_types.dart';
 import 'package:dc_test/layout/layout_config.dart';
 import 'package:dc_test/style/view_style.dart';
-import 'package:dc_test/ui_apis.dart';
+import 'package:dc_test/bridge/base.dart';
 
 final _logger = Logger('ModernApp');
 final bridge = NativeUIBridge();
@@ -26,7 +27,7 @@ Future<void> startApp() async {
   final rootId = rootInfo['viewId'] as String;
 
   // Main container with gradient background
-  final mainContainer = await bridge.createView('View');
+  final mainContainer = await bridge.createView(ViewType.view);
   if (mainContainer == null) return;
   await bridge.attachView(rootId, mainContainer);
 
@@ -56,7 +57,7 @@ Future<void> startApp() async {
       )).toJson());
 
   // Create header section
-  final headerContainer = await bridge.createView('View');
+  final headerContainer = await bridge.createView(ViewType.view);
   if (headerContainer == null) return;
   await bridge.attachView(mainContainer, headerContainer);
 
@@ -69,7 +70,7 @@ Future<void> startApp() async {
       ));
 
   // Title
-  final titleLabel = await bridge.createView('Label');
+  final titleLabel = await bridge.createView(ViewType.label);
   if (titleLabel == null) return;
   await bridge.attachView(headerContainer, titleLabel);
 
@@ -84,7 +85,7 @@ Future<void> startApp() async {
       )).toJson());
 
   // Subtitle
-  final subtitleLabel = await bridge.createView('Label');
+  final subtitleLabel = await bridge.createView(ViewType.label);
   if (subtitleLabel == null) return;
   await bridge.attachView(headerContainer, subtitleLabel);
 
@@ -93,12 +94,12 @@ Future<void> startApp() async {
       ViewStyle(
           textStyle: TextStyle(
         text: 'Tap buttons to count',
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha:0.7),
         fontSize: 16,
       )).toJson());
 
   // Counter card
-  final card = await bridge.createView('View');
+  final card = await bridge.createView(ViewType.view);
   if (card == null) return;
   await bridge.attachView(mainContainer, card);
 
@@ -127,7 +128,7 @@ Future<void> startApp() async {
       ]).toJson());
 
   // Counter display
-  final counterDisplay = await bridge.createView('View');
+  final counterDisplay = await bridge.createView(ViewType.view);
   if (counterDisplay == null) return;
   await bridge.attachView(card, counterDisplay);
 
@@ -150,7 +151,7 @@ Future<void> startApp() async {
       ).toJson());
 
   // Counter label
-  final counterLabel = await bridge.createView('Label');
+  final counterLabel = await bridge.createView(ViewType.label);
   if (counterLabel == null) return;
   await bridge.attachView(counterDisplay, counterLabel);
 
@@ -165,7 +166,7 @@ Future<void> startApp() async {
       )).toJson());
 
   // Buttons container
-  final buttonsContainer = await bridge.createView('View');
+  final buttonsContainer = await bridge.createView(ViewType.view);
   if (buttonsContainer == null) return;
   await bridge.attachView(card, buttonsContainer);
 
@@ -211,16 +212,7 @@ Future<void> startApp() async {
       },
     },
   );
-  await bridge.setLayout(
-      decrementButton!,
-      LayoutConfig(
-        flexDirection: YGFlexDirection.row,
-        justifyContent: YGJustify.spaceBetween,
-        alignItems: YGAlign.center,
-        width: YGValue(60, YGUnit.point),
-        margin: const EdgeInsets.only(top: 24),
-      ));
-  
+
 
   final resetButton = await bridge.createButton(
     text: '↺',
@@ -253,16 +245,7 @@ Future<void> startApp() async {
     },
   );
 
-   await bridge.setLayout(
-      resetButton!,
-      LayoutConfig(
-        flexDirection: YGFlexDirection.row,
-        justifyContent: YGJustify.spaceBetween,
-        alignItems: YGAlign.center,
-        width: YGValue(60, YGUnit.point),
-        margin: const EdgeInsets.only(top: 24),
-      ));
-  
+
 
   final incrementButton = await bridge.createButton(
     text: '+',
@@ -295,25 +278,9 @@ Future<void> startApp() async {
     },
   );
 
-   await bridge.setLayout(
-      incrementButton!,
-      LayoutConfig(
-        flexDirection: YGFlexDirection.row,
-        justifyContent: YGJustify.spaceBetween,
-        alignItems: YGAlign.center,
-        width: YGValue(60, YGUnit.point),
-        margin: const EdgeInsets.only(top: 24),
-      ));
-  
-
+ 
   // Attach buttons (no need for registerEvent anymore)
-  if (decrementButton != null) {
-    await bridge.attachView(buttonsContainer, decrementButton);
-  }
-  if (resetButton != null) {
-    await bridge.attachView(buttonsContainer, resetButton);
-  }
-  if (incrementButton != null) {
-    await bridge.attachView(buttonsContainer, incrementButton);
-  }
+  await bridge.attachView(buttonsContainer, decrementButton!);
+  await bridge.attachView(buttonsContainer, resetButton!);
+  await bridge.attachView(buttonsContainer, incrementButton!);
 }

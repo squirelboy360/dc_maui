@@ -2,16 +2,15 @@ import 'package:dc_test/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'layout/layout_config.dart';
-import 'style/view_style.dart';
-import 'core/types/layout/yoga_types.dart'; // Add this import
+import '../layout/layout_config.dart';
+import '../core/types/layout/yoga_types.dart'; // Add this import
+import '../core/types/view/view_types.dart';
 
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
 // Add these enums
 enum FlexDirection { row, column }
-
 enum FlexAlignment {
   start,
   center,
@@ -110,11 +109,11 @@ class NativeUIBridge {
   ///     isEnabled?: bool
   ///   }
   /// Returns: String viewId or null if failed
-  Future<String?> createView(String viewType,
+  Future<String?> createView(ViewType viewType,
       {Map<String, dynamic>? properties}) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createView', {
-        'viewType': viewType,
+        'viewType': viewType.value,
         ...?properties,
       });
       return viewId;
@@ -123,6 +122,7 @@ class NativeUIBridge {
       return null;
     }
   }
+  
 
   /// Attaches child view to parent view in native hierarchy
   /// Native expects:
@@ -660,7 +660,7 @@ class NativeUIBridge {
     Map<String, dynamic>? properties,
     Map<TouchEventType, Function(TouchEvent)>? events,
   }) async {
-    final viewId = await createView('TouchableOpacity', properties: properties);
+    final viewId = await createView(ViewType.touchableOpacity, properties: properties);
     if (viewId != null && events != null) {
       for (final entry in events.entries) {
         _registerTouchEvent(viewId, entry.key, entry.value);
@@ -675,7 +675,7 @@ class NativeUIBridge {
     Map<String, dynamic>? style,
     Map<ButtonEventType, Function()>? events,
   }) async {
-    final viewId = await createView('Button', properties: {
+    final viewId = await createView(ViewType.button, properties: {
       'text': text,
       ...?style,
     });
