@@ -94,7 +94,7 @@ Future<void> startApp() async {
       ViewStyle(
           textStyle: TextStyle(
         text: 'Tap buttons to count',
-        color: Colors.white.withValues(alpha:0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         fontSize: 16,
       )).toJson());
 
@@ -106,15 +106,15 @@ Future<void> startApp() async {
   await bridge.setLayout(
       card,
       LayoutConfig(
-          display: YGDisplay.flex,
-          flexDirection: YGFlexDirection.column,
-          alignItems: YGAlign.center,
-          justifyContent: YGJustify.center,
-          width: YGValue(100, YGUnit.percent),
-          height: YGValue(80, YGUnit.percent)
-          // padding: const EdgeInsets.all(32),
-          // margin: const EdgeInsets.symmetric(vertical: 40),
-          ));
+        display: YGDisplay.flex,
+        flexDirection: YGFlexDirection.column,
+        alignItems: YGAlign.center,
+        justifyContent: YGJustify.center,
+        width: YGValue(100, YGUnit.percent),
+        height: YGValue(80, YGUnit.percent),
+        // padding: const EdgeInsets.all(32),
+        // margin: const EdgeInsets.symmetric(vertical: 40),
+      ));
 
   await bridge.updateView(
       card,
@@ -146,7 +146,8 @@ Future<void> startApp() async {
       counterDisplay,
       ViewStyle(
         backgroundColor: Colors.blueAccent,
-        border: BorderStyle(color: Colors.amber, style: BorderType.dotted),
+        border: BorderStyle(
+            color: Colors.amber, style: BorderType.solid, width: 20),
         cornerRadius: 90,
       ).toJson());
 
@@ -187,6 +188,11 @@ Future<void> startApp() async {
     style: ViewStyle(
       backgroundColor: Color(0xFFFF3B30),
       cornerRadius: 28,
+      textStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
       shadows: [
         ShadowStyle(
           color: Color(0xFFFF3B30).withOpacity(0.3),
@@ -195,6 +201,10 @@ Future<void> startApp() async {
         )
       ],
     ).toJson(),
+    layout: LayoutConfig(
+      width: YGValue.points(56),
+      height: YGValue.points(56),
+    ),
     events: {
       ButtonEventType.onClick: () async {
         counter--;
@@ -213,10 +223,9 @@ Future<void> startApp() async {
     },
   );
 
-
   final resetButton = await bridge.createButton(
     text: '↺',
-    style: ViewStyle(   
+    style: ViewStyle(
       backgroundColor: Color(0xFF007AFF),
       cornerRadius: 28,
       shadows: [
@@ -244,8 +253,6 @@ Future<void> startApp() async {
       },
     },
   );
-
-
 
   final incrementButton = await bridge.createButton(
     text: '+',
@@ -275,10 +282,18 @@ Future<void> startApp() async {
           ).toJson(),
         );
       },
+      ButtonEventType.onPressIn: () async {
+        print('Button pressed in!');
+      },
+      ButtonEventType.onPressOut: () async {
+        print('Button pressed out!');
+      },
+      ButtonEventType.onLongPress: () async {
+        print('Button long pressed');
+      }
     },
   );
 
- 
   // Attach buttons (no need for registerEvent anymore)
   await bridge.attachView(buttonsContainer, decrementButton!);
   await bridge.attachView(buttonsContainer, resetButton!);

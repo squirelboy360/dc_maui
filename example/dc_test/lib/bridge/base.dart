@@ -11,6 +11,7 @@ enum ScrollDirection { vertical, horizontal }
 
 // Add these enums
 enum FlexDirection { row, column }
+
 enum FlexAlignment {
   start,
   center,
@@ -122,7 +123,6 @@ class NativeUIBridge {
       return null;
     }
   }
-  
 
   /// Attaches child view to parent view in native hierarchy
   /// Native expects:
@@ -660,7 +660,8 @@ class NativeUIBridge {
     Map<String, dynamic>? properties,
     Map<TouchEventType, Function(TouchEvent)>? events,
   }) async {
-    final viewId = await createView(ViewType.touchableOpacity, properties: properties);
+    final viewId =
+        await createView(ViewType.touchableOpacity, properties: properties);
     if (viewId != null && events != null) {
       for (final entry in events.entries) {
         _registerTouchEvent(viewId, entry.key, entry.value);
@@ -672,20 +673,34 @@ class NativeUIBridge {
   // Add new method for creating buttons with typed events
   Future<String?> createButton({
     required String text,
-    Map<String, dynamic>? style,
+    required Map<String, dynamic> style,
+    LayoutConfig? layout,
     Map<ButtonEventType, Function()>? events,
   }) async {
-    final viewId = await createView(ViewType.button, properties: {
-      'text': text,
-      ...?style,
-    });
+    try {
+      final viewId = await _channel.invokeMethod<String>('createView', {
+        'viewType': ViewType.button.value,
+        'properties': style,
+        if (layout != null) 'layout': layout.toJson(),
+      });
 
-    if (viewId != null && events != null) {
-      for (final entry in events.entries) {
-        _registerButtonEvent(viewId, entry.key, entry.value);
+      if (viewId != null && events != null) {
+        for (final entry in events.entries) {
+          String eventType = entry.key.toString().split('.').last;
+          await _channel.invokeMethod('registerEvent', {
+            'viewId': viewId,
+            'eventType': eventType,
+          });
+          _eventCallbacks[viewId] ??= {};
+          _eventCallbacks[viewId]![eventType] = entry.value;
+        }
       }
+
+      return viewId;
+    } catch (e) {
+      _logger.severe('Error creating button: $e');
+      return null;
     }
-    return viewId;
   }
 
   // Internal event registration methods
