@@ -102,27 +102,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            // First try to handle value API methods
-            self.addValueAPIMethodHandlers(call, result: result)
-            
-            // Then proceed with existing switch statement
             switch call.method {
-            case "getRootView":
-                guard let rootViewId = self.rootViewId,
-                      let rootView = self.views[rootViewId] else {
-                    result(FlutterError(code: "NO_ROOT_VIEW", message: "Root view not initialized", details: nil))
-                    return
-                }
-                
-                result([
-                    "viewId": rootViewId,
-                    "width": rootView.frame.width,
-                    "height": rootView.frame.height
-                ])
-                
             case "createView":
                 self.handleCreateView(call, result: result)
-                
             case "attachView":
                 self.handleAttachView(call, result: result)
             case "deleteView":
@@ -184,31 +166,37 @@ class NativeUIManager: NSObject, FlutterPlugin {
         case "Button":
             let button = UIButton(type: .system)
             
-            // Configure default button appearance
+            // Set default appearance
             button.backgroundColor = .systemBlue
             button.setTitleColor(.white, for: .normal)
             button.titleLabel?.font = .systemFont(ofSize: 24, weight: .semibold)
-            button.layer.cornerRadius = 28 // Default corner radius
+            button.layer.cornerRadius = 28
             
-            // Set size constraints
-            let width = properties["width"] as? CGFloat ?? 56
-            let height = properties["height"] as? CGFloat ?? 56
-            
-            button.translatesAutoresizingMaskIntoConstraints = false
-            button.widthAnchor.constraint(equalToConstant: width).isActive = true
-            button.heightAnchor.constraint(equalToConstant: height).isActive = true
-            
-            // Set text
-            if let text = properties["text"] as? String {
-                button.setTitle(text, for: .normal)
+            // Apply layout
+            if let layout = args["layout"] as? [String: Any] {
+                let config = LayoutConfig(from: layout)
+                applyYogaLayout(to: button, config: config)
             }
             
-            // Set padding
-            button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 24, bottom: 12, right: 24)
+            // Apply styles
+            if let style = properties["textStyle"] as? [String: Any] {
+                if let text = style["text"] as? String {
+                    button.setTitle(text, for: .normal)
+                }
+                if let color = style["color"] as? UInt32 {
+                    button.setTitleColor(UIColor(rgb: color), for: .normal)
+                }
+                if let fontSize = style["fontSize"] as? CGFloat {
+                    button.titleLabel?.font = .systemFont(ofSize: fontSize, weight: .bold)
+                }
+            }
             
-            // Apply any custom styles
             let style = NativeViewStyle(from: properties)
             style.apply(to: button)
+            
+            // Center the text
+            button.contentHorizontalAlignment = .center
+            button.contentVerticalAlignment = .center
             
             view = button
             setupButtonEvents(button)

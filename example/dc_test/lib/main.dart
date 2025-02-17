@@ -179,6 +179,7 @@ Future<void> startApp() async {
         alignItems: YGAlign.center,
         width: YGValue(100, YGUnit.percent),
         margin: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
       ));
 
   // Replace the old button creation and event handling with new typed version:
@@ -189,6 +190,8 @@ Future<void> startApp() async {
       backgroundColor: Color(0xFFFF3B30),
       cornerRadius: 28,
       textStyle: TextStyle(
+        // Important: text should be part of textStyle
+        text: '-',
         color: Colors.white,
         fontSize: 24,
         fontWeight: FontWeight.bold,
@@ -204,6 +207,8 @@ Future<void> startApp() async {
     layout: LayoutConfig(
       width: YGValue.points(56),
       height: YGValue.points(56),
+      alignItems: YGAlign.center,
+      justifyContent: YGJustify.center,
     ),
     events: {
       ButtonEventType.onClick: () async {
@@ -228,6 +233,13 @@ Future<void> startApp() async {
     style: ViewStyle(
       backgroundColor: Color(0xFF007AFF),
       cornerRadius: 28,
+      textStyle: TextStyle(
+        // Important: text should be part of textStyle
+        text: '↺',
+        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
       shadows: [
         ShadowStyle(
           color: Color(0xFF007AFF).withOpacity(0.3),
@@ -236,6 +248,12 @@ Future<void> startApp() async {
         )
       ],
     ).toJson(),
+    layout: LayoutConfig(
+      width: YGValue.points(56),
+      height: YGValue.points(56),
+      alignItems: YGAlign.center,
+      justifyContent: YGJustify.center,
+    ),
     events: {
       ButtonEventType.onClick: () async {
         counter = 0;
@@ -259,6 +277,13 @@ Future<void> startApp() async {
     style: ViewStyle(
       backgroundColor: Color(0xFF34C759),
       cornerRadius: 28,
+      textStyle: TextStyle(
+        // Important: text should be part of textStyle
+        text: '+',
+        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
       shadows: [
         ShadowStyle(
           color: Color(0xFF34C759).withOpacity(0.3),
@@ -267,6 +292,12 @@ Future<void> startApp() async {
         )
       ],
     ).toJson(),
+    layout: LayoutConfig(
+      width: YGValue.points(56),
+      height: YGValue.points(56),
+      alignItems: YGAlign.center,
+      justifyContent: YGJustify.center,
+    ),
     events: {
       ButtonEventType.onClick: () async {
         counter++;
