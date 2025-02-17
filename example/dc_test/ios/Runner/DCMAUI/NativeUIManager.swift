@@ -8,6 +8,33 @@ enum StackType: String {
     case depth
 }
 
+enum TouchEventType: String {
+    case onPress
+    case onLongPress
+    case onPressIn
+    case onPressOut
+    case onDoublePress
+}
+
+enum ButtonEventType: String {
+    case onClick
+    case onLongPress
+    case onPressIn
+    case onPressOut
+}
+
+enum GestureEventType: String {
+    case onTap
+    case onDoubleTap
+    case onLongPress
+    case onPanStart
+    case onPanUpdate
+    case onPanEnd
+    case onScaleStart
+    case onScaleUpdate
+    case onScaleEnd
+}
+
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
@@ -19,6 +46,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
     internal var layoutConfigs: [String: LayoutConfig] = [:]
     internal var yogaNodes: [String: YGNodeRef] = [:]
     
+    private var touchEventHandlers: [String: [TouchEventType: () -> Void]] = [:]
+    private var buttonEventHandlers: [String: [ButtonEventType: () -> Void]] = [:]
+    private var gestureEventHandlers: [String: [GestureEventType: () -> Void]] = [:]
+
     static func register(with registrar: FlutterPluginRegistrar) {
           let instance = NativeUIManager()
           let channel = FlutterMethodChannel(
@@ -163,19 +194,17 @@ class NativeUIManager: NSObject, FlutterPlugin {
             view = label
             
         case "Button":
-            let button = UIButton(type: .system)
-            if let properties = args["properties"] as? [String: Any] {
-                button.setTitle(properties["text"] as? String, for: .normal)
-                if let textStyle = (properties["textStyle"] as? [String: Any]) {
-                    if let fontSize = textStyle["fontSize"] as? CGFloat {
-                        button.titleLabel?.font = .systemFont(ofSize: fontSize)
-                    }
-                }
-            }
-            button.backgroundColor = .systemBlue
-            button.setTitleColor(.white, for: .normal)
-            button.layer.masksToBounds = true
+            let button = createButtonView()
+            setupButtonEvents(button)
             view = button
+            
+        case "TouchableOpacity":
+            let touchable = createTouchableView()
+            setupTouchableEvents(touchable)
+            touchable.alpha = 1.0
+            touchable.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
+            touchable.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            view = touchable
             
         default:
             view = UIView()
@@ -277,6 +306,19 @@ class NativeUIManager: NSObject, FlutterPlugin {
               let view = views[viewId] else {
             result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
             return
+        }
+        
+        print("Applying properties to view: \(properties)")  // Debug log
+        
+        // Handle text specifically for Label and Button
+        if let textStyle = properties["textStyle"] as? [String: Any] {
+            if let text = textStyle["text"] as? String {
+                if let label = view as? UILabel {
+                    label.text = text
+                } else if let button = view as? UIButton {
+                    button.setTitle(text, for: .normal)
+                }
+            }
         }
         
         let style = NativeViewStyle(from: properties)
@@ -511,7 +553,119 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 cleanup()
             }
             
+            private func createTouchableView() -> UIButton {
+                let touchable = UIButton(type: .custom)
+                touchable.backgroundColor = .clear
+                touchable.adjustsImageWhenHighlighted = true
+                touchable.showsTouchWhenHighlighted = true
+                return touchable
+            }
+
+            @objc private func handleTouchDown(_ sender: UIButton) {
+                UIView.animate(withDuration: 0.1) {
+                    sender.alpha = 0.6
+                }
+            }
+
+            @objc private func handleTouchUp(_ sender: UIButton) {
+                UIView.animate(withDuration: 0.1) {
+                    sender.alpha = 1.0
+                }
+            }
+
+    private func createButtonView() -> UIButton {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .clear
+        button.layer.masksToBounds = true
+        return button
+    }
+
+    private func setupButtonEvents(_ button: UIButton) {
+        button.addTarget(self, action: #selector(handleButtonPress(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(handleButtonPressUp(_:)), for: [.touchUpInside, .touchUpOutside])
+        
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
+        button.addGestureRecognizer(longPress)
+    }
+
+    private func setupTouchableEvents(_ view: UIView) {
+        // Tap gesture
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTouchablePress(_:)))
+        view.addGestureRecognizer(tap)
+        
+        // Double tap
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleTouchableDoublePress(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        tap.require(toFail: doubleTap)
+        view.addGestureRecognizer(doubleTap)
+        
+        // Long press
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleTouchableLongPress(_:)))
+        view.addGestureRecognizer(longPress)
+    }
+
+    @objc private func handleButtonPress(_ sender: UIButton) {
+        guard let viewId = getViewId(for: sender) else { return }
+        sendButtonEvent(viewId: viewId, type: .onPressIn)
+    }
+
+    @objc private func handleButtonPressUp(_ sender: UIButton) {
+        guard let viewId = getViewId(for: sender) else { return }
+        sendButtonEvent(viewId: viewId, type: .onPressOut)
+        sendButtonEvent(viewId: viewId, type: .onClick)
+    }
+
+    @objc private func handleButtonLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard let button = sender.view as? UIButton,
+              let viewId = getViewId(for: button) else { return }
+        
+        if sender.state == .began {
+            sendButtonEvent(viewId: viewId, type: .onLongPress)
         }
+    }
+
+    @objc private func handleTouchablePress(_ sender: UITapGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
+        
+        let location = sender.location(in: view)
+        sendTouchEvent(viewId: viewId, type: .onPress, location: location)
+    }
+
+    @objc private func handleTouchableDoublePress(_ sender: UITapGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
+        
+        let location = sender.location(in: view)
+        sendTouchEvent(viewId: viewId, type: .onDoublePress, location: location)
+    }
+
+    private func sendTouchEvent(viewId: String, type: TouchEventType, location: CGPoint) {
+        let eventData: [String: Any] = [
+            "viewId": viewId,
+            "type": type.rawValue,
+            "x": location.x,
+            "y": location.y,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        methodChannel?.invokeMethod("onTouchEvent", arguments: eventData)
+    }
+
+    private func sendButtonEvent(viewId: String, type: ButtonEventType) {
+        let eventData: [String: Any] = [
+            "viewId": viewId,
+            "type": type.rawValue,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        methodChannel?.invokeMethod("onButtonEvent", arguments: eventData)
+    }
+
+    private func getViewId(for view: UIView) -> String? {
+        return views.first(where: { $0.value == view })?.key
+    }
+}
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
@@ -613,6 +767,16 @@ extension NativeUIManager {
         view.layoutIfNeeded()
         
         result(true)
+    }
+
+    @objc private func handleTouchableLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
+        
+        if sender.state == .began {
+            let location = sender.location(in: view)
+            sendTouchEvent(viewId: viewId, type: .onLongPress, location: location)
+        }
     }
 }
 

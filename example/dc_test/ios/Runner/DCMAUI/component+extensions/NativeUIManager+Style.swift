@@ -20,6 +20,7 @@ struct BorderStyle {
 }
 
 struct TextStyle {
+    let text: String?  // Add this property
     let font: UIFont?
     let color: UIColor?
     let alignment: NSTextAlignment?
@@ -27,6 +28,9 @@ struct TextStyle {
     let letterSpacing: CGFloat?
     
     func apply(to label: UILabel) {
+        if let text = text {
+            label.text = text
+        }
         if let font = font {
             label.font = font
         }
@@ -153,6 +157,48 @@ extension UIView {
             print("Applying gradient: \(gradient)")
             gradient.apply(to: self)
         }
+        
+        // Apply gradient with proper frame
+        if let gradient = style.gradient {
+            print("Applying gradient with colors: \(gradient.colors)")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                let gradientLayer = CAGradientLayer()
+                gradientLayer.frame = self.bounds
+                gradientLayer.colors = gradient.colors.map { $0.cgColor }
+                gradientLayer.locations = gradient.locations.map { NSNumber(value: Double($0)) }
+                gradientLayer.startPoint = gradient.startPoint
+                gradientLayer.endPoint = gradient.endPoint
+                // Remove existing gradient if any
+                self.layer.sublayers?.removeAll { $0 is CAGradientLayer }
+                self.layer.insertSublayer(gradientLayer, at: 0)
+            }
+        }
+        
+        // Handle text styles more comprehensively
+        if let textStyle = style.textStyle {
+            if let label = self as? UILabel {
+                if let text = textStyle.text {
+                    label.text = text
+                }
+                if let font = textStyle.font {
+                    label.font = font
+                }
+                if let color = textStyle.color {
+                    label.textColor = color
+                }
+            } else if let button = self as? UIButton {
+                if let text = textStyle.text {
+                    button.setTitle(text, for: .normal)
+                }
+                if let font = textStyle.font {
+                    button.titleLabel?.font = font
+                }
+                if let color = textStyle.color {
+                    button.setTitleColor(color, for: .normal)
+                }
+            }
+        }
     }
 }
 
@@ -167,6 +213,7 @@ struct ViewStyle {
     var blendMode: CGBlendMode?
     var transform: TransformStyle?
     var filter: FilterStyle?
+    var textStyle: TextStyle? // Add this line
 }
 
 struct EdgeRadius {
@@ -311,6 +358,7 @@ struct NativeViewStyle {
         self.clipToBounds = style["clipToBounds"] as? Bool
         self.textStyle = (style["textStyle"] as? [String: Any]).map { dict in
             TextStyle(
+                text: dict["text"] as? String,  // Add this line
                 font: (dict["fontSize"] as? CGFloat).map { UIFont.systemFont(ofSize: $0) },
                 color: (dict["color"] as? UInt32).map { UIColor(rgb: $0) },
                 alignment: (dict["textAlign"] as? String).flatMap { TextAlign(rawValue: $0)?.nsTextAlignment },

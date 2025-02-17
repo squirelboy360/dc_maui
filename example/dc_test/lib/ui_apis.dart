@@ -1,3 +1,4 @@
+import 'package:dc_test/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
@@ -27,12 +28,12 @@ enum StackType {
   depth // ZStack
 }
 
-// Update Color extension to use new API
+// Update Color extension to use correct integer conversion
 extension ColorExtension on Color {
   String toHexString() {
-    final r = red.toRadixString(16).padLeft(2, '0');
-    final g = green.toRadixString(16).padLeft(2, '0');
-    final b = blue.toRadixString(16).padLeft(2, '0');
+    final r = red.round().toRadixString(16).padLeft(2, '0');
+    final g = green.round().toRadixString(16).padLeft(2, '0');
+    final b = blue.round().toRadixString(16).padLeft(2, '0');
     return '#$r$g$b';
   }
 }
@@ -195,6 +196,7 @@ class NativeUIBridge {
   ///   'click', 'longClick', 'focus', 'blur',
   ///   'textChanged', 'scrolled')
   /// Returns: bool success
+  @Deprecated('Use component-specific event handlers instead')
   Future<bool> registerEvent(
       String viewId, String eventType, Function callback) async {
     try {
@@ -652,6 +654,60 @@ class NativeUIBridge {
           padding: padding,
         ));
   }
+
+  // Add new method for creating touchable components
+  Future<String?> createTouchable({
+    Map<String, dynamic>? properties,
+    Map<TouchEventType, Function(TouchEvent)>? events,
+  }) async {
+    final viewId = await createView('TouchableOpacity', properties: properties);
+    if (viewId != null && events != null) {
+      for (final entry in events.entries) {
+        _registerTouchEvent(viewId, entry.key, entry.value);
+      }
+    }
+    return viewId;
+  }
+
+  // Add new method for creating buttons with typed events
+  Future<String?> createButton({
+    required String text,
+    Map<String, dynamic>? style,
+    Map<ButtonEventType, Function()>? events,
+  }) async {
+    final viewId = await createView('Button', properties: {
+      'text': text,
+      ...?style,
+    });
+
+    if (viewId != null && events != null) {
+      for (final entry in events.entries) {
+        _registerButtonEvent(viewId, entry.key, entry.value);
+      }
+    }
+    return viewId;
+  }
+
+  // Internal event registration methods
+  void _registerTouchEvent(
+      String viewId, TouchEventType type, Function(TouchEvent) callback) {
+    // Store in a separate map for touch events
+    _touchEventCallbacks[viewId] ??= {};
+    _touchEventCallbacks[viewId]![type] = callback;
+  }
+
+  void _registerButtonEvent(
+      String viewId, ButtonEventType type, Function() callback) {
+    // Store in a separate map for button events
+    _buttonEventCallbacks[viewId] ??= {};
+    _buttonEventCallbacks[viewId]![type] = callback;
+  }
+
+  // Add new maps for typed events
+  final Map<String, Map<TouchEventType, Function(TouchEvent)>>
+      _touchEventCallbacks = {};
+  final Map<String, Map<ButtonEventType, Function()>> _buttonEventCallbacks =
+      {};
 }
 
 // Helper classes for type-safe view creation
