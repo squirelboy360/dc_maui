@@ -1,5 +1,5 @@
 import 'package:dc_test/framework/bridge/base.dart';
-import 'package:dc_test/main_app/views/view_imports.dart';
+import 'package:dc_test/main_app/views/imports.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 

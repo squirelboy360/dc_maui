@@ -1,4 +1,4 @@
-part of '../view_imports.dart';
+part of '../imports.dart';
 
 class HomeViewBinder extends HomeView {
   final _logger = Logger('HomeViewBinder');

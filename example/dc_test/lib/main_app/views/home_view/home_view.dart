@@ -1,4 +1,4 @@
-part of '../view_imports.dart';
+part of '../imports.dart';
 
 class HomeView extends HomeViewComponents {
   final NativeUIBridge bridge;
@@ -22,14 +22,11 @@ class HomeView extends HomeViewComponents {
         alignItems: YGAlign.center,
         justifyContent: YGJustify.flexStart,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-       
       ),
     );
 
-    await bridge.updateView(
-        rootContainer,
-        ViewStyle(
-          backgroundColor: Colors.deepPurpleAccent).toJson());
+    await bridge.updateView(rootContainer,
+        ViewStyle(backgroundColor: Colors.deepPurpleAccent).toJson());
   }
 
   // Header section with title and subtitle
@@ -71,11 +68,12 @@ class HomeView extends HomeViewComponents {
     await bridge.updateView(
         subtitleLabel,
         ViewStyle(
+            backgroundColor: Colors.amber.withOpacity(0.2),
             textStyle: TextStyle(
-          text: 'Tap buttons to count',
-          color: Colors.white.withOpacity(0.7),
-          fontSize: 16,
-        )).toJson());
+              text: 'Tap buttons to count',
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
+            )).toJson());
 
     await bridge.attachView(headerSection, subtitleLabel);
   }
@@ -172,22 +170,38 @@ class HomeView extends HomeViewComponents {
     await createIncrementButton();
   }
 
+  // Update createDecrementButton to include error handling
   Future<void> createDecrementButton() async {
-    decrementButton = await createButton('-', Color(0xFFFF3B30), () async {
-          counter--;
-          // Update counter display
-        }) ??
-        '';
+    try {
+      final id = await createButton('-', Color(0xFFFF3B30), () async {
+        counter--;
+        await bridge.updateView(
+          counterLabel,
+          ViewStyle(
+            textStyle: TextStyle(
+              text: counter.toString(),
+              color: Color(0xFF2E3192),
+              fontSize: 72,
+              fontWeight: FontWeight.bold,
+            ),
+          ).toJson(),
+        );
+      });
 
-    await bridge.attachView(buttonsSection, decrementButton);
+      if (id != null) {
+        decrementButton = id;
+        await bridge.attachView(buttonsSection, decrementButton);
+        print('Decrement button created and attached: $id');
+      } else {
+        print('Failed to create decrement button');
+      }
+    } catch (e, stack) {
+      print('Error in createDecrementButton: $e');
+      print('Stack trace: $stack');
+    }
   }
 
   Future<void> createResetButton() async {
-    resetButton = await createButton('↺', Color(0xFF007AFF), () async {
-          counter = 0;
-          // Update counter display
-        }) ??
-        '';
 
     await bridge.attachView(buttonsSection, resetButton);
   }
@@ -195,7 +209,15 @@ class HomeView extends HomeViewComponents {
   Future<void> createIncrementButton() async {
     incrementButton = await createButton('+', Color(0xFF34C759), () async {
           counter++;
-          // Update counter display
+          await bridge.updateView(
+              counterLabel,
+              ViewStyle(
+                  textStyle: TextStyle(
+                text: counter.toString(),
+                color: Color(0xFF2E3192),
+                fontSize: 72,
+                fontWeight: FontWeight.bold,
+              )).toJson());
         }) ??
         '';
 
@@ -204,7 +226,7 @@ class HomeView extends HomeViewComponents {
 
   // Helper method to create buttons
   Future<String?> createButton(
-      String text, Color color, Function() onPress) async {
+      String text, Color color, Future<void> Function() onPress) async {
     return await bridge.createButton(
       text: text,
       style: ViewStyle(
@@ -212,7 +234,7 @@ class HomeView extends HomeViewComponents {
         cornerRadius: 28,
         textStyle: TextStyle(
           text: text,
-          color: Colors.white,
+          color: Colors.amber,
           fontSize: 24,
           fontWeight: FontWeight.bold,
         ),
@@ -229,8 +251,9 @@ class HomeView extends HomeViewComponents {
         height: YGValue.points(56),
         alignItems: YGAlign.center,
         justifyContent: YGJustify.center,
+        margin: const EdgeInsets.symmetric(horizontal: 8), // Add margin
       ),
-      events: {ButtonEventType.onClick: () => onPress()},
+      events: {ButtonEventType.onClick: onPress}, // Properly bind the callback
     );
   }
 }

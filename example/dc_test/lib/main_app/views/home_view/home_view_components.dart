@@ -1,4 +1,4 @@
-part of '../view_imports.dart';
+part of '../imports.dart';
 
 abstract class HomeViewComponents {
   String rootContainer = '';
@@ -6,7 +6,7 @@ abstract class HomeViewComponents {
   String titleLabel = '';
   String subtitleLabel = '';
   String cardSection = '';
-  String counterDisplay = ''; // Add this
+  String counterDisplay = '';
   String counterLabel = '';
   String buttonsSection = '';
   String decrementButton = '';

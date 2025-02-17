@@ -1,4 +1,3 @@
-library home;
 
 import 'package:dc_test/framework/bridge/base.dart';
 import 'package:dc_test/framework/core/types/events.dart';
