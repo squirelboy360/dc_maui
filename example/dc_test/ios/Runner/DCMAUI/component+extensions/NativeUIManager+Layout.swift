@@ -1,5 +1,5 @@
 import UIKit
-import yoga
+import YogaKit  // Change to YogaKit
 
 // YGValue helpers
 extension YGValue {
@@ -178,115 +178,89 @@ struct LayoutConfig {
 @available(iOS 13.0, *)
 extension NativeUIManager {
     internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-        guard let rootNode = YGNodeNew() else { return }
-        defer { YGNodeFree(rootNode) }
-        
-        guard let viewNode = YGNodeNew() else { return }
-        defer { YGNodeFree(viewNode) }
-        
-        // Build the yoga node tree
-        buildYogaNodeTree(for: view, node: viewNode)
-        YGNodeInsertChild(rootNode, viewNode, 0)
-        
-        // Apply layout config to view's node
-        configureYogaNode(viewNode, with: config)
-        
-        // Calculate layout using parent's dimensions
-        let parentWidth = view.superview?.bounds.width ?? UIScreen.main.bounds.width
-        let parentHeight = view.superview?.bounds.height ?? UIScreen.main.bounds.height
-        
-        print("Calculating layout with parent dimensions: \(parentWidth) x \(parentHeight)")
-        YGNodeCalculateLayout(rootNode, Float(parentWidth), Float(parentHeight), .LTR)
-        
-        // Apply calculated layout recursively
-        applyYogaLayout(from: viewNode, to: view)
-        
-        // Clean up child nodes
-        cleanupYogaNodes(for: view)
-    }
-    
-    private func buildYogaNodeTree(for view: UIView, node: YGNodeRef) {
-        for subview in view.subviews {
-            guard let childNode = YGNodeNew() else { continue }
-            buildYogaNodeTree(for: subview, node: childNode)
-            // Fix: Convert UInt32 to Int for YGNodeInsertChild
-            let childCount = Int(YGNodeGetChildCount(node))
-            YGNodeInsertChild(node, childNode, childCount)
+        // Enable yoga for this view and all parent views
+        var currentView: UIView? = view
+        while currentView != nil {
+            currentView?.yoga.isEnabled = true
+            currentView = currentView?.superview
         }
-    }
-    
-    private func configureYogaNode(_ node: YGNodeRef, with config: LayoutConfig) {
-        // Width/Height
-        switch config.width.unit {
-        case .percent:
-            YGNodeStyleSetWidthPercent(node, config.width.value)
-        case .point:
-            YGNodeStyleSetWidth(node, config.width.value)
-        case .auto:
-            YGNodeStyleSetWidthAuto(node)
-        default:
-            break
+
+        // Configure root view (superview) if it exists
+        if let superview = view.superview {
+            superview.yoga.isEnabled = true
+            superview.yoga.width = YGValue(value: Float(superview.bounds.width), unit: .point)
+            superview.yoga.height = YGValue(value: Float(superview.bounds.height), unit: .point)
+            superview.yoga.flexDirection = .column
+            superview.yoga.alignItems = .stretch // Let children take full width
         }
-        
-        switch config.height.unit {
-        case .percent:
-            YGNodeStyleSetHeightPercent(node, config.height.value)
-        case .point:
-            YGNodeStyleSetHeight(node, config.height.value)
-        case .auto:
-            YGNodeStyleSetHeightAuto(node)
-        default:
-            break
-        }
-        
-        // Flex properties
-        YGNodeStyleSetFlexDirection(node, config.flexDirection)
-        YGNodeStyleSetJustifyContent(node, config.justifyContent)
-        YGNodeStyleSetAlignItems(node, config.alignItems)
-        YGNodeStyleSetAlignSelf(node, config.alignSelf)
-        
-        if let flex = config.flex {
-            YGNodeStyleSetFlex(node, flex)
-        }
-        
-        // Margins and padding
-        YGNodeStyleSetMargin(node, .left, Float(config.margin.left))
-        YGNodeStyleSetMargin(node, .top, Float(config.margin.top))
-        YGNodeStyleSetMargin(node, .right, Float(config.margin.right))
-        YGNodeStyleSetMargin(node, .bottom, Float(config.margin.bottom))
-        
-        YGNodeStyleSetPadding(node, .left, Float(config.padding.left))
-        YGNodeStyleSetPadding(node, .top, Float(config.padding.top))
-        YGNodeStyleSetPadding(node, .right, Float(config.padding.right))
-        YGNodeStyleSetPadding(node, .bottom, Float(config.padding.bottom))
-    }
-    
-    private func applyYogaLayout(from node: YGNodeRef, to view: UIView) {
-        let frame = CGRect(
-            x: CGFloat(YGNodeLayoutGetLeft(node)),
-            y: CGFloat(YGNodeLayoutGetTop(node)),
-            width: max(1, CGFloat(YGNodeLayoutGetWidth(node))),
-            height: max(1, CGFloat(YGNodeLayoutGetHeight(node)))
-        )
-        
-        print("Applying frame \(frame) to view: \(view)")
-        view.frame = frame
-        
-        // Apply layout to children
-        for (index, subview) in view.subviews.enumerated() {
-            let childIndex = UInt32(index)
-            if let childNode = YGNodeGetChild(node, Int(childIndex)) {
-                applyYogaLayout(from: childNode, to: subview)
+
+        // Configure the target view
+        view.configureLayout { layout in
+            // Reset existing layout
+            layout.display = .flex
+            
+            // Set dimensions with proper units
+            if config.width.unit == .percent {
+                layout.width = YGValue(value: config.width.value, unit: .percent)
+                print("Setting percent width: \(config.width.value)")
+            } else if config.width.unit == .point {
+                layout.width = YGValue(value: config.width.value, unit: .point)
+                print("Setting point width: \(config.width.value)")
+            } else {
+                layout.width = .auto
+                print("Setting auto width")
             }
+
+            if config.height.unit == .percent {
+                layout.height = YGValue(value: config.height.value, unit: .percent)
+                print("Setting percent height: \(config.height.value)")
+            } else if config.height.unit == .point {
+                layout.height = YGValue(value: config.height.value, unit: .point)
+                print("Setting point height: \(config.height.value)")
+            } else {
+                layout.height = .auto
+                print("Setting auto height")
+            }
+
+            // Set core layout properties
+            layout.flexDirection = config.flexDirection
+            layout.justifyContent = config.justifyContent
+            layout.alignItems = config.alignItems
+            layout.position = config.position
+
+            if let flex = config.flex {
+                layout.flex = CGFloat(flex)
+            }
+
+            // Set margins explicitly
+            layout.marginLeft = YGValue(value: Float(config.margin.left), unit: .point)
+            layout.marginTop = YGValue(value: Float(config.margin.top), unit: .point)
+            layout.marginRight = YGValue(value: Float(config.margin.right), unit: .point)
+            layout.marginBottom = YGValue(value: Float(config.margin.bottom), unit: .point)
+
+            // Set padding explicitly
+            layout.paddingLeft = YGValue(value: Float(config.padding.left), unit: .point)
+            layout.paddingTop = YGValue(value: Float(config.padding.top), unit: .point)
+            layout.paddingRight = YGValue(value: Float(config.padding.right), unit: .point)
+            layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
         }
-    }
-    
-    private func cleanupYogaNodes(for view: UIView) {
+
+        // Enable yoga for all child views
         for subview in view.subviews {
-            cleanupYogaNodes(for: subview)
+            subview.yoga.isEnabled = true
         }
+
+        // Calculate and apply layout from the highest yoga-enabled ancestor
+        var rootView = view
+        while let parent = rootView.superview, parent.yoga.isEnabled {
+            rootView = parent
+        }
+        
+        print("Calculating layout from root view: \(rootView)")
+        rootView.yoga.applyLayout(preservingOrigin: false)
     }
-    
+
+
     internal func applyLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
@@ -298,5 +272,10 @@ extension NativeUIManager {
         let config = LayoutConfig(from: args)
         applyYogaLayout(to: view, config: config)
         result(true)
+    }
+
+    // Add this helper method
+    private func storeLayoutConfig(_ config: LayoutConfig, for viewId: String) {
+        layoutConfigs[viewId] = config
     }
 }

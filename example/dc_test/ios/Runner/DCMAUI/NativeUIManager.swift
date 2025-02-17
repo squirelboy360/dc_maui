@@ -1,5 +1,6 @@
 import UIKit
 import Flutter
+import yoga  // Add this import
 
 enum StackType: String {
     case vertical
@@ -15,6 +16,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
     private var rootViewId: String?
     private var window: UIWindow?
     private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
+    internal var layoutConfigs: [String: LayoutConfig] = [:]
+    internal var yogaNodes: [String: YGNodeRef] = [:]
     
     static func register(with registrar: FlutterPluginRegistrar) {
           let instance = NativeUIManager()

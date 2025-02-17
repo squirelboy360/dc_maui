@@ -10,7 +10,7 @@
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
-		3CEC1E972D627BD30050CA41 /* yoga in Frameworks */ = {isa = PBXBuildFile; productRef = 3CEC1E962D627BD30050CA41 /* yoga */; };
+		3CEC1EBD2D63028D0050CA41 /* YogaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3CEC1EBC2D63028D0050CA41 /* YogaKit */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -69,7 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3CEC1E972D627BD30050CA41 /* yoga in Frameworks */,
+				3CEC1EBD2D63028D0050CA41 /* YogaKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,7 +209,7 @@
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
-				3C2C89D42D627A6D0053A8D9 /* XCRemoteSwiftPackageReference "yoga" */,
+				3CEC1EBB2D63028D0050CA41 /* XCRemoteSwiftPackageReference "yoga" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
@@ -640,21 +640,21 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		3C2C89D42D627A6D0053A8D9 /* XCRemoteSwiftPackageReference "yoga" */ = {
+		3CEC1EBB2D63028D0050CA41 /* XCRemoteSwiftPackageReference "yoga" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/squirelboy360/yoga.git";
+			repositoryURL = "https://github.com/squirelboy360/yoga";
 			requirement = {
-				branch = main;
+				branch = master;
 				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		3CEC1E962D627BD30050CA41 /* yoga */ = {
+		3CEC1EBC2D63028D0050CA41 /* YogaKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 3C2C89D42D627A6D0053A8D9 /* XCRemoteSwiftPackageReference "yoga" */;
-			productName = yoga;
+			package = 3CEC1EBB2D63028D0050CA41 /* XCRemoteSwiftPackageReference "yoga" */;
+			productName = YogaKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
