@@ -172,7 +172,15 @@ class NativeUIManager: NSObject, FlutterPlugin {
             button.titleLabel?.font = .systemFont(ofSize: 24, weight: .semibold)
             button.layer.cornerRadius = 28
             
-            // Apply layout
+            // Force layout mode that preserves text
+            button.contentHorizontalAlignment = .center
+            button.contentVerticalAlignment = .center
+            button.titleLabel?.adjustsFontSizeToFitWidth = true
+            button.titleLabel?.minimumScaleFactor = 0.5
+            button.titleLabel?.lineBreakMode = .byTruncatingTail
+            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
+            
+            // Apply layout first
             if let layout = args["layout"] as? [String: Any] {
                 let config = LayoutConfig(from: layout)
                 applyYogaLayout(to: button, config: config)
@@ -182,6 +190,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             if let style = properties["textStyle"] as? [String: Any] {
                 if let text = style["text"] as? String {
                     button.setTitle(text, for: .normal)
+                    print("Setting button text to: \(text)") // Debug log
                 }
                 if let color = style["color"] as? UInt32 {
                     button.setTitleColor(UIColor(rgb: color), for: .normal)
@@ -194,9 +203,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
             let style = NativeViewStyle(from: properties)
             style.apply(to: button)
             
-            // Center the text
-            button.contentHorizontalAlignment = .center
-            button.contentVerticalAlignment = .center
+            // Ensure button has proper constraints
+            button.translatesAutoresizingMaskIntoConstraints = false
+            
+            // Debug print button state
+            print("Button created with title: \(button.title(for: .normal) ?? "nil")")
+            print("Button frame: \(button.frame)")
+            print("Button constraints: \(button.constraints)")
             
             view = button
             setupButtonEvents(button)

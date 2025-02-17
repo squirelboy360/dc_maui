@@ -179,7 +179,7 @@ Future<void> startApp() async {
         alignItems: YGAlign.center,
         width: YGValue(100, YGUnit.percent),
         margin: const EdgeInsets.only(top: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.all(32),
       ));
 
   // Replace the old button creation and event handling with new typed version:
@@ -301,6 +301,7 @@ Future<void> startApp() async {
     events: {
       ButtonEventType.onClick: () async {
         counter++;
+        print("The counter has been clicked $counter times");
         await bridge.updateView(
           counterLabel,
           ViewStyle(

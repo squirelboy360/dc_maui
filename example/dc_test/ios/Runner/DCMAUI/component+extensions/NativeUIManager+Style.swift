@@ -5,7 +5,8 @@ extension UIColor {
         let r = CGFloat((rgb >> 16) & 0xFF) / 255.0
         let g = CGFloat((rgb >> 8) & 0xFF) / 255.0
         let b = CGFloat(rgb & 0xFF) / 255.0
-        self.init(red: r, green: g, blue: b, alpha: 1.0)
+        let a = CGFloat((rgb >> 24) & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b, alpha: a > 0 ? a : 1.0)
     }
 }
 
