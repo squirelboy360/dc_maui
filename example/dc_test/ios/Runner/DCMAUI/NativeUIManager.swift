@@ -1,6 +1,6 @@
 import UIKit
 import Flutter
-import yoga  // Add this import
+import yoga  
 
 enum StackType: String {
     case vertical
@@ -180,17 +180,26 @@ class NativeUIManager: NSObject, FlutterPlugin {
             button.titleLabel?.lineBreakMode = .byTruncatingTail
             button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
             
+            // Setup event handlers immediately
+            print("Setting up button events for new button")
+            button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
+            button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
+            button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
+            button.addGestureRecognizer(longPress)
+            
             // Apply layout first
             if let layout = args["layout"] as? [String: Any] {
                 let config = LayoutConfig(from: layout)
                 applyYogaLayout(to: button, config: config)
             }
             
-            // Apply styles
+            // Apply styles after events and layout
             if let style = properties["textStyle"] as? [String: Any] {
                 if let text = style["text"] as? String {
                     button.setTitle(text, for: .normal)
-                    print("Setting button text to: \(text)") // Debug log
+                    print("Setting button text to: \(text)")
                 }
                 if let color = style["color"] as? UInt32 {
                     button.setTitleColor(UIColor(rgb: color), for: .normal)
@@ -203,17 +212,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
             let style = NativeViewStyle(from: properties)
             style.apply(to: button)
             
-            // Ensure button has proper constraints
-            button.translatesAutoresizingMaskIntoConstraints = false
-            
-            // Debug print button state
-            print("Button created with title: \(button.title(for: .normal) ?? "nil")")
-            print("Button frame: \(button.frame)")
-            print("Button constraints: \(button.constraints)")
-            
             view = button
-            setupButtonEvents(button)
-            print("Created button with ID: \(viewId)")
+            print("Button creation complete with ID: \(viewId)")
 
         case "View":
             let containerView = UIView(frame: .zero)
@@ -545,8 +545,22 @@ class NativeUIManager: NSObject, FlutterPlugin {
                     print("Warning: Could not find viewId for clicked button")
                     return
                 }
-                print("Native button click detected for viewId: \(viewId)")
-                sendButtonEvent(viewId: viewId, type: .onClick)
+                print("Button click detected for viewId: \(viewId)") // Debug log
+                
+                // Send event to Flutter
+                let eventData: [String: Any] = [
+                    "viewId": viewId,
+                    "type": ButtonEventType.onClick.rawValue,
+                    "timestamp": Date().timeIntervalSince1970
+                ]
+                
+                methodChannel?.invokeMethod("onButtonEvent", arguments: eventData, result: { result in
+                    if let error = result as? FlutterError {
+                        print("Error sending button event: \(error.message ?? "unknown")")
+                    } else {
+                        print("Button event sent successfully")
+                    }
+                })
             }
             
             @objc private func handleViewTap(_ sender: UITapGestureRecognizer) {
@@ -641,12 +655,14 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func setupButtonEvents(_ button: UIButton) {
+        print("Setting up button events") // Debug log
         button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
         button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
         button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
         
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
         button.addGestureRecognizer(longPress)
+        print("Button events setup complete") // Debug log
     }
 
     private func setupTouchableEvents(_ view: UIView) {
@@ -714,6 +730,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func sendButtonEvent(viewId: String, type: ButtonEventType) {
+        print("Sending button event: \(type.rawValue) for view: \(viewId)") // Debug log
         let eventData: [String: Any] = [
             "viewId": viewId,
             "type": type.rawValue,
