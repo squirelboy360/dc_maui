@@ -1,59 +1,100 @@
 import UIKit
 import Flutter
-import os.log 
+import yoga  // Add this import
 
-extension UIWindow {
-    func topViewController() -> UIViewController? {
-        var top = self.rootViewController
-        while let presented = top?.presentedViewController {
-            top = presented
-        }
-        return top
-    }
+enum StackType: String {
+    case vertical
+    case horizontal
+    case depth
+}
+
+enum TouchEventType: String {
+    case onPress
+    case onLongPress
+    case onPressIn
+    case onPressOut
+    case onDoublePress
+}
+
+enum ButtonEventType: String {
+    case onClick
+    case onLongPress
+    case onPressIn
+    case onPressOut
+}
+
+enum GestureEventType: String {
+    case onTap
+    case onDoubleTap
+    case onLongPress
+    case onPanStart
+    case onPanUpdate
+    case onPanEnd
+    case onScaleStart
+    case onScaleUpdate
+    case onScaleEnd
 }
 
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
-    private let logger = OSLog(subsystem: "com.dcmaui.framework", category: "NativeUIManager") // Use OSLog instead of Logger
-    internal var methodChannel: FlutterMethodChannel?
+    private var methodChannel: FlutterMethodChannel?
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
-    internal var rootViewId: String?
-    internal var window: UIWindow?
-    internal var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
-    internal var navigationController: NativeNavigationController?  // Keep this
+    private var rootViewId: String?
+    private var window: UIWindow?
+    private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
+    internal var layoutConfigs: [String: LayoutConfig] = [:]
+    internal var yogaNodes: [String: YGNodeRef] = [:]
     
-    // Add these properties to main class
-    internal let viewAccessQueue = DispatchQueue(label: "com.dcmaui.viewAccess", attributes: .concurrent)
-    private var viewStates: [String: [String: Any]] = [:]
-    internal var stateBindings: [String: Set<String>] = [:]  // Change to internal
-    internal let accessQueue = DispatchQueue(label: "com.dcmaui.accessQueue", attributes: .concurrent)
-    
+    private var touchEventHandlers: [String: [TouchEventType: () -> Void]] = [:]
+    private var buttonEventHandlers: [String: [ButtonEventType: () -> Void]] = [:]
+    private var gestureEventHandlers: [String: [GestureEventType: () -> Void]] = [:]
+
     static func register(with registrar: FlutterPluginRegistrar) {
-        let instance = NativeUIManager()
-        let channel = FlutterMethodChannel(
-            name: "com.dcmaui.framework",
-            binaryMessenger: registrar.messenger()
-        )
-        registrar.addMethodCallDelegate(instance, channel: channel)
-        instance.methodChannel = channel
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            instance.setupRootView()
-        }
-    }
-    
+          let instance = NativeUIManager()
+          let channel = FlutterMethodChannel(
+              name: "com.dcmaui.framework",
+              binaryMessenger: registrar.messenger()
+          )
+          registrar.addMethodCallDelegate(instance, channel: channel)
+          instance.methodChannel = channel
+          
+          // Initialize after a brief delay to ensure Flutter is ready
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+              instance.setupRootView()
+          }
+      }
     private func setupRootView() {
+        print("Setting up root view")
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            // Create a new window with the correct frame
             window = UIWindow(frame: windowScene.coordinateSpace.bounds)
             window?.windowScene = windowScene
             
-            // Create navigation controller as root
-            setupNavigationController()
+            let rootVC = UIViewController()
+            rootVC.view.backgroundColor = .white
+            print("Root view controller frame: \(rootVC.view.frame)")
             
-            // Log success
-            os_log(.info, log: logger, "Native UI window setup complete with root view: %{public}@", rootViewId ?? "none")
+            let rootView = UIView(frame: rootVC.view.bounds)
+            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            rootView.backgroundColor = .white
+            rootView.yoga.isEnabled = true // Enable yoga on root
+            rootView.yoga.flexDirection = .column
+            rootView.yoga.width = YGValue(value: Float(rootVC.view.bounds.width), unit: .point)
+            rootView.yoga.height = YGValue(value: Float(rootVC.view.bounds.height), unit: .point)
+            
+            print("Root view frame: \(rootView.frame)")
+            
+            rootVC.view.addSubview(rootView)
+            
+            rootViewId = "root-\(UUID().uuidString)"
+            views[rootViewId!] = rootView
+            childViews[rootViewId!] = []
+            
+            window?.rootViewController = rootVC
+            window?.makeKeyAndVisible()
+            
+            print("Root view setup complete with ID: \(rootViewId!)")
+            print("Window frame: \(window?.frame ?? .zero)")
         }
     }
 
@@ -61,44 +102,65 @@ class NativeUIManager: NSObject, FlutterPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
+            // First try to handle value API methods
+            self.addValueAPIMethodHandlers(call, result: result)
+            
+            // Then proceed with existing switch statement
             switch call.method {
-            case "setupNavigation":
-                if let args = call.arguments as? [String: Any],
-                   let typeStr = args["type"] as? String {
-                    if self.navigationController == nil {
-                        self.setupNavigationController()
-                    }
-                    result(true)
+            case "getRootView":
+                guard let rootViewId = self.rootViewId,
+                      let rootView = self.views[rootViewId] else {
+                    result(FlutterError(code: "NO_ROOT_VIEW", message: "Root view not initialized", details: nil))
                     return
                 }
-                result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
+                
+                result([
+                    "viewId": rootViewId,
+                    "width": rootView.frame.width,
+                    "height": rootView.frame.height
+                ])
                 
             case "createView":
                 self.handleCreateView(call, result: result)
                 
-            case "pushScreen", "popScreen", "presentModal",
-                 "dismissModal", "setupTabs", "switchTab":
-                self.handleNavigationMethod(call, result: result)
-                
-            // Remove duplicate createView case and combine view-related cases
-            case "attachView", "detachView", "deleteView",
-                 "getRootView", "getViewById", "getChildren",
-                 "updateView", "setViewProperties",
-                 "changeViewBackgroundColor", "setViewVisibility",
-                 "setViewSize", "setViewMargin", "setViewPadding",
-                 "setViewBorder", "setViewCornerRadius",
-                 "setViewShadow", "setViewOpacity", "setViewTransform":
-                self.handleViewMethod(call, result: result)
-                
-            case "registerEvent", "unregisterEvent":
-                self.handleEventMethod(call, result: result)
-                
-            case "onStateChange":
-                self.handleStateChange(call, result: result)
-                
-            case "showAlert":
-                self.handleShowAlert(call, result: result)
-                
+            case "attachView":
+                self.handleAttachView(call, result: result)
+            case "deleteView":
+                self.handleDeleteView(call, result: result)
+            case "updateView":
+                self.handleUpdateView(call, result: result)
+            case "setViewProperties":
+                self.handleSetViewProperties(call, result: result)
+            case "addChildView":
+                self.handleAddChildView(call, result: result)
+            case "removeChildView":
+                self.handleRemoveChildView(call, result: result)
+            case "getViewById":
+                self.handleGetViewById(call, result: result)
+            case "getChildren":
+                self.handleGetChildren(call, result: result)
+            case "changeViewBackgroundColor":
+                self.handleChangeViewBackgroundColor(call, result: result)
+            case "setViewVisibility":
+                self.handleSetViewVisibility(call, result: result)
+            case "registerEvent":
+                self.handleRegisterEvent(call, result: result)
+            case "unregisterEvent":
+                self.handleUnregisterEvent(call, result: result)
+            case "getRootView":
+                self.handleGetRootView(result: result)
+            case "createStackView":
+                self.handleCreateStackView(call, result: result)
+            case "createListView":
+                self.handleCreateListView(call, result: result)
+            case "setViewLayout":
+                self.handleSetViewLayout(call, result: result)
+            case "createScrollView":
+                self.handleCreateScrollView(call, result: result)
+            case "setScrollContent":
+                self.handleSetScrollContent(call, result: result)
+            case "applyLayout":  // Add this case to handle layout application
+                self.applyLayout(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -106,6 +168,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func handleCreateView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        print("Creating view with arguments: \(String(describing: call.arguments))")
+        
         guard let args = call.arguments as? [String: Any],
               let viewType = args["viewType"] as? String else {
             result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing viewType", details: nil))
@@ -116,106 +180,34 @@ class NativeUIManager: NSObject, FlutterPlugin {
         let viewId = "\(viewType.lowercased())-\(UUID().uuidString)"
         
         switch viewType {
-        // Layout Components
-        case "StackView":
-            let stackView = UIStackView()
-            stackView.axis = (args["axis"] as? String == "horizontal") ? .horizontal : .vertical
-            stackView.spacing = args["spacing"] as? CGFloat ?? 8
-            stackView.alignment = .fill
-            stackView.distribution = .fill
-            view = stackView
+        case "View":
+            let containerView = UIView(frame: .zero)
+            containerView.backgroundColor = .clear
+            view = containerView
             
-        case "ScrollView":
-            let scrollView = UIScrollView()
-            scrollView.alwaysBounceVertical = true
-            view = scrollView
-            
-        case "CollectionView":
-            let layout = UICollectionViewFlowLayout()
-            let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-            view = collectionView
-            
-        // Input Components
-        case "Button":
-            let button = UIButton(type: .system)
-            button.setTitle(args["title"] as? String ?? "", for: .normal)
-            button.backgroundColor = .systemBlue
-            button.setTitleColor(.white, for: .normal)
-            button.layer.cornerRadius = 8
-            view = button
-            
-        case "TextField":
-            let textField = UITextField()
-            textField.borderStyle = .roundedRect
-            textField.placeholder = args["placeholder"] as? String
-            textField.text = args["text"] as? String
-            view = textField
-            
-        case "TextView":
-            let textView = UITextView()
-            textView.text = args["text"] as? String
-            textView.font = .systemFont(ofSize: args["fontSize"] as? CGFloat ?? 17)
-            view = textView
-            
-        case "Switch":
-            let switchView = UISwitch()
-            switchView.isOn = args["value"] as? Bool ?? false
-            view = switchView
-            
-        case "Slider":
-            let slider = UISlider()
-            slider.minimumValue = args["min"] as? Float ?? 0
-            slider.maximumValue = args["max"] as? Float ?? 1
-            slider.value = args["value"] as? Float ?? 0
-            view = slider
-            
-        // Display Components
         case "Label":
             let label = UILabel()
-            label.text = args["text"] as? String ?? ""
+            label.text = (args["properties"] as? [String: Any])?["text"] as? String
             label.textAlignment = .center
-            label.numberOfLines = args["maxLines"] as? Int ?? 0
+            label.numberOfLines = 0
+            label.adjustsFontSizeToFitWidth = true
             view = label
             
-        case "ImageView":
-            let imageView = UIImageView()
-            imageView.contentMode = .scaleAspectFit
-            if let urlString = args["url"] as? String,
-               let url = URL(string: urlString) {
-                URLSession.shared.dataTask(with: url) { data, _, _ in
-                    if let data = data, let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            imageView.image = image
-                        }
-                    }
-                }.resume()
-            }
-            view = imageView
+        case "Button":
+            let button = createButtonView()
+            setupButtonEvents(button)
+            view = button
             
-        case "ProgressView":
-            let progressView = UIProgressView(progressViewStyle: .default)
-            progressView.progress = args["progress"] as? Float ?? 0
-            view = progressView
-            
-        case "ActivityIndicator":
-            let activityIndicator = UIActivityIndicatorView(style: .medium)
-            if args["isAnimating"] as? Bool ?? false {
-                activityIndicator.startAnimating()
-            }
-            view = activityIndicator
-            
-        // Container Components
-        case "View":
-            view = UIView()
-            
-        case "SafeAreaView":
-            let safeAreaView = UIView()
-            safeAreaView.insetsLayoutMarginsFromSafeArea = true
-            view = safeAreaView
+        case "TouchableOpacity":
+            let touchable = createTouchableView()
+            setupTouchableEvents(touchable)
+            touchable.alpha = 1.0
+            touchable.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
+            touchable.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            view = touchable
             
         default:
             view = UIView()
-            os_log(.info, log: logger, "⚠️ Unknown view type: %{public}@", viewType)
         }
         
         view?.translatesAutoresizingMaskIntoConstraints = false
@@ -223,37 +215,67 @@ class NativeUIManager: NSObject, FlutterPlugin {
         if let view = view {
             views[viewId] = view
             childViews[viewId] = []
+            
+            // Important: Apply styles before layout
+            if let properties = args["properties"] as? [String: Any] {
+                let style = NativeViewStyle(from: properties)
+                style.apply(to: view)
+            }
+            
+            // Apply layout with proper parent bounds
+            if let layout = args["layout"] as? [String: Any] {
+                let config = LayoutConfig(from: layout)
+                if let superview = view.superview {
+                    view.frame = CGRect(origin: .zero, size: superview.bounds.size)
+                } else {
+                    view.frame = UIScreen.main.bounds
+                }
+                applyYogaLayout(to: view, config: config)
+            }
+            
             result(viewId)
         } else {
             result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
         }
     }
 
+    private func applyLayout(to view: UIView, layout: [String: Any]) {
+        if let width = layout["width"] as? Double {
+            view.widthAnchor.constraint(equalToConstant: CGFloat(width)).isActive = true
+        }
+        
+        if let height = layout["height"] as? Double {
+            view.heightAnchor.constraint(equalToConstant: CGFloat(height)).isActive = true
+        }
+        
+        if let flex = layout["flex"] as? Double {
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .horizontal)
+            view.setContentHuggingPriority(.init(rawValue: 1000 - Float(flex)), for: .vertical)
+        }
+    }
+
     private func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-           guard let args = call.arguments as? [String: Any],
-                 let parentId = args["parentId"] as? String,
-                 let childId = args["childId"] as? String,
-                 let parentView = views[parentId],
-                 let childView = views[childId] else {
-               result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
-               return
-           }
-           
-           if let stackView = parentView as? UIStackView {
-               stackView.addArrangedSubview(childView)
-           } else {
-               parentView.addSubview(childView)
-               
-               NSLayoutConstraint.activate([
-                   childView.centerXAnchor.constraint(equalTo: parentView.centerXAnchor),
-                   childView.centerYAnchor.constraint(equalTo: parentView.centerYAnchor),
-                   childView.widthAnchor.constraint(lessThanOrEqualTo: parentView.widthAnchor, constant: -32)
-               ])
-           }
-           
-           childViews[parentId]?.append(childId)
-           result(true)
-       }
+        print("Attaching view with arguments: \(String(describing: call.arguments))")
+        
+        guard let args = call.arguments as? [String: Any],
+              let parentId = args["parentId"] as? String,
+              let childId = args["childId"] as? String,
+              let parentView = views[parentId],
+              let childView = views[childId] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
+            return
+        }
+        
+        childView.translatesAutoresizingMaskIntoConstraints = false
+        childView.yoga.isEnabled = true // Enable yoga on child
+        parentView.addSubview(childView)
+        childViews[parentId]?.append(childId)
+        
+        // Trigger layout calculation
+        parentView.yoga.applyLayout(preservingOrigin: false)
+        
+        result(true)
+    }
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
@@ -286,29 +308,24 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        if let button = view as? UIButton {
-            if let title = properties["title"] as? String {
-                button.setTitle(title, for: .normal)
-            }
-        } else if let label = view as? UILabel {
-            if let text = properties["text"] as? String {
-                label.text = text
-            }
-        } else if let textField = view as? UITextField {
-            if let text = properties["text"] as? String {
-                textField.text = text
-            }
-            if let placeholder = properties["placeholder"] as? String {
-                textField.placeholder = placeholder
-            }
-        } else if let stackView = view as? UIStackView {
-            if let spacing = properties["spacing"] as? CGFloat {
-                stackView.spacing = spacing
-            }
-            if let axis = properties["axis"] as? String {
-                stackView.axis = axis == "horizontal" ? .horizontal : .vertical
+        print("Applying properties to view: \(properties)")  // Debug log
+        
+        // Handle text specifically for Label and Button
+        if let textStyle = properties["textStyle"] as? [String: Any] {
+            if let text = textStyle["text"] as? String {
+                if let label = view as? UILabel {
+                    label.text = text
+                } else if let button = view as? UIButton {
+                    button.setTitle(text, for: .normal)
+                }
             }
         }
+        
+        let style = NativeViewStyle(from: properties)
+        style.apply(to: view)
+        
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
         
         result(true)
     }
@@ -377,20 +394,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        switch colorString.lowercased() {
-        case "red": view.backgroundColor = .red
-        case "blue": view.backgroundColor = .blue
-        case "green": view.backgroundColor = .green
-        case "yellow": view.backgroundColor = .yellow
-        case "black": view.backgroundColor = .black
-        case "white": view.backgroundColor = .white
-        case "clear": view.backgroundColor = .clear
-        default:
-            if let color = UIColor(named: colorString) {
-                view.backgroundColor = color
-            }
-        }
-        
+        applyColorToView(view, colorString: colorString)
         result(true)
     }
 
@@ -462,7 +466,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
         result(true)
     }
 
-    private func handleGetRootView(result: @escaping FlutterResult) {
+    internal func handleGetRootView(result: @escaping FlutterResult) {
         guard let rootViewId = self.rootViewId,
               let rootView = views[rootViewId] else {
             result(FlutterError(code: "NO_ROOT_VIEW", message: "Root view not initialized", details: nil))
@@ -477,7 +481,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
             
             @objc private func handleButtonClick(_ sender: UIButton) {
-                guard let viewId = views.first(where: { $0.value == sender })?.key else { return }
+                guard let viewId = views.first(where: { $0.value == sender })?.key else {
+                    print("Warning: Could not find viewId for clicked button")
+                    return
+                }
+                print("Native button click detected for viewId: \(viewId)")
                 sendEventToFlutter(viewId: viewId, eventType: "onClick")
             }
             
@@ -495,13 +503,28 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
             
             private func sendEventToFlutter(viewId: String, eventType: String) {
+                // Explicitly type the dictionary
                 let eventData: [String: Any] = [
-                    "viewId": viewId,
-                    "eventType": eventType,
-                    "timestamp": Date().timeIntervalSince1970
+                    "viewId": viewId as String,
+                    "eventType": eventType as String,
+                    "timestamp": Date().timeIntervalSince1970 as Double
                 ]
                 
-                methodChannel?.invokeMethod("onNativeEvent", arguments: eventData)
+                DispatchQueue.main.async { [weak self] in
+                    self?.methodChannel?.invokeMethod(
+                        "onNativeEvent",
+                        arguments: eventData as [String: Any],
+                        result: { (result) in
+                            if let error = result as? FlutterError {
+                                print("Warning: Event callback completed with error: \(error.message ?? "unknown")")
+                            } else if FlutterMethodNotImplemented.isEqual(result) {
+                                print("Warning: Event callback not implemented on Flutter side")
+                            } else {
+                                print("Event successfully delivered to Flutter: \(eventType) for view \(viewId)")
+                            }
+                        }
+                    )
+                }
             }
             
             private func cleanup() {
@@ -529,425 +552,237 @@ class NativeUIManager: NSObject, FlutterPlugin {
             deinit {
                 cleanup()
             }
-        }
-
-        extension UIView {
-            var parentViewController: UIViewController? {
-                var responder: UIResponder? = self
-                while let nextResponder = responder?.next {
-                    if let viewController = nextResponder as? UIViewController {
-                        return viewController
-                    }
-                    responder = nextResponder
-                }
-                return nil
+            
+            private func createTouchableView() -> UIButton {
+                let touchable = UIButton(type: .custom)
+                touchable.backgroundColor = .clear
+                touchable.adjustsImageWhenHighlighted = true
+                touchable.showsTouchWhenHighlighted = true
+                return touchable
             }
+
+            @objc private func handleTouchDown(_ sender: UIButton) {
+                UIView.animate(withDuration: 0.1) {
+                    sender.alpha = 0.6
+                }
+            }
+
+            @objc private func handleTouchUp(_ sender: UIButton) {
+                UIView.animate(withDuration: 0.1) {
+                    sender.alpha = 1.0
+                }
+            }
+
+    private func createButtonView() -> UIButton {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .clear
+        button.layer.masksToBounds = true
+        return button
+    }
+
+    private func setupButtonEvents(_ button: UIButton) {
+        button.addTarget(self, action: #selector(handleButtonPress(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(handleButtonPressUp(_:)), for: [.touchUpInside, .touchUpOutside])
+        
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
+        button.addGestureRecognizer(longPress)
+    }
+
+    private func setupTouchableEvents(_ view: UIView) {
+        // Tap gesture
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTouchablePress(_:)))
+        view.addGestureRecognizer(tap)
+        
+        // Double tap
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleTouchableDoublePress(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        tap.require(toFail: doubleTap)
+        view.addGestureRecognizer(doubleTap)
+        
+        // Long press
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleTouchableLongPress(_:)))
+        view.addGestureRecognizer(longPress)
+    }
+
+    @objc private func handleButtonPress(_ sender: UIButton) {
+        guard let viewId = getViewId(for: sender) else { return }
+        sendButtonEvent(viewId: viewId, type: .onPressIn)
+    }
+
+    @objc private func handleButtonPressUp(_ sender: UIButton) {
+        guard let viewId = getViewId(for: sender) else { return }
+        sendButtonEvent(viewId: viewId, type: .onPressOut)
+        sendButtonEvent(viewId: viewId, type: .onClick)
+    }
+
+    @objc private func handleButtonLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard let button = sender.view as? UIButton,
+              let viewId = getViewId(for: button) else { return }
+        
+        if sender.state == .began {
+            sendButtonEvent(viewId: viewId, type: .onLongPress)
         }
+    }
+
+    @objc private func handleTouchablePress(_ sender: UITapGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
+        
+        let location = sender.location(in: view)
+        sendTouchEvent(viewId: viewId, type: .onPress, location: location)
+    }
+
+    @objc private func handleTouchableDoublePress(_ sender: UITapGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
+        
+        let location = sender.location(in: view)
+        sendTouchEvent(viewId: viewId, type: .onDoublePress, location: location)
+    }
+
+    private func sendTouchEvent(viewId: String, type: TouchEventType, location: CGPoint) {
+        let eventData: [String: Any] = [
+            "viewId": viewId,
+            "type": type.rawValue,
+            "x": location.x,
+            "y": location.y,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        methodChannel?.invokeMethod("onTouchEvent", arguments: eventData)
+    }
+
+    private func sendButtonEvent(viewId: String, type: ButtonEventType) {
+        let eventData: [String: Any] = [
+            "viewId": viewId,
+            "type": type.rawValue,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        methodChannel?.invokeMethod("onButtonEvent", arguments: eventData)
+    }
+
+    private func getViewId(for view: UIView) -> String? {
+        return views.first(where: { $0.value == view })?.key
+    }
+}
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    // Keep only the view property methods
-    private func handleSetViewSize(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    private func handleCreateStackView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let width = args["width"] as? CGFloat,
-              let height = args["height"] as? CGFloat,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid size arguments", details: nil))
+              let stackTypeString = args["stackType"] as? String,
+              let stackType = StackType(rawValue: stackTypeString) else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid stack type", details: nil))
             return
         }
-        
-        NSLayoutConstraint.activate([
-            view.widthAnchor.constraint(equalToConstant: width),
-            view.heightAnchor.constraint(equalToConstant: height)
-        ])
-        result(true)
-    }
-    
-    private func handleSetViewMargin(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let margins = args["margins"] as? [String: CGFloat],
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid margin arguments", details: nil))
-            return
+
+        let stackView: UIView
+        let viewId = "stack-\(stackType.rawValue)-\(UUID().uuidString)"
+
+        switch stackType {
+        case .vertical:
+            let vStack = UIStackView()
+            vStack.axis = .vertical
+            vStack.spacing = args["spacing"] as? CGFloat ?? 8.0
+            stackView = vStack
+            
+        case .horizontal:
+            let hStack = UIStackView()
+            hStack.axis = .horizontal
+            hStack.spacing = args["spacing"] as? CGFloat ?? 8.0
+            stackView = hStack
+            
+        case .depth:
+            // For ZStack, we use a regular view that overlays its subviews
+            let zStack = ZStackView()
+            stackView = zStack
         }
-        
-        if let superview = view.superview {
-            NSLayoutConstraint.activate([
-                view.topAnchor.constraint(equalTo: superview.topAnchor, constant: margins["top"] ?? 0),
-                view.leadingAnchor.constraint(equalTo: superview.leadingAnchor, constant: margins["left"] ?? 0),
-                view.trailingAnchor.constraint(equalTo: superview.trailingAnchor, constant: -(margins["right"] ?? 0)),
-                view.bottomAnchor.constraint(equalTo: superview.bottomAnchor, constant: -(margins["bottom"] ?? 0))
-            ])
+
+        if let stackView = stackView as? UIStackView {
+            if let alignment = args["alignment"] as? String {
+                stackView.alignment = convertAlignment(alignment)
+            }
         }
-        result(true)
-    }
-    
-    private func handleSetViewPadding(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let padding = args["padding"] as? [String: CGFloat],
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid padding arguments", details: nil))
-            return
-        }
-        
-        if let stackView = view as? UIStackView {
+
+        // Apply padding if provided
+        if let padding = args["padding"] as? [String: CGFloat] {
             stackView.layoutMargins = UIEdgeInsets(
                 top: padding["top"] ?? 0,
                 left: padding["left"] ?? 0,
                 bottom: padding["bottom"] ?? 0,
                 right: padding["right"] ?? 0
             )
-            stackView.isLayoutMarginsRelativeArrangement = true
+            if let stackView = stackView as? UIStackView {
+                stackView.isLayoutMarginsRelativeArrangement = true
+            }
         }
-        result(true)
-    }
-    
-    private func handleSetViewBorder(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let width = args["width"] as? CGFloat,
-              let color = args["color"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid border arguments", details: nil))
-            return
-        }
+
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        views[viewId] = stackView
+        childViews[viewId] = []
         
-        view.layer.borderWidth = width
-        view.layer.borderColor = UIColor(named: color)?.cgColor ?? UIColor.black.cgColor
-        result(true)
-    }
-    
-    private func handleSetViewCornerRadius(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let radius = args["radius"] as? CGFloat,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid corner radius arguments", details: nil))
-            return
-        }
-        
-        view.layer.cornerRadius = radius
-        view.clipsToBounds = true
-        result(true)
+        result(viewId)
     }
 
-    // Add new method to handle view shadow
-    private func handleSetViewShadow(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    private func convertAlignment(_ alignment: String) -> UIStackView.Alignment {
+        switch alignment {
+        case "start": return .leading
+        case "center": return .center
+        case "end": return .trailing
+        case "stretch": return .fill
+        default: return .fill
+        }
+    }
+
+    private func handleSetViewLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
               let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid shadow arguments", details: nil))
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
             return
         }
         
-        view.layer.shadowColor = UIColor(named: args["color"] as? String ?? "black")?.cgColor
-        view.layer.shadowOffset = CGSize(
-            width: args["offsetX"] as? CGFloat ?? 0,
-            height: args["offsetY"] as? CGFloat ?? 2
-        )
-        view.layer.shadowRadius = args["radius"] as? CGFloat ?? 4
-        view.layer.shadowOpacity = Float(args["opacity"] as? CGFloat ?? 0.25)
+        // Create layout config from arguments        let config = LayoutConfig(from: args)                // Apply the layout        applyYogaLayout(to: view, config: config)                // Trigger layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
         result(true)
     }
 
-    // Add new method to handle view transform
-    private func handleSetViewTransform(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    private func applyLayout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
+              let layoutConfig = args as? [String: Any],
               let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid transform arguments", details: nil))
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for layout", details: nil))
             return
         }
         
-        var transform = CGAffineTransform.identity
+        let config = LayoutConfig(from: layoutConfig)
+        applyYogaLayout(to: view, config: config)
         
-        if let rotation = args["rotation"] as? CGFloat {
-            transform = transform.rotated(by: rotation)
-        }
+        // Trigger layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
         
-        if let scale = args["scale"] as? CGFloat {
-            transform = transform.scaledBy(x: scale, y: scale)
-        }
-        
-        if let translateX = args["translateX"] as? CGFloat,
-           let translateY = args["translateY"] as? CGFloat {
-            transform = transform.translatedBy(x: translateX, y: translateY)
-        }
-        
-        view.transform = transform
         result(true)
     }
 
-    private func handleDetachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let parentId = args["parentId"] as? String,
-              let childId = args["childId"] as? String,
-              let childView = views[childId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
-            return
-        }
+    @objc private func handleTouchableLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard let view = sender.view,
+              let viewId = getViewId(for: view) else { return }
         
-        childView.removeFromSuperview()
-        childViews[parentId]?.removeAll { $0 == childId }
-        result(true)
-    }
-    
-    private func handleSetViewOpacity(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let opacity = args["opacity"] as? CGFloat,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid opacity arguments", details: nil))
-            return
+        if sender.state == .began {
+            let location = sender.location(in: view)
+            sendTouchEvent(viewId: viewId, type: .onLongPress, location: location)
         }
-        
-        view.alpha = opacity
-        result(true)
     }
-    
-    private func handleSetupNavigation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let args = call.arguments as? [String: Any],
-           let typeStr = args["type"] as? String {
-            // Create navigation controller if needed
-            if navigationController == nil {
-                setupNavigationController()
-                os_log(.info, log: logger, "Navigation controller setup complete")
-            }
-            result(true)
-            return
-        }
-        result(FlutterError(code: "INVALID_ARGS", message: "Invalid navigation setup args", details: nil))
-    }
+}
 
-    // Add method implementation
-    private func handleShowAlert(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let title = args["title"] as? String,
-              let message = args["message"] as? String,
-              let actions = args["actions"] as? [[String: Any]] else {
-            result(false)
-            return
-        }
-        
-        let alertStyle: UIAlertController.Style = 
-            (args["style"] as? String == "actionSheet") ? .actionSheet : .alert
-        
-        let alert = UIAlertController(title: title, message: message, preferredStyle: alertStyle)
-        
-        for action in actions {
-            guard let title = action["title"] as? String else { continue }
-            
-            let style: UIAlertAction.Style
-            switch action["style"] as? String {
-            case "cancel": style = .cancel
-            case "destructive": style = .destructive
-            default: style = .default
-            }
-            
-            let alertAction = UIAlertAction(title: title, style: style) { [weak self] _ in
-                self?.methodChannel?.invokeMethod("onAlertAction", arguments: [
-                    "title": title
-                ])
-            }
-            alert.addAction(alertAction)
-        }
-        
-        if let topVC = UIApplication.shared.keyWindow?.topViewController() {
-            topVC.present(alert, animated: true)
-            result(true)
-        } else {
-            result(false)
-        }
-    }
-
-    // Add state tracking
-    private func handleStateChange(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let key = args["key"] as? String,
-              let value = args["value"] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid state change args", details: nil))
-            return
-        }
-        
-        // Track which views need updates
-        var updatedViews: Set<String> = []
-        
-        // Update state and find affected views
-        for (viewId, states) in viewStates where states.keys.contains(key) {
-            let oldValue = states[key]
-            if !isEqual(oldValue, value) {
-                viewStates[viewId]?[key] = value
-                updatedViews.insert(viewId)
-            }
-        }
-        
-        // Include bound views
-        if let boundViews = stateBindings[key] {
-            updatedViews.formUnion(boundViews)
-        }
-        
-        // Only update changed views
-        for viewId in updatedViews {
-            updateViewWithState(viewId: viewId, key: key, value: value)
-        }
-        
-        result(true)
-        
-        // Notify Flutter about successful update
-        methodChannel?.invokeMethod("onStateUpdateComplete", arguments: [
-            "key": key,
-            "value": value,
-            "updatedViews": Array(updatedViews)
-        ])
-    }
-    
-    private func isEqual(_ lhs: Any?, _ rhs: Any?) -> Bool {
-        switch (lhs, rhs) {
-        case (nil, nil): return true
-        case let (lhs as String, rhs as String): return lhs == rhs
-        case let (lhs as Int, rhs as Int): return lhs == rhs
-        case let (lhs as Double, rhs as Double): return lhs == rhs
-        case let (lhs as Bool, rhs as Bool): return lhs == rhs
-        default: return false
-        }
-    }
-    
-    private func updateViewWithState(viewId: String, key: String, value: Any) {
-        guard let view = views[viewId] else { return }
-        
-        // Apply state update based on view type and state key
-        switch view {
-        case let label as UILabel:
-            if key.hasSuffix("text") {
-                label.text = "\(value)"
-            } else if key.hasSuffix("color") {
-                label.textColor = UIColor(named: "\(value)") ?? .black
-            }
-            
-        case let button as UIButton:
-            if key.hasSuffix("title") {
-                button.setTitle("\(value)", for: .normal)
-            } else if key.hasSuffix("enabled") {
-                button.isEnabled = (value as? Bool) ?? true
-            }
-            
-        case let textField as UITextField:
-            if key.hasSuffix("text") {
-                textField.text = "\(value)"
-            } else if key.hasSuffix("placeholder") {
-                textField.placeholder = "\(value)"
-            }
-            
-        case let imageView as UIImageView:
-            if key.hasSuffix("url"), let urlString = value as? String {
-                loadImage(from: urlString, into: imageView)
-            }
-            
-        default:
-            // Common properties for all views
-            if key.hasSuffix("backgroundColor"), let colorName = value as? String {
-                view.backgroundColor = UIColor(named: colorName)
-            } else if key.hasSuffix("alpha"), let opacity = value as? CGFloat {
-                view.alpha = opacity
-            } else if key.hasSuffix("hidden"), let isHidden = value as? Bool {
-                view.isHidden = isHidden
-            }
-        }
-    }
-    
-    private func loadImage(from urlString: String, into imageView: UIImageView) {
-        guard let url = URL(string: urlString) else { return }
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    imageView.image = image
-                }
-            }
-        }.resume()
-    }
-    
-    private func handleBindState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let key = args["key"] as? String else {
-            result(false)
-            return
-        }
-        
-        // Initialize state tracking for view if needed
-        viewStates[viewId] = viewStates[viewId] ?? [:]
-        
-        // Add to state bindings
-        stateBindings[key] = stateBindings[key] ?? Set()
-        stateBindings[key]?.insert(viewId)
-        
-        result(true)
-    }
-    
-    private func handleUnbindState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let key = args["key"] as? String else {
-            result(false)
-            return
-        }
-        
-        stateBindings[key]?.remove(viewId)
-        viewStates[viewId]?.removeValue(forKey: key)
-        
-        result(true)
-    }
-    
-    // Add handleViewMethod implementation
-    private func handleViewMethod(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "attachView":
-            handleAttachView(call, result: result)
-        case "detachView":
-            handleDetachView(call, result: result)
-        case "deleteView":
-            handleDeleteView(call, result: result)
-        case "updateView":
-            handleUpdateView(call, result: result)
-        case "setViewProperties":
-            handleSetViewProperties(call, result: result)
-        case "changeViewBackgroundColor":
-            handleChangeViewBackgroundColor(call, result: result)
-        case "setViewVisibility":
-            handleSetViewVisibility(call, result: result)
-        case "setViewSize":
-            handleSetViewSize(call, result: result)
-        case "setViewMargin":
-            handleSetViewMargin(call, result: result)
-        case "setViewPadding":
-            handleSetViewPadding(call, result: result)
-        case "setViewBorder":
-            handleSetViewBorder(call, result: result)
-        case "setViewCornerRadius":
-            handleSetViewCornerRadius(call, result: result)
-        case "setViewShadow":
-            handleSetViewShadow(call, result: result)
-        case "setViewOpacity":
-            handleSetViewOpacity(call, result: result)
-        case "setViewTransform":
-            handleSetViewTransform(call, result: result)
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
-
-    // Add this method to handle events
-    private func handleEventMethod(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "registerEvent":
-            handleRegisterEvent(call, result: result)
-        case "unregisterEvent":
-            handleUnregisterEvent(call, result: result)
-        default:
-            result(FlutterMethodNotImplemented)
-        }
+extension UIView {
+    func setupForBackground() {
+        backgroundColor = .clear
+        clipsToBounds = true
     }
 }
