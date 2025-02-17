@@ -1,5 +1,5 @@
 import 'package:dc_test/core/types/events.dart';
-import 'package:flutter/material.dart' hide TextStyle;
+import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
 import 'package:logging/logging.dart';
 import 'package:dc_test/core/types/layout/yoga_types.dart';
 import 'package:dc_test/layout/layout_config.dart';
@@ -105,14 +105,15 @@ Future<void> startApp() async {
   await bridge.setLayout(
       card,
       LayoutConfig(
-        display: YGDisplay.flex,
-        flexDirection: YGFlexDirection.column,
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        width: YGValue(300, YGUnit.point),
-        padding: const EdgeInsets.all(32),
-        margin: const EdgeInsets.symmetric(vertical: 40),
-      ));
+          display: YGDisplay.flex,
+          flexDirection: YGFlexDirection.column,
+          alignItems: YGAlign.center,
+          justifyContent: YGJustify.center,
+          width: YGValue(100, YGUnit.percent),
+          height: YGValue(80, YGUnit.percent)
+          // padding: const EdgeInsets.all(32),
+          // margin: const EdgeInsets.symmetric(vertical: 40),
+          ));
 
   await bridge.updateView(
       card,
@@ -143,20 +144,10 @@ Future<void> startApp() async {
   await bridge.updateView(
       counterDisplay,
       ViewStyle(
-          gradient: GradientStyle(
-            colors: [Color(0xFFF0F7FF), Color(0xFFE6F0FF)],
-            stops: [0.0, 1.0],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          cornerRadius: 90,
-          shadows: [
-            ShadowStyle(
-              color: Color(0xFF2E3192).withOpacity(0.1),
-              offset: const Offset(0, 8),
-              radius: 16,
-            )
-          ]).toJson());
+        backgroundColor: Colors.blueAccent,
+        border: BorderStyle(color: Colors.amber, style: BorderType.dotted),
+        cornerRadius: 90,
+      ).toJson());
 
   // Counter label
   final counterLabel = await bridge.createView('Label');
@@ -220,10 +211,20 @@ Future<void> startApp() async {
       },
     },
   );
+  await bridge.setLayout(
+      decrementButton!,
+      LayoutConfig(
+        flexDirection: YGFlexDirection.row,
+        justifyContent: YGJustify.spaceBetween,
+        alignItems: YGAlign.center,
+        width: YGValue(60, YGUnit.point),
+        margin: const EdgeInsets.only(top: 24),
+      ));
+  
 
   final resetButton = await bridge.createButton(
     text: '↺',
-    style: ViewStyle(
+    style: ViewStyle(   
       backgroundColor: Color(0xFF007AFF),
       cornerRadius: 28,
       shadows: [
@@ -251,6 +252,17 @@ Future<void> startApp() async {
       },
     },
   );
+
+   await bridge.setLayout(
+      resetButton!,
+      LayoutConfig(
+        flexDirection: YGFlexDirection.row,
+        justifyContent: YGJustify.spaceBetween,
+        alignItems: YGAlign.center,
+        width: YGValue(60, YGUnit.point),
+        margin: const EdgeInsets.only(top: 24),
+      ));
+  
 
   final incrementButton = await bridge.createButton(
     text: '+',
@@ -282,6 +294,17 @@ Future<void> startApp() async {
       },
     },
   );
+
+   await bridge.setLayout(
+      incrementButton!,
+      LayoutConfig(
+        flexDirection: YGFlexDirection.row,
+        justifyContent: YGJustify.spaceBetween,
+        alignItems: YGAlign.center,
+        width: YGValue(60, YGUnit.point),
+        margin: const EdgeInsets.only(top: 24),
+      ));
+  
 
   // Attach buttons (no need for registerEvent anymore)
   if (decrementButton != null) {
