@@ -1,4 +1,5 @@
-import 'package:dc_test/core/types/events.dart';
+
+import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
