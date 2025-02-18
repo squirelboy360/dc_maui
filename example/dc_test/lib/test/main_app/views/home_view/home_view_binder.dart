@@ -1,16 +1,16 @@
-part of '../imports.dart';
+part of '../../imports.dart';
 
 class HomeViewBinder extends HomeView {
   final _logger = Logger('HomeViewBinder');
 
-  HomeViewBinder(super.bridge);
+
 
   Future<void> navigateToHomeScreen() async {
     _logger.info('Starting navigation to home screen');
 
     try {
       // First create all components
-      await createRootContainer(''); // Bridge will handle root ID internally
+      await createRootContainer(); // Bridge will handle root ID internally
       await createHeaderSection();
       await createCardSection();
       await createButtonsSection();

@@ -1,13 +1,23 @@
-part of '../imports.dart';
+part of '../../imports.dart';
+
+abstract class HomeViewComponents {
+  String rootContainer = '';
+  String headerSection = '';
+  String titleLabel = '';
+  String subtitleLabel = '';
+  String cardSection = '';
+  String counterDisplay = '';
+  String counterLabel = '';
+  String buttonsSection = '';
+  String decrementButton = '';
+  String resetButton = '';
+  String incrementButton = '';
+}
 
 class HomeView extends HomeViewComponents {
-  final NativeUIBridge bridge;
   int counter = 0;
-
-  HomeView(this.bridge);
-
   // Root container component with gradient
-  Future<void> createRootContainer(String parentId) async {
+  Future<void> createRootContainer() async {
     rootContainer = await bridge.createView(ViewType.view) ?? '';
 
     // Set explicit size constraints
@@ -36,10 +46,23 @@ class HomeView extends HomeViewComponents {
     await bridge.setLayout(
       headerSection,
       LayoutConfig(
+        width: YGValue(100, YGUnit.percent),
         flexDirection: YGFlexDirection.column,
         alignItems: YGAlign.center,
-        margin: const EdgeInsets.only(top: 60, bottom: 40),
+        padding: EdgeInsets.all(0),
+        margin: const EdgeInsets.only(top: 60, bottom: 40,right: 0,left: 0),
       ),
+    );
+
+    await bridge.updateView(
+      headerSection,
+      ViewStyle(
+        cornerRadius: 20,
+        backgroundColor: Colors.purpleAccent,
+        opacity: 0.5,
+        border:
+            BorderStyle(color: Colors.amber, style: BorderType.solid, width: 2),
+      ).toJson(),
     );
 
     await createHeaderTitle();
@@ -174,7 +197,7 @@ class HomeView extends HomeViewComponents {
   Future<void> createDecrementButton() async {
     try {
       final buttonId = await bridge.createView(ViewType.button) ?? '';
-      
+
       // Set layout first
       await bridge.setLayout(
         buttonId,
@@ -232,7 +255,6 @@ class HomeView extends HomeViewComponents {
       );
 
       await bridge.attachView(buttonsSection, buttonId);
-      
     } catch (e, stack) {
       print('Error in createDecrementButton: $e\n$stack');
     }
