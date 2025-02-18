@@ -52,7 +52,7 @@ class Base {
     binding.addObserver(
       _HotReloadObserver(
         onHotReload: () async {
-          print('🔄 Hot reload detected');
+          Logger('🔄 Hot reload detected');
           await _hotReloadManager.handleHotReload();
         },
         onHotRestart: () async {

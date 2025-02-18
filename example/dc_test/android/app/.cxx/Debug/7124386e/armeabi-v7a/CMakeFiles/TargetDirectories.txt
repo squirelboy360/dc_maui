@@ -1,0 +1,2 @@
+/Users/tahiruagbanwa/Desktop/projects/public/dicore/dc_maui/example/dc_test/android/app/.cxx/Debug/7124386e/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/tahiruagbanwa/Desktop/projects/public/dicore/dc_maui/example/dc_test/android/app/.cxx/Debug/7124386e/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../layout/layout_config.dart';
 import '../core/types/layout/yoga_types.dart'; // Add this import
 import '../core/types/view/view_types.dart';
+
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
@@ -19,13 +20,6 @@ enum FlexAlignment {
   spaceBetween,
   spaceAround,
   spaceEvenly
-}
-
-// Add these enums after existing enums
-enum StackType {
-  vertical, // VStack
-  horizontal, // HStack
-  depth // ZStack
 }
 
 // Update Color extension to use correct integer conversion
@@ -194,8 +188,7 @@ class Core {
   ///     isEnabled?: bool,
   ///     isVisible?: bool
   ///   }
-  Future<bool> updateView(
-      String viewId, Map<String, dynamic> styles) async {
+  Future<bool> updateView(String viewId, Map<String, dynamic> styles) async {
     try {
       // Convert any Color objects to hex strings
       var processedProperties = Map<String, dynamic>.from(styles);
@@ -421,72 +414,6 @@ class Core {
       _logger.severe('Error setting view layout: $e');
       return false;
     }
-  }
-
-  Future<String?> createStackView(
-    StackType type, {
-    double spacing = 8.0,
-    FlexAlignment? alignment,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) async {
-    try {
-      _logger.info('Creating stack view of type: ${type.toString()}');
-      final viewId = await _channel.invokeMethod<String>('createStackView', {
-        'stackType': type.toString().split('.').last,
-        'spacing': spacing,
-        'alignment': alignment?.toString().split('.').last,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-      });
-      _logger.info('Stack view created with ID: $viewId');
-      return viewId;
-    } catch (e) {
-      _logger.severe('Error creating stack view: $e');
-      return null;
-    }
-  }
-
-  // Helper methods for specific stack types
-  Future<String?> createVStack({
-    double spacing = 8.0,
-    FlexAlignment? alignment,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) {
-    return createStackView(
-      StackType.vertical,
-      spacing: spacing,
-      alignment: alignment,
-      padding: padding,
-    );
-  }
-
-  Future<String?> createHStack({
-    double spacing = 8.0,
-    FlexAlignment? alignment,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) {
-    return createStackView(
-      StackType.horizontal,
-      spacing: spacing,
-      alignment: alignment,
-      padding: padding,
-    );
-  }
-
-  Future<String?> createZStack({
-    FlexAlignment? alignment,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) {
-    return createStackView(
-      StackType.depth,
-      spacing: 0,
-      alignment: alignment,
-      padding: padding,
-    );
   }
 
   Future<double> getScreenWidth() async {
@@ -765,7 +692,6 @@ class Core {
     _touchEventCallbacks[viewId] ??= {};
     _touchEventCallbacks[viewId]![type] = callback;
   }
-
 
   // Add new maps for typed events
   final Map<String, Map<TouchEventType, Function(TouchEvent)>>
