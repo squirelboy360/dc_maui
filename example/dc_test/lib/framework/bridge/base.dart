@@ -73,21 +73,10 @@ class NativeUIBridge {
       try {
         switch (call.method) {
           case 'onNativeEvent':
+          case 'onButtonEvent':
             final args = Map<String, dynamic>.from(call.arguments as Map);
             final String viewId = args['viewId'] as String;
             final String eventType = args['eventType'] as String;
-
-            if (_eventCallbacks.containsKey(viewId) &&
-                _eventCallbacks[viewId]!.containsKey(eventType)) {
-              await _eventCallbacks[viewId]![eventType]!.call();
-              return true;
-            }
-            return false;
-
-          case 'onButtonEvent':
-            final args = Map<String, dynamic>.from(call.arguments as Map);
-            final viewId = args['viewId'] as String;
-            final eventType = args['type'] as String;
 
             if (_eventHandlers.containsKey(viewId) &&
                 _eventHandlers[viewId]!.containsKey(eventType)) {
@@ -114,17 +103,18 @@ class NativeUIBridge {
     Future<void> Function() callback,
   ) async {
     try {
+      // First store the callback
+      _eventHandlers[buttonId] ??= {};
+      _eventHandlers[buttonId]![eventType] = callback;
+
+      // Then register with native side
       final result = await _channel.invokeMethod('registerEvent', {
         'viewId': buttonId,
         'eventType': eventType,
+        'handler': true, // Just send a flag, actual handler is stored in _eventHandlers
       });
 
-      if (result == true) {
-        _eventHandlers[buttonId] ??= {};
-        _eventHandlers[buttonId]![eventType] = callback;
-        return true;
-      }
-      return false;
+      return result ?? false;
     } catch (e) {
       _logger.severe('Error registering button event: $e');
       return false;

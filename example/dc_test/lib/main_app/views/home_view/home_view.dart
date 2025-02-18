@@ -174,8 +174,8 @@ class HomeView extends HomeViewComponents {
   Future<void> createDecrementButton() async {
     try {
       final buttonId = await bridge.createView(ViewType.button) ?? '';
-
-      // First set the layout
+      
+      // Set layout first
       await bridge.setLayout(
         buttonId,
         LayoutConfig(
@@ -187,39 +187,35 @@ class HomeView extends HomeViewComponents {
         ),
       );
 
-      // Then update appearance
+      // Update style
       await bridge.updateView(
         buttonId,
-        {
-          ...ViewStyle(
-            backgroundColor: Color(0xFFFF3B30),
-            cornerRadius: 28,
-            textStyle: TextStyle(
-              text: '-',
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            shadows: [
-              ShadowStyle(
-                color: Color(0xFFFF3B30).withOpacity(0.3),
-                offset: const Offset(0, 4),
-                radius: 8,
-              )
-            ],
-          ).toJson(),
-          'type': ViewType.button.value, // Important: specify view type
-        },
+        ViewStyle(
+          backgroundColor: Color(0xFFFF3B30),
+          cornerRadius: 28,
+          textStyle: TextStyle(
+            text: '-',
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          shadows: [
+            ShadowStyle(
+              color: Color(0xFFFF3B30).withOpacity(0.3),
+              offset: const Offset(0, 4),
+              radius: 8,
+            )
+          ],
+        ).toJson(),
       );
 
-      // Store button ID
       decrementButton = buttonId;
 
-      // Register click handler
-      await bridge.invokeMethod('registerEvent', {
-        'viewId': buttonId,
-        'eventType': 'onClick',
-        'handler': () async {
+      // Register event with simple callback
+      await bridge.registerButtonEvent(
+        buttonId,
+        'onClick',
+        () async {
           counter--;
           await bridge.updateView(
             counterLabel,
@@ -233,10 +229,10 @@ class HomeView extends HomeViewComponents {
             ).toJson(),
           );
         },
-      });
+      );
 
-      // Attach to parent
       await bridge.attachView(buttonsSection, buttonId);
+      
     } catch (e, stack) {
       print('Error in createDecrementButton: $e\n$stack');
     }
