@@ -147,9 +147,9 @@ class HomeView extends HomeViewComponents {
     await bridge.updateView(
         counterDisplay,
         ViewStyle(
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: Colors.white,
           border: BorderStyle(
-              color: Colors.amber, style: BorderType.solid, width: 20),
+              color: Colors.black26, style: BorderType.solid, width: 20),
           cornerRadius: 90,
         ).toJson());
 

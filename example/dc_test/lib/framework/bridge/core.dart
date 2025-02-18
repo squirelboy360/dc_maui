@@ -2,10 +2,10 @@ import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:flutter/foundation.dart';
 import '../layout/layout_config.dart';
 import '../core/types/layout/yoga_types.dart'; // Add this import
 import '../core/types/view/view_types.dart';
-
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
 
