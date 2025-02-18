@@ -37,26 +37,18 @@ enum GestureEventType: String {
 
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
-    internal var methodChannel: FlutterMethodChannel?
+    private var methodChannel: FlutterMethodChannel?
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
-    internal var rootViewId: String?
-    internal var window: UIWindow?
+    private var rootViewId: String?
+    private var window: UIWindow?
+    private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
     internal var layoutConfigs: [String: LayoutConfig] = [:]
     internal var yogaNodes: [String: YGNodeRef] = [:]
     
+    private var touchEventHandlers: [String: [TouchEventType: () -> Void]] = [:]
+    private var buttonEventHandlers: [String: [ButtonEventType: () -> Void]] = [:]
     private var gestureEventHandlers: [String: [GestureEventType: () -> Void]] = [:]
-    private var windowSizeObserver: NSObjectProtocol?
-    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
-
-    deinit {
-        if let observer = windowSizeObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        window?.removeObserver(self, forKeyPath: "bounds")
-        cleanup()
-        endBackgroundTask()
-    }
 
     static func register(with registrar: FlutterPluginRegistrar) {
           let instance = NativeUIManager()
@@ -106,29 +98,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleWindowSizeChange() {
-        guard let window = window else { return }
-        
-        let size = window.frame.size
-        methodChannel?.invokeMethod("onWindowSizeChanged", arguments: [
-            "width": size.width,
-            "height": size.height
-        ])
-        
-        // Trigger layout update for root view
-        if let rootView = views[rootViewId ?? ""] {
-            rootView.yoga.applyLayout(preservingOrigin: true)
-        }
-    }
-
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        startBackgroundTask()
-        
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { 
-                self?.endBackgroundTask()
-                return 
-            }
+            guard let self = self else { return }
             
             switch call.method {
             case "createView":
@@ -153,6 +125,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleChangeViewBackgroundColor(call, result: result)
             case "setViewVisibility":
                 self.handleSetViewVisibility(call, result: result)
+            case "registerEvent":
+                self.handleRegisterEvent(call, result: result)
+            case "unregisterEvent":
+                self.handleUnregisterEvent(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
             case "createStackView":
@@ -170,8 +146,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
             default:
                 result(FlutterMethodNotImplemented)
             }
-            
-            self.endBackgroundTask()
         }
     }
 
@@ -344,6 +318,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
         view.removeFromSuperview()
         views.removeValue(forKey: viewId)
         childViews.removeValue(forKey: viewId)
+        registeredGestureRecognizers.removeValue(forKey: viewId)
         
         for (parentId, children) in childViews {
             if children.contains(viewId) {
@@ -469,40 +444,86 @@ class NativeUIManager: NSObject, FlutterPlugin {
     private func handleRegisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let viewId = args["viewId"] as? String,
-              let rawEventType = args["eventType"] as? String,
+              let eventTypeStr = args["eventType"] as? String,
               let view = views[viewId] else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
             return
         }
         
-        // Convert event type string to lowercase for matching
-        let eventTypeStr = rawEventType.lowercased()
-        
-        if let button = view as? UIButton {
-            switch eventTypeStr {
-            case ButtonEventType.onClick.rawValue.lowercased():
-                button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-                result(true)
-                
-            case ButtonEventType.onLongPress.rawValue.lowercased():
-                let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
-                button.addGestureRecognizer(longPress)
-                result(true)
-                
-            case ButtonEventType.onPressIn.rawValue.lowercased():
-                button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
-                result(true)
-                
-            case ButtonEventType.onPressOut.rawValue.lowercased():
-                button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-                result(true)
-                
-            default:
-                result(FlutterError(code: "INVALID_EVENT", message: "Unknown event type: \(rawEventType)", details: nil))
-            }
-        } else {
-            result(FlutterError(code: "INVALID_VIEW", message: "View is not a button", details: nil))
+        // Convert eventType string to proper enum
+        if let buttonEvent = ButtonEventType(rawValue: eventTypeStr) {
+            setupButtonEvent(view, viewId: viewId, eventType: buttonEvent)
+            result(true)
+            return
         }
+        
+        if let touchEvent = TouchEventType(rawValue: eventTypeStr) {
+            setupTouchEvent(view, viewId: viewId, eventType: touchEvent)
+            result(true)
+            return
+        }
+        
+        result(FlutterError(code: "INVALID_EVENT", message: "Unknown event type: \(eventTypeStr)", details: nil))
+    }
+
+    private func setupButtonEvent(_ view: UIView, viewId: String, eventType: ButtonEventType) {
+        guard let button = view as? UIButton else { return }
+        
+        switch eventType {
+        case .onClick:
+            button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
+        case .onLongPress:
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
+            button.addGestureRecognizer(longPress)
+        case .onPressIn:
+            button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
+        case .onPressOut:
+            button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        }
+    }
+
+    private func setupTouchEvent(_ view: UIView, viewId: String, eventType: TouchEventType) {
+        switch eventType {
+        case .onPress:
+            let tap = UITapGestureRecognizer(target: self, action: #selector(handleTouchablePress(_:)))
+            view.addGestureRecognizer(tap)
+        case .onDoublePress:
+            let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleTouchableDoublePress(_:)))
+            doubleTap.numberOfTapsRequired = 2
+            view.addGestureRecognizer(doubleTap)
+        case .onLongPress:
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleTouchableLongPress(_:)))
+            view.addGestureRecognizer(longPress)
+        case .onPressIn:
+            if let button = view as? UIButton {
+                button.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
+            }
+        case .onPressOut:
+            if let button = view as? UIButton {
+                button.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            }
+        }
+    }
+
+    private func handleUnregisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let eventType = args["eventType"] as? String,
+              let view = views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
+            return
+        }
+        
+        if let button = view as? UIButton, eventType == "onClick" {
+            button.removeTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
+        } else {
+            registeredGestureRecognizers[viewId]?.forEach { gesture in
+                view.removeGestureRecognizer(gesture)
+            }
+            registeredGestureRecognizers.removeValue(forKey: viewId)
+        }
+        
+        result(true)
     }
 
     internal func handleGetRootView(result: @escaping FlutterResult) {
@@ -556,8 +577,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             }
             
             private func sendEventToFlutter(viewId: String, eventType: String) {
-                startBackgroundTask()
-                
+                // Explicitly type the dictionary
                 let eventData: [String: Any] = [
                     "viewId": viewId as String,
                     "eventType": eventType as String,
@@ -568,17 +588,30 @@ class NativeUIManager: NSObject, FlutterPlugin {
                     self?.methodChannel?.invokeMethod(
                         "onNativeEvent",
                         arguments: eventData as [String: Any],
-                        result: { [weak self] (result) in
+                        result: { (result) in
                             if let error = result as? FlutterError {
                                 print("Warning: Event callback completed with error: \(error.message ?? "unknown")")
+                            } else if FlutterMethodNotImplemented.isEqual(result) {
+                                print("Warning: Event callback not implemented on Flutter side")
+                            } else {
+                                print("Event successfully delivered to Flutter: \(eventType) for view \(viewId)")
                             }
-                            self?.endBackgroundTask()
                         }
                     )
                 }
             }
             
             private func cleanup() {
+                for (_, recognizers) in registeredGestureRecognizers {
+                    for recognizer in recognizers {
+                        if let view = recognizer.view {
+                            view.removeGestureRecognizer(recognizer)
+                        }
+                    }
+                }
+                
+                registeredGestureRecognizers.removeAll()
+                
                 for (_, view) in views {
                     if let button = view as? UIButton {
                         button.removeTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
@@ -588,7 +621,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 
                 views.removeAll()
                 childViews.removeAll()
-                endBackgroundTask()
+            }
+            
+            deinit {
+                cleanup()
             }
             
             private func createTouchableView() -> UIButton {
@@ -694,8 +730,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func sendButtonEvent(viewId: String, type: ButtonEventType) {
-        startBackgroundTask()
-        
         print("Sending button event: \(type.rawValue) for view: \(viewId)") // Debug log
         let eventData: [String: Any] = [
             "viewId": viewId,
@@ -703,15 +737,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             "timestamp": Date().timeIntervalSince1970
         ]
         
-        DispatchQueue.main.async { [weak self] in
-            self?.methodChannel?.invokeMethod(
-                "onButtonEvent",
-                arguments: eventData,
-                result: { [weak self] _ in
-                    self?.endBackgroundTask()
-                }
-            )
-        }
+        methodChannel?.invokeMethod("onButtonEvent", arguments: eventData)
     }
 
     private func getViewId(for view: UIView) -> String? {

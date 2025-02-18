@@ -23,7 +23,9 @@ void main() {
 Future<void> startApp() async {
   try {
     final binder = HomeViewBinder(bridge);
-    await binder.navigateToHomeScreen();
+    await binder.navigateToHomeScreen().then((_) {
+      print("Called");
+    });
 
     _logger.info('App started successfully');
   } catch (e, stack) {

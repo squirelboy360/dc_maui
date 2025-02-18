@@ -174,7 +174,7 @@ class HomeView extends HomeViewComponents {
   Future<void> createDecrementButton() async {
     try {
       final buttonId = await bridge.createView(ViewType.button) ?? '';
-
+      
       // Set layout first
       await bridge.setLayout(
         buttonId,
@@ -214,7 +214,7 @@ class HomeView extends HomeViewComponents {
       // Register event with simple callback
       await bridge.registerButtonEvent(
         buttonId,
-        'onclick', // Changed from 'onClick' to 'onclick'
+        'onClick',
         () async {
           counter--;
           await bridge.updateView(
@@ -232,6 +232,7 @@ class HomeView extends HomeViewComponents {
       );
 
       await bridge.attachView(buttonsSection, buttonId);
+      
     } catch (e, stack) {
       print('Error in createDecrementButton: $e\n$stack');
     }
@@ -267,7 +268,6 @@ class HomeView extends HomeViewComponents {
         ),
         events: {
           ButtonEventType.onClick: () async {
-            // The enum stays the same
             counter = 0;
             await bridge.updateView(
               counterLabel,
@@ -323,7 +323,6 @@ class HomeView extends HomeViewComponents {
         ),
         events: {
           ButtonEventType.onClick: () async {
-            // The enum stays the same
             counter++;
             await bridge.updateView(
               counterLabel,
