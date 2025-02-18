@@ -25,8 +25,14 @@ class Base {
     }
 
     try {
-      // Show dummy Flutter UI
-      runApp(const SizedBox());
+      //  if you want to ever in sometime in your app embedd a flutter view in your native view with no performance issues,
+      //? call runApp and call the flutter view Api and attatch to parent view. this would allow u use flutter in your native app 
+      //? 100% fast as a native flutter app
+      // runApp(MaterialApp(
+      //   theme: ThemeData.light(),
+      //   color: Colors.indigo,
+      //   home: Center(child: Text("App running")),
+      // ));
 
       // Run actual native UI binding
       await bindApp();
