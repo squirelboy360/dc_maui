@@ -28,13 +28,13 @@ enum StackType {
   depth // ZStack
 }
 
-// Update Color extension to use correct integer conversion
+// Update Color extension to use new API
 extension ColorExtension on Color {
   String toHexString() {
-    final r = red.round().toRadixString(16).padLeft(2, '0');
-    final g = green.round().toRadixString(16).padLeft(2, '0');
-    final b = blue.round().toRadixString(16).padLeft(2, '0');
-    return '#$r$g$b';
+    return '#'
+        '${r.round().toRadixString(16).padLeft(2, '0')}'
+        '${g.round().toRadixString(16).padLeft(2, '0')}'
+        '${b.round().toRadixString(16).padLeft(2, '0')}';
   }
 }
 
@@ -47,6 +47,53 @@ enum ScrollAxis { vertical, horizontal, free }
 enum LayoutType { flex, absolute, relative }
 
 enum LayoutAlign { auto, start, center, end, stretch, baseline }
+
+// Add comprehensive event handling types
+enum TouchableEvent { onTouchDown, onTouchMove, onTouchUp, onTouchCancel }
+
+enum GestureEvent {
+  onTap,
+  onDoubleTap,
+  onLongPress,
+  onPanStart,
+  onPanUpdate,
+  onPanEnd,
+  onScaleStart,
+  onScaleUpdate,
+  onScaleEnd,
+  onRotateStart,
+  onRotateUpdate,
+  onRotateEnd
+}
+
+class TouchEventData {
+  final String viewId;
+  final TouchableEvent type;
+  final Offset position;
+  final double pressure;
+  final double timestamp;
+
+  TouchEventData({
+    required this.viewId,
+    required this.type,
+    required this.position,
+    this.pressure = 1.0,
+    required this.timestamp,
+  });
+
+  factory TouchEventData.fromJson(Map<String, dynamic> json) {
+    return TouchEventData(
+      viewId: json['viewId'] as String,
+      type: TouchableEvent.values[json['type'] as int],
+      position: Offset(
+        json['x'] as double,
+        json['y'] as double,
+      ),
+      pressure: json['pressure'] as double? ?? 1.0,
+      timestamp: json['timestamp'] as double,
+    );
+  }
+}
 
 // Yoga-compatible layout configuration
 class NativeUIBridge {
@@ -62,10 +109,11 @@ class NativeUIBridge {
   factory NativeUIBridge() => _instance;
   NativeUIBridge._() {
     _setupEventHandler();
+    _setupLayoutHandlers();
   }
 
-  // Callback registry
-  final Map<String, Map<String, Function>> _eventCallbacks = {};
+  // Add missing event handlers map
+  final Map<String, Map<String, Future<void> Function()>> _eventHandlers = {};
 
   // Event handler setup
   void _setupEventHandler() {
@@ -111,7 +159,8 @@ class NativeUIBridge {
       final result = await _channel.invokeMethod('registerEvent', {
         'viewId': buttonId,
         'eventType': eventType,
-        'handler': true, // Just send a flag, actual handler is stored in _eventHandlers
+        'handler':
+            true, // Just send a flag, actual handler is stored in _eventHandlers
       });
 
       return result ?? false;
@@ -121,11 +170,10 @@ class NativeUIBridge {
     }
   }
 
-  // View Management Methods
-
+// View Management Methods
   /// Creates a new native view
   /// Native expects:
-  /// - viewType: String (e.g. 'Button', 'TextView', 'LinearLayout')
+  /// - viewType: String (e.g. `Button`, `TextView`, `LinearLayout`)
   /// - properties: {
   ///     text?: String,
   ///     textSize?: double,
@@ -137,13 +185,30 @@ class NativeUIBridge {
   ///     isEnabled?: bool
   ///   }
   /// Returns: String viewId or null if failed
-  Future<String?> createView(ViewType viewType,
-      {Map<String, dynamic>? properties}) async {
+  ///
+  Future<String?> createView(
+    ViewType viewType, {
+    Map<String, dynamic>? properties,
+    LayoutConfig? layout,
+    Map<TouchEventType, Function(TouchEventData)>? events,
+  }) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createView', {
         'viewType': viewType.value,
-        ...?properties,
+        if (properties != null) 'properties': properties,
+        if (layout != null) 'layout': layout.toJson(),
       });
+
+      if (viewId != null && events != null) {
+        for (final entry in events.entries) {
+          await _registerTouchEvent(
+            viewId,
+            entry.key,
+            entry.value,
+          );
+        }
+      }
+
       return viewId;
     } catch (e) {
       _logger.severe('Error creating view: $e');
@@ -215,59 +280,6 @@ class NativeUIBridge {
   }
 
   // Event Handling
-
-  /// Registers event listener on native view
-  /// Native expects:
-  /// - viewId: String (must be existing view ID)
-  /// - eventType: String (supported events:
-  ///   'click', 'longClick', 'focus', 'blur',
-  ///   'textChanged', 'scrolled')
-  /// Returns: bool success
-  @Deprecated('Use component-specific event handlers instead')
-  Future<bool> registerEvent(
-      String viewId, String eventType, Function callback) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('registerEvent', {
-        'viewId': viewId,
-        'eventType': eventType,
-      });
-
-      if (result == true) {
-        // Initialize the map for this viewId if it doesn't exist
-        _eventCallbacks[viewId] ??= {};
-        // Store the callback - this was missing!
-        _eventCallbacks[viewId]![eventType] = callback;
-        _logger.info('Successfully registered $eventType for view $viewId');
-        return true;
-      }
-      _logger.warning('Failed to register event on native side');
-      return false;
-    } catch (e) {
-      _logger.severe('Error registering event: $e');
-      return false;
-    }
-  }
-
-  Future<bool> unregisterEvent(String viewId, String eventType) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('unregisterEvent', {
-        'viewId': viewId,
-        'eventType': eventType,
-      });
-
-      if (result ?? false) {
-        _eventCallbacks[viewId]?.remove(eventType);
-        if (_eventCallbacks[viewId]?.isEmpty ?? false) {
-          _eventCallbacks.remove(viewId);
-        }
-        return true;
-      }
-      return false;
-    } catch (e) {
-      _logger.severe('Error unregistering event: $e');
-      return false;
-    }
-  }
 
   // Styling Methods
 
@@ -573,27 +585,6 @@ class NativeUIBridge {
     }
   }
 
-  Future<String?> createScrollView({
-    ScrollAxis axis = ScrollAxis.vertical,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) async {
-    try {
-      final result = await _channel.invokeMethod('createScrollView', {
-        'axis': axis.toString().split('.').last,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-      });
-      return result as String?;
-    } catch (e) {
-      _logger.severe('Error creating scroll view: $e');
-      return null;
-    }
-  }
-
   Future<bool> setScrollContent(
       String scrollViewId, String contentViewId) async {
     try {
@@ -685,127 +676,235 @@ class NativeUIBridge {
   // Add new method for creating touchable components
   Future<String?> createTouchable({
     Map<String, dynamic>? properties,
-    Map<TouchEventType, Function(TouchEvent)>? events,
+    Map<TouchEventType, Function(TouchEventData)>? events,
   }) async {
     final viewId =
         await createView(ViewType.touchableOpacity, properties: properties);
     if (viewId != null && events != null) {
       for (final entry in events.entries) {
-        _registerTouchEvent(viewId, entry.key, entry.value);
+        await _registerTouchEvent(viewId, entry.key, entry.value);
       }
     }
     return viewId;
   }
 
-  // Update createButton method
+  // Enhanced button creation
   Future<String?> createButton({
     required String text,
     required Map<String, dynamic> style,
-    LayoutConfig? layout,
+    required LayoutConfig layout,
     Map<ButtonEventType, Future<void> Function()>? events,
   }) async {
     try {
-      // Convert events to a format that can be serialized
-      final Map<String, dynamic>? serializedEvents = events?.map(
-        (key, value) => MapEntry(key.name, {'type': key.name}),
-      );
-
       final viewId = await _channel.invokeMethod<String>('createView', {
         'viewType': ViewType.button.value,
+        'properties': {
+          ...style,
+          'text': text,
+        },
+        'layout': layout.toJson(),
+      });
+
+      if (viewId != null) {
+        // Register events
+        if (events != null) {
+          for (final entry in events.entries) {
+            await registerButtonEvent(
+              viewId,
+              entry.key.toString(),
+              entry.value,
+            );
+          }
+        }
+        return viewId;
+      }
+      return null;
+    } catch (e) {
+      _logger.severe('Error creating button: $e');
+      return null;
+    }
+  }
+
+  // Fix TouchableOpacity event registration
+  Future<String?> createTouchableOpacity({
+    required Map<String, dynamic> style,
+    required LayoutConfig layout,
+    required Widget child,
+    Map<TouchableEvent, void Function(TouchEventData)>? events,
+  }) async {
+    try {
+      final viewId = await _channel.invokeMethod<String>('createView', {
+        'viewType': ViewType.touchableOpacity.value,
         'properties': style,
-        if (layout != null) 'layout': layout.toJson(),
-        if (serializedEvents != null) 'events': serializedEvents,
+        'layout': layout.toJson(),
       });
 
       if (viewId != null && events != null) {
-        // Store callbacks for later use
-        _eventHandlers[viewId] = {};
-
         for (final entry in events.entries) {
-          // Register the event type with native
+          _touchEventHandlers[viewId] ??= {};
+          _touchEventHandlers[viewId]![entry.key.toString()] = entry.value;
+
           await _channel.invokeMethod('registerEvent', {
             'viewId': viewId,
-            'eventType': entry.key.name,
+            'eventType': entry.key.toString(),
+            'hasHandler': true,
           });
-
-          // Store the callback
-          _eventHandlers[viewId]![entry.key.name] = entry.value;
         }
-
-        // Set up method channel handler if not already done
-        _channel.setMethodCallHandler((call) async {
-          if (call.method == 'onButtonEvent') {
-            final args = call.arguments as Map<String, dynamic>;
-            final eventViewId = args['viewId'] as String;
-            final eventType = args['type'] as String;
-
-            if (_eventHandlers.containsKey(eventViewId) &&
-                _eventHandlers[eventViewId]!.containsKey(eventType)) {
-              await _eventHandlers[eventViewId]![eventType]!();
-              return true;
-            }
-          }
-          return null;
-        });
       }
-
       return viewId;
-    } catch (e, stack) {
-      _logger.severe('Error creating button: $e');
-      _logger.severe('Stack trace: $stack');
+    } catch (e) {
+      _logger.severe('Error creating touchable opacity: $e');
+      return null;
+    }
+  }
+
+  // Add gesture detector support
+  Future<String?> createGestureDetector({
+    required Map<String, dynamic> style,
+    required LayoutConfig layout,
+    required Widget child,
+    Map<GestureEvent, dynamic Function(dynamic)>? events,
+  }) async {
+    try {
+      final viewId = await _channel.invokeMethod<String>('createView', {
+        'viewType': ViewType.gestureDetector.value,
+        'properties': style,
+        'layout': layout.toJson(),
+      });
+
+      if (viewId != null && events != null) {
+        for (final entry in events.entries) {
+          await _registerGestureEvent(
+            viewId,
+            entry.key.toString(),
+            entry.value,
+          );
+        }
+      }
+      return viewId;
+    } catch (e) {
+      _logger.severe('Error creating gesture detector: $e');
       return null;
     }
   }
 
   // Internal event registration methods
-  void _registerTouchEvent(
-      String viewId, TouchEventType type, Function(TouchEvent) callback) {
-    // Store in a separate map for touch events
-    _touchEventCallbacks[viewId] ??= {};
-    _touchEventCallbacks[viewId]![type] = callback;
-  }
+  Future<bool> _registerTouchEvent(
+    String viewId,
+    TouchEventType type,
+    Function(TouchEventData) callback,
+  ) async {
+    try {
+      _touchEventHandlers[viewId] ??= {};
+      _touchEventHandlers[viewId]![type.name] = callback;
 
-  void _registerButtonEvent(
-      String viewId, ButtonEventType type, Function() callback) {
-    // Store in a separate map for button events
-    _buttonEventCallbacks[viewId] ??= {};
-    _buttonEventCallbacks[viewId]![type] = callback;
-  }
+      final result = await _channel.invokeMethod('registerEvent', {
+        'viewId': viewId,
+        'eventType': type.name,
+        'hasHandler': true,
+      });
 
-  // Add new maps for typed events
-  final Map<String, Map<TouchEventType, Function(TouchEvent)>>
-      _touchEventCallbacks = {};
-  final Map<String, Map<ButtonEventType, Function()>> _buttonEventCallbacks =
-      {};
-
-  // Add method to handle incoming events
-  Future<dynamic> _handleMethodCall(MethodCall call) async {
-    switch (call.method) {
-      case 'onButtonEvent':
-        final args = Map<String, dynamic>.from(call.arguments);
-        final viewId = args['viewId'] as String;
-        final eventType =
-            args['type'] as String; // This comes as a string from native
-
-        if (_eventHandlers.containsKey(viewId) &&
-            _eventHandlers[viewId]!.containsKey(eventType)) {
-          await _eventHandlers[viewId]![eventType]!();
-          return true;
-        }
-        return false;
-
-      default:
-        throw PlatformException(
-          code: 'Unimplemented',
-          details: 'Method ${call.method} not implemented',
-        );
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error registering touch event: $e');
+      return false;
     }
   }
 
-  // Update event handlers storage to use string keys (enum names)
-  final Map<String, Map<String, Future<void> Function()>> _eventHandlers = {};
+  Future<bool> _registerGestureEvent(
+    String viewId,
+    String eventType,
+    Function callback,
+  ) async {
+    try {
+      _gestureEventHandlers[viewId] ??= {};
+      _gestureEventHandlers[viewId]![eventType] = callback;
 
-  // Add new convenience method for root handling
+      return await _channel.invokeMethod('registerEvent', {
+        'viewId': viewId,
+        'eventType': eventType,
+        'hasHandler': true,
+      });
+    } catch (e) {
+      _logger.severe('Error registering gesture event: $e');
+      return false;
+    }
+  }
+
+  // Event handler storage
+  final Map<String, Map<String, Function(TouchEventData)>> _touchEventHandlers =
+      {};
+  final Map<String, Map<String, Function>> _gestureEventHandlers = {};
+
+  // Add orientation/window change handlers
+  void _setupLayoutHandlers() {
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'onOrientationChange':
+          final args = Map<String, dynamic>.from(call.arguments);
+          _handleOrientationChange(
+            orientation: args['orientation'] as String,
+            width: args['width'] as double,
+            height: args['height'] as double,
+          );
+          return true;
+
+        case 'onWindowChange':
+          final args = Map<String, dynamic>.from(call.arguments);
+          _handleWindowChange(
+            width: args['width'] as double,
+            height: args['height'] as double,
+          );
+          return true;
+
+        default:
+          return null;
+      }
+    });
+  }
+
+  void _handleOrientationChange({
+    required String orientation,
+    required double width,
+    required double height,
+  }) {
+    // Notify listeners of orientation change
+    for (final callback in _orientationListeners) {
+      callback(orientation, width, height);
+    }
+  }
+
+  void _handleWindowChange({
+    required double width,
+    required double height,
+  }) {
+    // Notify listeners of window size change
+    for (final callback in _windowListeners) {
+      callback(width, height);
+    }
+  }
+
+  // Listener management
+  final _orientationListeners = <Function(String, double, double)>[];
+  final _windowListeners = <Function(double, double)>[];
+
+  void addOrientationListener(Function(String, double, double) listener) {
+    _orientationListeners.add(listener);
+  }
+
+  void removeOrientationListener(Function(String, double, double) listener) {
+    _orientationListeners.remove(listener);
+  }
+
+  void addWindowListener(Function(double, double) listener) {
+    _windowListeners.add(listener);
+  }
+
+  void removeWindowListener(Function(double, double) listener) {
+    _windowListeners.remove(listener);
+  }
+
+  // Add missing attachToRoot method
   Future<bool> attachToRoot(String viewId) async {
     try {
       final rootInfo = await getRootView();
@@ -857,13 +956,6 @@ class NativeView {
     return _bridge.updateView(viewId, properties);
   }
 
-  Future<bool> addEventListener(String eventType, Function callback) {
-    return _bridge.registerEvent(viewId, eventType, callback);
-  }
-
-  Future<bool> removeEventListener(String eventType) {
-    return _bridge.unregisterEvent(viewId, eventType);
-  }
 
   Future<bool> setSize({double? width, double? height}) {
     return _bridge.setViewLayout(viewId, width: width, height: height);
@@ -905,16 +997,5 @@ class ListViewController {
       }
     }
     return false;
-  }
-
-  Future<void> setRefreshCallback(Future<void> Function() onRefresh) async {
-    await _bridge.registerEvent(viewId, 'onRefresh', () async {
-      await onRefresh();
-      await _bridge.invokeMethod('endRefreshing', {'viewId': viewId});
-    });
-  }
-
-  Future<void> setPaginationCallback(Future<void> Function() onLoadMore) async {
-    await _bridge.registerEvent(viewId, 'onLoadMore', onLoadMore);
   }
 }

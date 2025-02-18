@@ -2,7 +2,11 @@ enum ViewType {
   view,
   label,
   button,
-  touchableOpacity;
+  touchableOpacity,
+  gestureDetector,
+  scrollView,
+  stackView,
+  listView;
 
   String get value {
     switch (this) {
@@ -14,6 +18,14 @@ enum ViewType {
         return 'Button';
       case ViewType.touchableOpacity:
         return 'TouchableOpacity';
+      case ViewType.gestureDetector:
+        return 'GestureDetector';
+      case ViewType.scrollView:
+        return 'ScrollView';
+      case ViewType.stackView:
+        return 'StackView';
+      case ViewType.listView:
+        return 'ListView';
     }
   }
 }
