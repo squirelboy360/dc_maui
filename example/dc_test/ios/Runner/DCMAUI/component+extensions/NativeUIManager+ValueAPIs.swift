@@ -31,11 +31,8 @@ extension NativeUIManager {
             result(metrics)
             
         case "isDarkMode":
-            if #available(iOS 13.0, *) {
                 result(UITraitCollection.current.userInterfaceStyle == .dark)
-            } else {
-                result(false)
-            }
+         
             
         case "getStatusBarHeight":
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {

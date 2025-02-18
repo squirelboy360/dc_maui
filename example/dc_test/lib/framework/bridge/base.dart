@@ -1,10 +1,10 @@
-import 'package:dc_test/core/types/events.dart';
+import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'layout/layout_config.dart';
-import 'style/view_style.dart';
-import 'core/types/layout/yoga_types.dart'; // Add this import
+import '../layout/layout_config.dart';
+import '../core/types/layout/yoga_types.dart'; // Add this import
+import '../core/types/view/view_types.dart';
 
 // Add this enum at the top of the file after imports
 enum ScrollDirection { vertical, horizontal }
@@ -70,28 +70,55 @@ class NativeUIBridge {
   // Event handler setup
   void _setupEventHandler() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onNativeEvent') {
-        try {
-          // Explicitly cast the arguments to Map<String, dynamic>
-          final args = Map<String, dynamic>.from(call.arguments as Map);
-          final String viewId = args['viewId'] as String;
-          final String eventType = args['eventType'] as String;
+      try {
+        switch (call.method) {
+          case 'onNativeEvent':
+          case 'onButtonEvent':
+            final args = Map<String, dynamic>.from(call.arguments as Map);
+            final String viewId = args['viewId'] as String;
+            final String eventType = args['eventType'] as String;
 
-          if (_eventCallbacks.containsKey(viewId) &&
-              _eventCallbacks[viewId]!.containsKey(eventType)) {
-            await _eventCallbacks[viewId]![eventType]!.call();
-            return true;
-          }
-          _logger.warning('No callback found for $eventType on view $viewId');
-          return false;
-        } catch (e, stack) {
-          _logger.severe('Error handling native event: $e');
-          _logger.severe('Stack trace: $stack');
-          throw FlutterError('Failed to process native event: $e');
+            if (_eventHandlers.containsKey(viewId) &&
+                _eventHandlers[viewId]!.containsKey(eventType)) {
+              await _eventHandlers[viewId]![eventType]!();
+              return true;
+            }
+            return false;
+
+          default:
+            return null;
         }
+      } catch (e, stack) {
+        _logger.severe('Error handling method call: $e');
+        _logger.severe('Stack trace: $stack');
+        return null;
       }
-      return null;
     });
+  }
+
+  // Add new method for button event registration
+  Future<bool> registerButtonEvent(
+    String buttonId,
+    String eventType,
+    Future<void> Function() callback,
+  ) async {
+    try {
+      // First store the callback
+      _eventHandlers[buttonId] ??= {};
+      _eventHandlers[buttonId]![eventType] = callback;
+
+      // Then register with native side
+      final result = await _channel.invokeMethod('registerEvent', {
+        'viewId': buttonId,
+        'eventType': eventType,
+        'handler': true, // Just send a flag, actual handler is stored in _eventHandlers
+      });
+
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error registering button event: $e');
+      return false;
+    }
   }
 
   // View Management Methods
@@ -110,11 +137,11 @@ class NativeUIBridge {
   ///     isEnabled?: bool
   ///   }
   /// Returns: String viewId or null if failed
-  Future<String?> createView(String viewType,
+  Future<String?> createView(ViewType viewType,
       {Map<String, dynamic>? properties}) async {
     try {
       final viewId = await _channel.invokeMethod<String>('createView', {
-        'viewType': viewType,
+        'viewType': viewType.value,
         ...?properties,
       });
       return viewId;
@@ -660,7 +687,8 @@ class NativeUIBridge {
     Map<String, dynamic>? properties,
     Map<TouchEventType, Function(TouchEvent)>? events,
   }) async {
-    final viewId = await createView('TouchableOpacity', properties: properties);
+    final viewId =
+        await createView(ViewType.touchableOpacity, properties: properties);
     if (viewId != null && events != null) {
       for (final entry in events.entries) {
         _registerTouchEvent(viewId, entry.key, entry.value);
@@ -669,23 +697,64 @@ class NativeUIBridge {
     return viewId;
   }
 
-  // Add new method for creating buttons with typed events
+  // Update createButton method
   Future<String?> createButton({
     required String text,
-    Map<String, dynamic>? style,
-    Map<ButtonEventType, Function()>? events,
+    required Map<String, dynamic> style,
+    LayoutConfig? layout,
+    Map<ButtonEventType, Future<void> Function()>? events,
   }) async {
-    final viewId = await createView('Button', properties: {
-      'text': text,
-      ...?style,
-    });
+    try {
+      // Convert events to a format that can be serialized
+      final Map<String, dynamic>? serializedEvents = events?.map(
+        (key, value) => MapEntry(key.name, {'type': key.name}),
+      );
 
-    if (viewId != null && events != null) {
-      for (final entry in events.entries) {
-        _registerButtonEvent(viewId, entry.key, entry.value);
+      final viewId = await _channel.invokeMethod<String>('createView', {
+        'viewType': ViewType.button.value,
+        'properties': style,
+        if (layout != null) 'layout': layout.toJson(),
+        if (serializedEvents != null) 'events': serializedEvents,
+      });
+
+      if (viewId != null && events != null) {
+        // Store callbacks for later use
+        _eventHandlers[viewId] = {};
+
+        for (final entry in events.entries) {
+          // Register the event type with native
+          await _channel.invokeMethod('registerEvent', {
+            'viewId': viewId,
+            'eventType': entry.key.name,
+          });
+
+          // Store the callback
+          _eventHandlers[viewId]![entry.key.name] = entry.value;
+        }
+
+        // Set up method channel handler if not already done
+        _channel.setMethodCallHandler((call) async {
+          if (call.method == 'onButtonEvent') {
+            final args = call.arguments as Map<String, dynamic>;
+            final eventViewId = args['viewId'] as String;
+            final eventType = args['type'] as String;
+
+            if (_eventHandlers.containsKey(eventViewId) &&
+                _eventHandlers[eventViewId]!.containsKey(eventType)) {
+              await _eventHandlers[eventViewId]![eventType]!();
+              return true;
+            }
+          }
+          return null;
+        });
       }
+
+      return viewId;
+    } catch (e, stack) {
+      _logger.severe('Error creating button: $e');
+      _logger.severe('Stack trace: $stack');
+      return null;
     }
-    return viewId;
   }
 
   // Internal event registration methods
@@ -708,6 +777,61 @@ class NativeUIBridge {
       _touchEventCallbacks = {};
   final Map<String, Map<ButtonEventType, Function()>> _buttonEventCallbacks =
       {};
+
+  // Add method to handle incoming events
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onButtonEvent':
+        final args = Map<String, dynamic>.from(call.arguments);
+        final viewId = args['viewId'] as String;
+        final eventType =
+            args['type'] as String; // This comes as a string from native
+
+        if (_eventHandlers.containsKey(viewId) &&
+            _eventHandlers[viewId]!.containsKey(eventType)) {
+          await _eventHandlers[viewId]![eventType]!();
+          return true;
+        }
+        return false;
+
+      default:
+        throw PlatformException(
+          code: 'Unimplemented',
+          details: 'Method ${call.method} not implemented',
+        );
+    }
+  }
+
+  // Update event handlers storage to use string keys (enum names)
+  final Map<String, Map<String, Future<void> Function()>> _eventHandlers = {};
+
+  // Add new convenience method for root handling
+  Future<bool> attachToRoot(String viewId) async {
+    try {
+      final rootInfo = await getRootView();
+      if (rootInfo == null) {
+        _logger.severe('Failed to get root view');
+        return false;
+      }
+
+      final rootId = rootInfo['viewId'] as String;
+      await attachView(rootId, viewId);
+
+      // Handle root layout automatically
+      await setLayout(
+        rootId,
+        LayoutConfig(
+          width: YGValue.percent(100),
+          height: YGValue.percent(100),
+        ),
+      );
+
+      return true;
+    } catch (e) {
+      _logger.severe('Error attaching to root: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation

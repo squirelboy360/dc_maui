@@ -1,5 +1,15 @@
 import UIKit
 
+extension UIColor {
+    convenience init(rgb: UInt32) {
+        let r = CGFloat((rgb >> 16) & 0xFF) / 255.0
+        let g = CGFloat((rgb >> 8) & 0xFF) / 255.0
+        let b = CGFloat(rgb & 0xFF) / 255.0
+        let a = CGFloat((rgb >> 24) & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b, alpha: a > 0 ? a : 1.0)
+    }
+}
+
 enum BorderType: String {
     case none
     case solid
@@ -423,17 +433,6 @@ struct NativeViewStyle {
     }
 }
 
-// Helper extensions
-private extension UIColor {
-    convenience init(rgb: UInt32) {
-        self.init(
-            red: CGFloat((rgb & 0xFF0000) >> 16) / 255.0,
-            green: CGFloat((rgb & 0x00FF00) >> 8) / 255.0,
-            blue: CGFloat(rgb & 0x0000FF) / 255.0,
-            alpha: CGFloat((rgb & 0xFF000000) >> 24) / 255.0
-        )
-    }
-}
 
 private enum TextAlign: String {
     case left, center, right, justify
