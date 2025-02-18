@@ -1,4 +1,3 @@
-
 import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -71,28 +70,65 @@ class NativeUIBridge {
   // Event handler setup
   void _setupEventHandler() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onNativeEvent') {
-        try {
-          // Explicitly cast the arguments to Map<String, dynamic>
-          final args = Map<String, dynamic>.from(call.arguments as Map);
-          final String viewId = args['viewId'] as String;
-          final String eventType = args['eventType'] as String;
+      try {
+        switch (call.method) {
+          case 'onNativeEvent':
+            final args = Map<String, dynamic>.from(call.arguments as Map);
+            final String viewId = args['viewId'] as String;
+            final String eventType = args['eventType'] as String;
 
-          if (_eventCallbacks.containsKey(viewId) &&
-              _eventCallbacks[viewId]!.containsKey(eventType)) {
-            await _eventCallbacks[viewId]![eventType]!.call();
-            return true;
-          }
-          _logger.warning('No callback found for $eventType on view $viewId');
-          return false;
-        } catch (e, stack) {
-          _logger.severe('Error handling native event: $e');
-          _logger.severe('Stack trace: $stack');
-          throw FlutterError('Failed to process native event: $e');
+            if (_eventCallbacks.containsKey(viewId) &&
+                _eventCallbacks[viewId]!.containsKey(eventType)) {
+              await _eventCallbacks[viewId]![eventType]!.call();
+              return true;
+            }
+            return false;
+
+          case 'onButtonEvent':
+            final args = Map<String, dynamic>.from(call.arguments as Map);
+            final viewId = args['viewId'] as String;
+            final eventType = args['type'] as String;
+
+            if (_eventHandlers.containsKey(viewId) &&
+                _eventHandlers[viewId]!.containsKey(eventType)) {
+              await _eventHandlers[viewId]![eventType]!();
+              return true;
+            }
+            return false;
+
+          default:
+            return null;
         }
+      } catch (e, stack) {
+        _logger.severe('Error handling method call: $e');
+        _logger.severe('Stack trace: $stack');
+        return null;
       }
-      return null;
     });
+  }
+
+  // Add new method for button event registration
+  Future<bool> registerButtonEvent(
+    String buttonId,
+    String eventType,
+    Future<void> Function() callback,
+  ) async {
+    try {
+      final result = await _channel.invokeMethod('registerEvent', {
+        'viewId': buttonId,
+        'eventType': eventType,
+      });
+
+      if (result == true) {
+        _eventHandlers[buttonId] ??= {};
+        _eventHandlers[buttonId]![eventType] = callback;
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.severe('Error registering button event: $e');
+      return false;
+    }
   }
 
   // View Management Methods
@@ -694,14 +730,14 @@ class NativeUIBridge {
       if (viewId != null && events != null) {
         // Store callbacks for later use
         _eventHandlers[viewId] = {};
-        
+
         for (final entry in events.entries) {
           // Register the event type with native
           await _channel.invokeMethod('registerEvent', {
             'viewId': viewId,
             'eventType': entry.key.name,
           });
-          
+
           // Store the callback
           _eventHandlers[viewId]![entry.key.name] = entry.value;
         }
@@ -778,6 +814,34 @@ class NativeUIBridge {
 
   // Update event handlers storage to use string keys (enum names)
   final Map<String, Map<String, Future<void> Function()>> _eventHandlers = {};
+
+  // Add new convenience method for root handling
+  Future<bool> attachToRoot(String viewId) async {
+    try {
+      final rootInfo = await getRootView();
+      if (rootInfo == null) {
+        _logger.severe('Failed to get root view');
+        return false;
+      }
+
+      final rootId = rootInfo['viewId'] as String;
+      await attachView(rootId, viewId);
+
+      // Handle root layout automatically
+      await setLayout(
+        rootId,
+        LayoutConfig(
+          width: YGValue.percent(100),
+          height: YGValue.percent(100),
+        ),
+      );
+
+      return true;
+    } catch (e) {
+      _logger.severe('Error attaching to root: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation

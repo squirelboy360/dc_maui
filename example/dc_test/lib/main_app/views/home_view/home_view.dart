@@ -173,87 +173,182 @@ class HomeView extends HomeViewComponents {
   // Update createDecrementButton to include error handling
   Future<void> createDecrementButton() async {
     try {
-      final id = await createButton('-', Color(0xFFFF3B30), () async {
-        counter--;
-        await bridge.updateView(
-          counterLabel,
-          ViewStyle(
+      final buttonId = await bridge.createView(ViewType.button) ?? '';
+
+      // First set the layout
+      await bridge.setLayout(
+        buttonId,
+        LayoutConfig(
+          width: YGValue.points(56),
+          height: YGValue.points(56),
+          alignItems: YGAlign.center,
+          justifyContent: YGJustify.center,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+      );
+
+      // Then update appearance
+      await bridge.updateView(
+        buttonId,
+        {
+          ...ViewStyle(
+            backgroundColor: Color(0xFFFF3B30),
+            cornerRadius: 28,
             textStyle: TextStyle(
-              text: counter.toString(),
-              color: Color(0xFF2E3192),
-              fontSize: 72,
+              text: '-',
+              color: Colors.white,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
+            shadows: [
+              ShadowStyle(
+                color: Color(0xFFFF3B30).withOpacity(0.3),
+                offset: const Offset(0, 4),
+                radius: 8,
+              )
+            ],
           ).toJson(),
-        );
-      });
+          'type': ViewType.button.value, // Important: specify view type
+        },
+      );
 
-      if (id != null) {
-        decrementButton = id;
-        await bridge.attachView(buttonsSection, decrementButton);
-        print('Decrement button created and attached: $id');
-      } else {
-        print('Failed to create decrement button');
-      }
-    } catch (e, stack) {
-      print('Error in createDecrementButton: $e');
-      print('Stack trace: $stack');
-    }
-  }
+      // Store button ID
+      decrementButton = buttonId;
 
-  Future<void> createResetButton() async {
-
-    await bridge.attachView(buttonsSection, resetButton);
-  }
-
-  Future<void> createIncrementButton() async {
-    incrementButton = await createButton('+', Color(0xFF34C759), () async {
-          counter++;
+      // Register click handler
+      await bridge.invokeMethod('registerEvent', {
+        'viewId': buttonId,
+        'eventType': 'onClick',
+        'handler': () async {
+          counter--;
           await bridge.updateView(
-              counterLabel,
-              ViewStyle(
-                  textStyle: TextStyle(
+            counterLabel,
+            ViewStyle(
+              textStyle: TextStyle(
                 text: counter.toString(),
                 color: Color(0xFF2E3192),
                 fontSize: 72,
                 fontWeight: FontWeight.bold,
-              )).toJson());
-        }) ??
-        '';
+              ),
+            ).toJson(),
+          );
+        },
+      });
 
-    await bridge.attachView(buttonsSection, incrementButton);
+      // Attach to parent
+      await bridge.attachView(buttonsSection, buttonId);
+    } catch (e, stack) {
+      print('Error in createDecrementButton: $e\n$stack');
+    }
   }
 
-  // Helper method to create buttons
-  Future<String?> createButton(
-      String text, Color color, Future<void> Function() onPress) async {
-    return await bridge.createButton(
-      text: text,
-      style: ViewStyle(
-        backgroundColor: color,
-        cornerRadius: 28,
-        textStyle: TextStyle(
-          text: text,
-          color: Colors.amber,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
+  Future<void> createResetButton() async {
+    try {
+      final id = await bridge.createButton(
+        text: '↺',
+        style: ViewStyle(
+          backgroundColor: Color(0xFF007AFF),
+          cornerRadius: 28,
+          textStyle: TextStyle(
+            text: '↺',
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          shadows: [
+            ShadowStyle(
+              color: Color(0xFF007AFF).withOpacity(0.3),
+              offset: const Offset(0, 4),
+              radius: 8,
+            )
+          ],
+        ).toJson(),
+        layout: LayoutConfig(
+          width: YGValue.points(56),
+          height: YGValue.points(56),
+          alignItems: YGAlign.center,
+          justifyContent: YGJustify.center,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
         ),
-        shadows: [
-          ShadowStyle(
-            color: color.withOpacity(0.3),
-            offset: const Offset(0, 4),
-            radius: 8,
-          )
-        ],
-      ).toJson(),
-      layout: LayoutConfig(
-        width: YGValue.points(56),
-        height: YGValue.points(56),
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        margin: const EdgeInsets.symmetric(horizontal: 8), // Add margin
-      ),
-      events: {ButtonEventType.onClick: onPress}, // Properly bind the callback
-    );
+        events: {
+          ButtonEventType.onClick: () async {
+            counter = 0;
+            await bridge.updateView(
+              counterLabel,
+              ViewStyle(
+                textStyle: TextStyle(
+                  text: counter.toString(),
+                  color: Color(0xFF2E3192),
+                  fontSize: 72,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).toJson(),
+            );
+          },
+        },
+      );
+
+      if (id != null) {
+        resetButton = id;
+        await bridge.attachView(buttonsSection, resetButton);
+      }
+    } catch (e, stack) {
+      print('Error in createResetButton: $e\n$stack');
+    }
+  }
+
+  Future<void> createIncrementButton() async {
+    try {
+      final id = await bridge.createButton(
+        text: '+',
+        style: ViewStyle(
+          backgroundColor: Color(0xFF34C759),
+          cornerRadius: 28,
+          textStyle: TextStyle(
+            text: '+',
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          shadows: [
+            ShadowStyle(
+              color: Color(0xFF34C759).withOpacity(0.3),
+              offset: const Offset(0, 4),
+              radius: 8,
+            )
+          ],
+        ).toJson(),
+        layout: LayoutConfig(
+          width: YGValue.points(56),
+          height: YGValue.points(56),
+          alignItems: YGAlign.center,
+          justifyContent: YGJustify.center,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+        events: {
+          ButtonEventType.onClick: () async {
+            counter++;
+            await bridge.updateView(
+              counterLabel,
+              ViewStyle(
+                textStyle: TextStyle(
+                  text: counter.toString(),
+                  color: Color(0xFF2E3192),
+                  fontSize: 72,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).toJson(),
+            );
+          },
+        },
+      );
+
+      if (id != null) {
+        incrementButton = id;
+        await bridge.attachView(buttonsSection, incrementButton);
+      }
+    } catch (e, stack) {
+      print('Error in createIncrementButton: $e\n$stack');
+    }
   }
 }
