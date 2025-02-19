@@ -737,6 +737,87 @@ class Core {
       return false;
     }
   }
+
+  Future<bool> configureAsScrollView(String viewId, {
+    ScrollAxis axis = ScrollAxis.vertical,
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('configureAsScrollView', {
+        'viewId': viewId,
+        'axis': axis.toString().split('.').last,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        },
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error configuring scroll view: $e');
+      return false;
+    }
+  }
+
+  Future<bool> configureAsListView(String viewId, {
+    ListViewStyle style = ListViewStyle.list,
+    int columns = 1,
+    double spacing = 8.0,
+    EdgeInsets padding = EdgeInsets.zero,
+    bool enableRefresh = false,
+    bool enablePagination = false,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('configureAsListView', {
+        'viewId': viewId,
+        'style': style.toString().split('.').last,
+        'columns': columns,
+        'spacing': spacing,
+        'padding': {
+          'top': padding.top,
+          'left': padding.left,
+          'bottom': padding.bottom,
+          'right': padding.right,
+        },
+        'enableRefresh': enableRefresh,
+        'enablePagination': enablePagination,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error configuring list view: $e');
+      return false;
+    }
+  }
+
+  // Enhanced ScrollController
+  Future<bool> scrollToOffset(String viewId, double offset, {bool animated = true}) async {
+    try {
+      final result = await _channel.invokeMethod('scrollToOffset', {
+        'viewId': viewId,
+        'offset': offset,
+        'animated': animated,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error scrolling to offset: $e');
+      return false;
+    }
+  }
+
+  Future<bool> scrollToIndex(String viewId, int index, {bool animated = true}) async {
+    try {
+      final result = await _channel.invokeMethod('scrollToIndex', {
+        'viewId': viewId,
+        'index': index,
+        'animated': animated,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error scrolling to index: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation

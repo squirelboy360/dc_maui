@@ -32,6 +32,54 @@ extension NativeUIManager {
     internal func addItemToList(_ listView: DCCollectionView, _ childView: UIView, height: CGFloat? = nil) {
         listView.addItem(childView, height: height)
     }
+    
+    internal func handleConfigureAsListView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let view = views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid viewId", details: nil))
+            return
+        }
+
+        // Create list view
+        let listView = DCListView(
+            style: ListViewStyle(rawValue: args["style"] as? String ?? "list") ?? .list,
+            columns: args["columns"] as? Int ?? 1,
+            spacing: args["spacing"] as? CGFloat ?? 8.0
+        )
+        
+        if let padding = args["padding"] as? [String: CGFloat] {
+            listView.contentInset = UIEdgeInsets(
+                top: padding["top"] ?? 0,
+                left: padding["left"] ?? 0,
+                bottom: padding["bottom"] ?? 0,
+                right: padding["right"] ?? 0
+            )
+        }
+        
+        // Replace old view with list view
+        if let superview = view.superview {
+            view.removeFromSuperview()
+            superview.addSubview(listView)
+            
+            listView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                listView.leadingAnchor.constraint(equalTo: superview.leadingAnchor),
+                listView.trailingAnchor.constraint(equalTo: superview.trailingAnchor),
+                listView.topAnchor.constraint(equalTo: superview.topAnchor),
+                listView.bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+            ])
+        }
+        
+        // Update view registry
+        views[viewId] = listView
+        
+        // Setup delegate for scroll events
+        listView.delegate = self
+        listView.tag = viewId.hash
+        
+        result(true)
+    }
 }
 
 private class DCScrollableStackView: UIScrollView {
@@ -134,4 +182,41 @@ private class DCScrollableStackView: UIScrollView {
         // Update content size
         contentSize = stackView.frame.size
     }
+}
+
+class DCListView: UICollectionView {
+    private let style: ListViewStyle
+    private let columns: Int
+    private let spacing: CGFloat
+    
+    init(style: ListViewStyle, columns: Int, spacing: CGFloat) {
+        self.style = style
+        self.columns = columns
+        self.spacing = spacing
+        
+        let layout = UICollectionViewFlowLayout()
+        layout.minimumInteritemSpacing = spacing
+        layout.minimumLineSpacing = spacing
+        
+        super.init(frame: .zero, collectionViewLayout: layout)
+        setupListView()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupListView() {
+        backgroundColor = .clear
+        showsVerticalScrollIndicator = true
+        clipsToBounds = true
+        
+        // Register cell
+        register(UICollectionViewCell.self, forCellWithReuseIdentifier: "Cell")
+    }
+}
+
+enum ListViewStyle: String {
+    case list
+    case grid
 }

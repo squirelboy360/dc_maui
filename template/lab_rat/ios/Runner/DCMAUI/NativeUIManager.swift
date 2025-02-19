@@ -785,3 +785,27 @@ extension UIView {
         clipsToBounds = true
     }
 }
+
+extension NativeUIManager: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let viewId = String(scrollView.tag)
+        methodChannel?.invokeMethod("onScroll", arguments: [
+            "viewId": viewId,
+            "offset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        let viewId = String(scrollView.tag)
+        methodChannel?.invokeMethod("onScrollEnd", arguments: [
+            "viewId": viewId,
+            "offset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
+    }
+}
