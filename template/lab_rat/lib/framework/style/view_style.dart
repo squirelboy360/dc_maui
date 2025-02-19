@@ -114,21 +114,26 @@ class TextStyle implements JsonSerializable {
   });
 
   @override
-  Map<String, dynamic> toJson() => {
-        if (text != null) 'text': text,
-        if (fontFamily != null) 'fontFamily': fontFamily,
-        if (fontSize != null) 'fontSize': fontSize,
-        if (fontWeight != null) 'fontWeight': fontWeight!.value,
-        if (color != null) 'color': color!.toARGB32(),
-        if (letterSpacing != null) 'letterSpacing': letterSpacing,
-        if (wordSpacing != null) 'wordSpacing': wordSpacing,
-        if (lineHeight != null) 'lineHeight': lineHeight,
-        if (decoration != null) 'decoration': decoration!.toString(),
-        if (textAlign != null) 'textAlign': textAlign!.name,
-        if (italic != null) 'italic': italic,
-        if (maxLines != null) 'maxLines': maxLines,
-        if (overflow != null) 'overflow': overflow!.name,
-      };
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> style = {
+      if (text != null) 'text': text,
+      if (fontFamily != null) 'fontFamily': fontFamily,
+      if (fontSize != null) 'fontSize': fontSize,
+      if (fontWeight != null) 'fontWeight': fontWeight!.value,
+      if (color != null) 'color': color!.value, // Use value instead of toARGB32
+      if (letterSpacing != null) 'letterSpacing': letterSpacing,
+      if (wordSpacing != null) 'wordSpacing': wordSpacing,
+      if (lineHeight != null) 'lineHeight': lineHeight,
+      if (decoration != null) 'decoration': decoration!.toString(),
+      if (textAlign != null) 'textAlign': textAlign!.name,
+      if (italic != null) 'italic': italic,
+      if (maxLines != null) 'maxLines': maxLines,
+      if (overflow != null) 'overflow': overflow!.name,
+    };
+
+    print('TextStyle JSON: $style'); // Debug log
+    return style;
+  }
 }
 
 // Transform style

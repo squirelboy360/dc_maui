@@ -1,5 +1,6 @@
 
 import 'package:dc_test/framework/bridge/base.dart';
+import 'package:dc_test/framework/bridge/core.dart';
 import 'package:dc_test/framework/core/types/events.dart';
 import 'package:dc_test/framework/core/types/layout/yoga_types.dart';
 import 'package:dc_test/framework/core/types/view/view_types.dart';

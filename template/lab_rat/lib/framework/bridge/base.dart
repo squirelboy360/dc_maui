@@ -1,3 +1,4 @@
+import 'package:dc_test/framework/bridge/hot_restart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle;
 import 'package:logging/logging.dart';
@@ -5,7 +6,6 @@ import '../core/types/events.dart';
 import '../core/types/view/view_types.dart';
 import '../style/view_style.dart';
 import '../layout/layout_config.dart';
-import 'hot_restart.dart';
 import 'core.dart';
 
 final bridge = UIBridge();
@@ -13,28 +13,26 @@ final bridge = UIBridge();
 class UIBridge {
   final Core _core = Core();
 
-  // View Creation - Fully typed
   Future<String> createView(
     ViewType type, {
-      TextStyle? testStyle,
+    TextStyle? testStyle,
     ViewStyle? style,
     LayoutConfig? layout,
   }) async {
-    final viewId = await _core.createView(type);
+    // Transform configs to match native expectations
+    final Map<String, dynamic> args = {
+      'viewType': type.value,
+      'properties': {
+        if (testStyle != null) 'textStyle': testStyle.toJson(),
+        if (style != null) ...style.toJson(),
+      },
+      if (layout != null) 'layout': layout.toJson(),
+    };
+
+    final viewId = await _core.createView(type, args);
     if (viewId == null) {
       throw ViewCreationException(
           'Failed to create view of type: ${type.value}');
-    }
-
-    if (style != null) {
-      await setViewStyle(viewId, style);
-    }
-
-      if (testStyle != null) {
-      await (viewId, style);
-    }
-    if (layout != null) {
-      await setViewLayout(viewId, layout);
     }
 
     return viewId;

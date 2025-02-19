@@ -132,25 +132,25 @@ class Core {
   ///     isEnabled?: bool
   ///   }
   /// Returns: String viewId or null if failed
-  Future<String?> createView(ViewType viewType,
-      {Map<String, dynamic>? properties}) async {
+  Future<String?> createView(
+      ViewType viewType, Map<String, dynamic> args) async {
     try {
-      final viewId = await _channel.invokeMethod<String>('createView', {
+      // Sending exactly what native expects
+      final Map<String, dynamic> nativeArgs = {
         'viewType': viewType.value,
-        ...?properties,
-      });
+        if (args['properties'] != null) 'properties': args['properties'],
+        if (args['layout'] != null) 'layout': args['layout'],
+      };
+
+      final viewId =
+          await _channel.invokeMethod<String>('createView', nativeArgs);
       return viewId;
-    } catch (e) {
-      _logger.severe('Error creating view: $e');
+    } catch (e, stack) {
+      _logger.severe('Error creating view: $e\n$stack');
       return null;
     }
   }
 
-  /// Attaches child view to parent view in native hierarchy
-  /// Native expects:
-  /// - parentId: String (must be existing view ID)
-  /// - childId: String (must be existing view ID)
-  /// Returns: bool success
   Future<bool> attachView(String parentId, String childId) async {
     try {
       // Check if already attached to prevent duplicates
@@ -202,75 +202,15 @@ class Core {
   ///   }
   Future<bool> updateView(String viewId, Map<String, dynamic> styles) async {
     try {
-      // Convert any Color objects to hex strings
-      var processedProperties = Map<String, dynamic>.from(styles);
-      if (styles['textColor'] is Color) {
-        processedProperties['textColor'] =
-            (styles['textColor'] as Color).toHexString();
-      }
+      print('Updating view $viewId with styles: $styles'); // Debug log
 
       final result = await _channel.invokeMethod<bool>('updateView', {
         'viewId': viewId,
-        'properties': processedProperties,
+        'properties': styles,
       });
       return result ?? false;
     } catch (e) {
       _logger.severe('Error updating view: $e');
-      return false;
-    }
-  }
-
-  // Event Handling
-
-  /// Registers event listener on native view
-  /// Native expects:
-  /// - viewId: String (must be existing view ID)
-  /// - eventType: String (supported events:
-  ///   'click', 'longClick', 'focus', 'blur',
-  ///   'textChanged', 'scrolled')
-  /// Returns: bool success
-  @Deprecated('Use component-specific event handlers instead')
-  Future<bool> registerEvent(
-      String viewId, String eventType, Function callback) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('registerEvent', {
-        'viewId': viewId,
-        'eventType': eventType,
-      });
-
-      if (result == true) {
-        // Initialize the map for this viewId if it doesn't exist
-        _eventCallbacks[viewId] ??= {};
-        // Store the callback - this was missing!
-        _eventCallbacks[viewId]![eventType] = callback;
-        _logger.info('Successfully registered $eventType for view $viewId');
-        return true;
-      }
-      _logger.warning('Failed to register event on native side');
-      return false;
-    } catch (e) {
-      _logger.severe('Error registering event: $e');
-      return false;
-    }
-  }
-
-  Future<bool> unregisterEvent(String viewId, String eventType) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('unregisterEvent', {
-        'viewId': viewId,
-        'eventType': eventType,
-      });
-
-      if (result ?? false) {
-        _eventCallbacks[viewId]?.remove(eventType);
-        if (_eventCallbacks[viewId]?.isEmpty ?? false) {
-          _eventCallbacks.remove(viewId);
-        }
-        return true;
-      }
-      return false;
-    } catch (e) {
-      _logger.severe('Error unregistering event: $e');
       return false;
     }
   }
@@ -627,8 +567,13 @@ class Core {
     Map<String, dynamic>? properties,
     Map<TouchEventType, Function(TouchEvent)>? events,
   }) async {
-    final viewId =
-        await createView(ViewType.touchableOpacity, properties: properties);
+    // Fix: Convert properties to proper args map format
+    final args = {
+      'viewType': ViewType.touchableOpacity.value,
+      if (properties != null) 'properties': properties,
+    };
+
+    final viewId = await createView(ViewType.touchableOpacity, args);
     if (viewId != null && events != null) {
       for (final entry in events.entries) {
         _registerTouchEvent(viewId, entry.key, entry.value);
@@ -774,14 +719,6 @@ class NativeView {
     return _bridge.updateView(viewId, properties);
   }
 
-  Future<bool> addEventListener(String eventType, Function callback) {
-    return _bridge.registerEvent(viewId, eventType, callback);
-  }
-
-  Future<bool> removeEventListener(String eventType) {
-    return _bridge.unregisterEvent(viewId, eventType);
-  }
-
   Future<bool> setSize({double? width, double? height}) {
     return _bridge.setViewLayout(viewId, width: width, height: height);
   }
@@ -822,16 +759,5 @@ class ListViewController {
       }
     }
     return false;
-  }
-
-  Future<void> setRefreshCallback(Future<void> Function() onRefresh) async {
-    await _bridge.registerEvent(viewId, 'onRefresh', () async {
-      await onRefresh();
-      await _bridge.invokeMethod('endRefreshing', {'viewId': viewId});
-    });
-  }
-
-  Future<void> setPaginationCallback(Future<void> Function() onLoadMore) async {
-    await _bridge.registerEvent(viewId, 'onLoadMore', onLoadMore);
   }
 }

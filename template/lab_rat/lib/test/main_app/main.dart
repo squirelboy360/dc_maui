@@ -8,6 +8,6 @@ import 'package:dc_test/test/main_app/imports.dart';
 void app() {
   Base.startApp(bindApp: () async {
     final binder = HomeViewBinder();
-    await binder.navigateToHomeScreen();
+    await binder.bindComponents();
   });
 }

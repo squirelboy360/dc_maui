@@ -103,6 +103,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleAttachView(call, result: result)
             case "deleteView":
                 self.handleDeleteView(call, result: result)
+//!                DONT CALL THIS METHOD, HAS BUGS TO FIX LATER //!
+              case "clearAllViews":
+                self.handleDeleteAllViews(call, result: result)
             case "updateView":
                 self.handleUpdateView(call, result: result)
             case "setViewProperties":
@@ -119,10 +122,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleChangeViewBackgroundColor(call, result: result)
             case "setViewVisibility":
                 self.handleSetViewVisibility(call, result: result)
-            case "registerEvent":
-                self.handleRegisterEvent(call, result: result)
-            case "unregisterEvent":
-                self.handleUnregisterEvent(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
             case "createListView":
@@ -204,6 +203,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
             let style = NativeViewStyle(from: properties)
             style.apply(to: button)
             
+            // Add default text color if none specified
+            button.setTitleColor(.black, for: .normal)
+            
             view = button
             print("Button creation complete with ID: \(viewId)")
 
@@ -214,10 +216,17 @@ class NativeUIManager: NSObject, FlutterPlugin {
             
         case "Label":
             let label = UILabel()
-            label.text = (args["properties"] as? [String: Any])?["text"] as? String
+            // Add better text handling and debugging
+            if let properties = args["properties"] as? [String: Any],
+               let textStyle = properties["textStyle"] as? [String: Any],
+               let text = textStyle["text"] as? String {
+                print("Setting label text: \(text)")  // Debug log
+                label.text = text
+            }
             label.textAlignment = .center
             label.numberOfLines = 0
             label.adjustsFontSizeToFitWidth = true
+            label.textColor = .black  // Add default text color
             view = label
             
         case "TouchableOpacity":
@@ -317,6 +326,17 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 childViews[parentId]?.removeAll { $0 == viewId }
             }
         }
+        
+        result(true)
+    }
+    
+    
+    private func handleDeleteAllViews(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+//        clear all but first
+        var rootTemp:[String: UIView] = [:];
+        rootTemp.updateValue(views.first!.value, forKey: views.first!.key)
+        views.removeAll();
+        views = rootTemp;
         
         result(true)
     }
@@ -433,30 +453,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
         result(true)
     }
 
-    private func handleRegisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let eventTypeStr = args["eventType"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
-            return
-        }
-        
-        // Convert eventType string to proper enum
-        if let buttonEvent = ButtonEventType(rawValue: eventTypeStr) {
-            setupButtonEvent(view, viewId: viewId, eventType: buttonEvent)
-            result(true)
-            return
-        }
-        
-        if let touchEvent = TouchEventType(rawValue: eventTypeStr) {
-            setupTouchEvent(view, viewId: viewId, eventType: touchEvent)
-            result(true)
-            return
-        }
-        
-        result(FlutterError(code: "INVALID_EVENT", message: "Unknown event type: \(eventTypeStr)", details: nil))
-    }
+   
 
     private func setupButtonEvent(_ view: UIView, viewId: String, eventType: ButtonEventType) {
         guard let button = view as? UIButton else { return }
@@ -497,26 +494,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleUnregisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let eventType = args["eventType"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
-            return
-        }
-        
-        if let button = view as? UIButton, eventType == "onClick" {
-            button.removeTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-        } else {
-            registeredGestureRecognizers[viewId]?.forEach { gesture in
-                view.removeGestureRecognizer(gesture)
-            }
-            registeredGestureRecognizers.removeValue(forKey: viewId)
-        }
-        
-        result(true)
-    }
 
     internal func handleGetRootView(result: @escaping FlutterResult) {
         guard let rootViewId = self.rootViewId,

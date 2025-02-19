@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -50,14 +49,16 @@ class HotReloadManager {
         _rootViewId = viewId;
       } else {
         _viewHierarchy[parentId] ??= [];
-        if (!_viewHierarchy[parentId]!.contains(viewId)) {  // Prevent duplicates
+        if (!_viewHierarchy[parentId]!.contains(viewId)) {
+          // Prevent duplicates
           _viewHierarchy[parentId]!.add(viewId);
         }
       }
       await _saveState();
-      
+
       // Debug log
-      _logger.fine('Tracked view: $viewId${parentId != null ? ' under parent: $parentId' : ' as root'}');
+      _logger.fine(
+          'Tracked view: $viewId${parentId != null ? ' under parent: $parentId' : ' as root'}');
     } catch (e) {
       _logger.severe('Error tracking view: $e');
     }
@@ -101,25 +102,76 @@ class HotReloadManager {
     _logger.info('🔁 Hot restart detected');
 
     try {
-      await debugPrintHierarchy();
-
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       if (await needsCleanup()) {
         _logger.info('Cleaning up views from previous run');
-        await _core.clearAllViews();
-
-        await _db?.update(
-          'view_state',
-          {'cleaned': 1},
-          where: 'cleaned = 0',
-        );
-
-        await debugPrintHierarchy();
+        
+        // Get root view first
+        final rootView = await _core.getRootView();
+        if (rootView != null) {
+          final rootId = rootView['viewId'] as String;
+          
+          // Get all children recursively and delete them
+          await _clearViewsExceptRoot(rootId);
+          
+          await _db?.update('view_state', {'cleaned': 1}, where: 'cleaned = 0');
+        }
       }
 
       _viewHierarchy.clear();
       _rootViewId = null;
+      
+      // Wait for root view stability
+      bool hasRoot = false;
+      int attempts = 0;
+      while (!hasRoot && attempts < 3) {
+        try {
+          final rootView = await _core.getRootView();
+          if (rootView != null) {
+            hasRoot = true;
+            await debugPrintHierarchy();
+          }
+        } catch (e) {
+          _logger.warning('Attempt $attempts: Waiting for root view...');
+          await Future.delayed(const Duration(milliseconds: 100));
+          attempts++;
+        }
+      }
     } catch (e) {
       _logger.severe('Error during hot restart: $e');
+    }
+  }
+
+  Future<void> _clearViewsExceptRoot(String rootId) async {
+    try {
+      // Get immediate children of root
+      final children = await _core.getChildren(rootId) ?? [];
+      
+      // Delete each child and its subtree
+      for (final childId in children) {
+        await _deleteViewAndChildren(childId);
+      }
+    } catch (e) {
+      _logger.severe('Error clearing views: $e');
+    }
+  }
+
+  Future<void> _deleteViewAndChildren(String viewId) async {
+    try {
+      // Get children first
+      final children = await _core.getChildren(viewId) ?? [];
+      
+      // Recursively delete children
+      for (final childId in children) {
+        await _deleteViewAndChildren(childId);
+      }
+      
+      // Delete the view itself
+      await _core.deleteView(viewId);
+      _logger.fine('Deleted view: $viewId');
+    } catch (e) {
+      _logger.severe('Error deleting view $viewId: $e');
     }
   }
 
@@ -138,7 +190,7 @@ class HotReloadManager {
     try {
       final children = await _core.getChildren(viewId) ?? [];
       final uniqueChildren = children.toSet().toList(); // Remove duplicates
-      
+
       String viewType = viewId.split('-').first; // Extract view type from ID
       _logger.info('$prefix${isLast ? '└── ' : '├── '}$viewId ($viewType)');
 
