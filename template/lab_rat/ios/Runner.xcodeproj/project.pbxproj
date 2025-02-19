@@ -69,8 +69,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3C2C5C982D5FA5CF006FE92E /* DCMAUI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = DCMAUI;
 			sourceTree = "<group>";
 		};
@@ -171,7 +169,6 @@
 				318FB9E27712B0D342D70E9F /* Pods-RunnerTests.release.xcconfig */,
 				688DF5AB04181E8540B7B8CC /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -489,7 +486,7 @@
 				DEVELOPMENT_TEAM = NNXKAV4XD5;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 14;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -673,7 +670,7 @@
 				DEVELOPMENT_TEAM = NNXKAV4XD5;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 14;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -697,7 +694,7 @@
 				DEVELOPMENT_TEAM = NNXKAV4XD5;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 14;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

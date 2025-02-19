@@ -1,5 +1,6 @@
 import 'package:dc_test/framework/bridge/base.dart';
 import 'package:dc_test/framework/core/types/events.dart';
+import 'package:dc_test/framework/style/view_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
@@ -491,14 +492,43 @@ class Core {
   // Single unified layout method
   Future<bool> setLayout(String viewId, LayoutConfig config) async {
     try {
+      // Get parent dimensions before applying new layout
+      final parent = await getParentView(viewId);
+      final parentHeight = parent?['height'] as double?;
+      final parentWidth = parent?['width'] as double?;
+
+      // Store original parent dimensions if using percentages
+      if (config.height?.unit == YGUnit.percent ||
+          config.width?.unit == YGUnit.percent) {
+        await _channel.invokeMethod('preserveParentDimensions', {
+          'viewId': viewId,
+          'parentHeight': parentHeight,
+          'parentWidth': parentWidth,
+        });
+      }
+
       final result = await _channel.invokeMethod('applyLayout', {
         'viewId': viewId,
-        ...config.toJson(),
+        'config': config.toJson(),
+        'preserveParent':
+            true, // Tell native side to preserve parent dimensions
       });
+
       return result ?? false;
     } catch (e) {
       _logger.severe('Error applying layout: $e');
       return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getParentView(String viewId) async {
+    try {
+      final result =
+          await _channel.invokeMethod('getParentView', {'viewId': viewId});
+      return result != null ? Map<String, dynamic>.from(result) : null;
+    } catch (e) {
+      _logger.severe('Error getting parent view: $e');
+      return null;
     }
   }
 
@@ -691,6 +721,19 @@ class Core {
       return result ?? false;
     } catch (e) {
       _logger.severe('Error clearing views: $e');
+      return false;
+    }
+  }
+
+  // Add helper method to force parent dimension update
+  Future<bool> updateParentDimensions(String viewId) async {
+    try {
+      final result = await _channel.invokeMethod('updateParentDimensions', {
+        'viewId': viewId,
+      });
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error updating parent dimensions: $e');
       return false;
     }
   }

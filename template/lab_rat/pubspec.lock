@@ -219,6 +219,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  native_ios_color_picker:
+    dependency: "direct main"
+    description:
+      name: native_ios_color_picker
+      sha256: "119d080c3e9fc18f0cf950e6d115d56012b4ef934619938edacc2eba6a8a10ec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   nitrogen_types:
     dependency: transitive
     description:

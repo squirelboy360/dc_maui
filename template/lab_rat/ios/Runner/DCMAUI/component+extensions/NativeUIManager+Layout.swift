@@ -178,18 +178,47 @@ struct LayoutConfig {
 @available(iOS 13.0, *)
 extension NativeUIManager {
     internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-        // Enable yoga for this view and all parent views
-        var currentView: UIView? = view
-        while currentView != nil {
-            currentView?.yoga.isEnabled = true
-            currentView = currentView?.superview
+        // Store original parent dimensions
+        let parentView = view.superview
+        let originalParentFrame = parentView?.frame
+        
+        // Enable yoga
+        view.yoga.isEnabled = true
+        parentView?.yoga.isEnabled = true
+        
+        // If using percentage height/width, ensure parent has valid dimensions
+        if config.height.unit == .percent || config.width.unit == .percent {
+            if let parent = parentView {
+                // Preserve parent's dimensions
+                if parent.frame.height == 0 {
+                    parent.frame.size.height = originalParentFrame?.height ?? UIScreen.main.bounds.height
+                }
+                if parent.frame.width == 0 {
+                    parent.frame.size.width = originalParentFrame?.width ?? UIScreen.main.bounds.width
+                }
+                
+                // Force parent layout update
+                parent.yoga.applyLayout(preservingOrigin: true)
+            }
         }
 
-        // Configure target view
+        // Configure view layout
         view.configureLayout { layout in
-            // Reset layout state
+            // Existing layout configuration...
             layout.isEnabled = true
             
+            // Set dimensions with parent context
+            if config.width.unit == .percent {
+                layout.width = YGValue(value: config.width.value, unit: .percent)
+                print("Setting percentage width: \(config.width.value)% of parent width: \(parentView?.frame.width ?? 0)")
+            }
+            
+            if config.height.unit == .percent {
+                layout.height = YGValue(value: config.height.value, unit: .percent)
+                print("Setting percentage height: \(config.height.value)% of parent height: \(parentView?.frame.height ?? 0)")
+            }
+            
+            // Rest of your existing layout configuration...
             // Set dimensions
             switch config.width.unit {
             case .percent:
@@ -245,17 +274,14 @@ extension NativeUIManager {
                 layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
             }
         }
-
-        // Calculate layout from root
+        
+        // Calculate layout
         if let rootView = getRootView(for: view) {
-            print("Calculating layout from root: \(rootView)")
             rootView.yoga.applyLayout(preservingOrigin: false)
             
-            // Force UI update
-            DispatchQueue.main.async {
-                rootView.setNeedsLayout()
-                rootView.layoutIfNeeded()
-            }
+            // Verify dimensions after layout
+            print("Final view dimensions - width: \(view.frame.width), height: \(view.frame.height)")
+            print("Parent dimensions - width: \(parentView?.frame.width ?? 0), height: \(parentView?.frame.height ?? 0)")
         }
     }
 
@@ -268,24 +294,5 @@ extension NativeUIManager {
             current = parent
         }
         return current
-    }
-}
-
-// Helper extension for color conversion
-extension UIColor {
-    convenience init?(from hexString: String?) {
-        guard let hexString = hexString else { return nil }
-        var hexSanitized = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        var rgb: UInt64 = 0
-        
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        
-        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
-        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
-        let blue = CGFloat(rgb & 0x0000FF) / 255.0
-        
-        self.init(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }

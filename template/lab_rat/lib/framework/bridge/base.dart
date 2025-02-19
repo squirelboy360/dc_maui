@@ -1,13 +1,13 @@
 import 'package:dc_test/framework/bridge/hot_restart.dart';
-import 'package:dc_test/framework/core/types/layout/yoga_types.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide TextStyle;
+import 'package:flutter/material.dart' hide TextStyle, ScrollView, ListView;
 import 'package:logging/logging.dart';
 import '../core/types/events.dart';
 import '../core/types/view/view_types.dart';
 import '../style/view_style.dart';
 import '../layout/layout_config.dart';
 import 'core.dart';
+import '../core/types/layout/yoga_types.dart';
 
 final bridge = UIBridge();
 
@@ -27,16 +27,8 @@ class UIBridge {
         if (testStyle != null) 'textStyle': testStyle.toJson(),
         if (style != null) ...style.toJson(),
       },
-      'layout': layout?.toJson() ??
-          {
-            // Add default layout values
-            'display': YGDisplay.flex.name,
-            'alignItems': YGAlign.stretch.name,
-          },
+      if (layout != null) 'layout': layout.toJson(),
     };
-
-    print(
-        'Creating view with args: $args'); // Debug log to verify layout values
 
     final viewId = await _core.createView(type, args);
     if (viewId == null) {
@@ -82,6 +74,7 @@ class UIBridge {
     TouchEventType eventType,
     void Function(TouchEvent) callback,
   ) async {
+    // Todo
     // Implementation for touch events
   }
 
@@ -101,13 +94,146 @@ class UIBridge {
     }
   }
 
+  // Updated ScrollView creation
+  Future<String> createScrollView({
+    ScrollAxis axis = ScrollAxis.vertical,
+    EdgeInsets padding = EdgeInsets.zero,
+    ViewStyle? style,
+    LayoutConfig? layout,
+  }) async {
+    // First create the base view with style
+    final viewId = await createView(
+      ViewType.view,
+      style: style ?? ViewStyle(),
+      layout: layout,
+    );
+
+    // Then configure it as a scroll view
+    final result = await _core.invokeMethod('configureAsScrollView', {
+      'viewId': viewId,
+      'axis': axis.toString().split('.').last,
+      'padding': {
+        'top': padding.top,
+        'left': padding.left,
+        'bottom': padding.bottom,
+        'right': padding.right,
+      },
+    });
+
+    if (result == null || result == false) {
+      throw ViewCreationException('Failed to configure ScrollView');
+    }
+
+    return viewId;
+  }
+
+  Future<void> setScrollContent(
+      String scrollViewId, String contentViewId) async {
+    final success = await _core.setScrollContent(scrollViewId, contentViewId);
+    if (!success) {
+      throw ViewUpdateException(
+          'Failed to set scroll content for view: $scrollViewId');
+    }
+  }
+
+  // Updated ListView creation
+  Future<ListViewController> createListView({
+    ListViewStyle style = ListViewStyle.list,
+    int columns = 1,
+    double spacing = 8.0,
+    EdgeInsets padding = EdgeInsets.zero,
+    bool enableRefresh = false,
+    bool enablePagination = false,
+    ViewStyle? viewStyle,
+    LayoutConfig? layout,
+  }) async {
+    // First create the base view with style
+    final viewId = await createView(
+      ViewType.view,
+      style: viewStyle ?? ViewStyle(),
+      layout: layout,
+    );
+
+    // Then configure it as a list view
+    final result = await _core.invokeMethod('configureAsListView', {
+      'viewId': viewId,
+      'style': style.toString().split('.').last,
+      'columns': columns,
+      'spacing': spacing,
+      'padding': {
+        'top': padding.top,
+        'left': padding.left,
+        'bottom': padding.bottom,
+        'right': padding.right,
+      },
+      'enableRefresh': enableRefresh,
+      'enablePagination': enablePagination,
+    });
+
+    if (result == null || result == false) {
+      throw ViewCreationException('Failed to configure ListView');
+    }
+
+    return ListViewController(_core, viewId);
+  }
+
+  // Add helper method for filling parent with scroll content
+  Future<void> fillParentWithScroll(String scrollViewId) async {
+    final layout = LayoutConfig(
+      width: YGValue.percent(100),
+      height: YGValue.percent(100),
+      flexGrow: 1,
+      flexShrink: 1,
+    );
+
+    await setViewLayout(scrollViewId, layout);
+  }
+
+  // Updated vertical scroll container helper
+  Future<String> createVerticalScrollContainer({
+    EdgeInsets padding = EdgeInsets.zero,
+    ViewStyle? style,
+    LayoutConfig? layout,
+  }) async {
+    final scrollViewId = await createScrollView(
+      axis: ScrollAxis.vertical,
+      padding: padding,
+      style: style ??
+          ViewStyle(
+            backgroundColor: Colors.transparent,
+          ),
+      layout: layout ??
+          LayoutConfig(
+            width: YGValue.percent(100),
+            height: YGValue.percent(100),
+            flexGrow: 1,
+          ),
+    );
+
+    final contentId = await createView(
+      ViewType.view,
+      style: ViewStyle(
+        backgroundColor: Colors.transparent,
+      ),
+      layout: LayoutConfig(
+        width: YGValue.percent(100),
+        flexGrow: 1,
+        flexShrink: 1,
+        flexDirection: YGFlexDirection.column,
+      ),
+    );
+
+    await setScrollContent(scrollViewId, contentId);
+    return scrollViewId;
+  }
+
   // Debug Tools - Type safe
   Future<void> debugLogHierarchy() async {
     final rootView = await _core.getRootView();
     if (rootView == null) {
       throw DebugException('No root view found');
     }
-    // Implementation...
+    // Todo
   }
 }
 
