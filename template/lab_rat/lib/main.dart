@@ -1,13 +1,8 @@
 // keeps code clean and organized
 // part of 'imports.dart';
 
+import 'package:dc_test/test/main_app/main.dart' as test;
 
-import 'package:dc_test/framework/bridge/base.dart';
-import 'package:dc_test/test/main_app/imports.dart';
-
-void main() {
-  Base.startApp(bindApp: () async {
-    final binder = HomeViewBinder();
-    await binder.navigateToHomeScreen();
-  });
+Future<void> main() async {
+  test.app();
 }
