@@ -2,7 +2,7 @@ part of '../../imports.dart';
 
 abstract class HomeViewComponents {
   // root
-  final rootView = bridge.createView(ViewType.view,
+  final rootView = bridge.createScrollView(
       layout: LayoutConfig(
           flex: 1,
           alignItems: YGAlign.center,

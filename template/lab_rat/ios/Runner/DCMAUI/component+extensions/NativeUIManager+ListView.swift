@@ -1,7 +1,7 @@
 import UIKit
 
 @available(iOS 13.0, *)
-extension NativeUIManager {
+extension NativeUIManager: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     internal func handleCreateListView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any] else {
             result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
@@ -79,6 +79,51 @@ extension NativeUIManager {
         listView.tag = viewId.hash
         
         result(true)
+    }
+    
+    // Required UICollectionViewDataSource methods
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        guard let listView = collectionView as? DCListView else { return 0 }
+        return listView.numberOfItems
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath)
+        
+        // Get the child view for this index if it exists
+        if let listView = collectionView as? DCListView,
+           let childView = listView.viewForItem(at: indexPath.item) {
+            // Remove any existing content view
+            cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+            
+            // Add the child view
+            cell.contentView.addSubview(childView)
+            childView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                childView.topAnchor.constraint(equalTo: cell.contentView.topAnchor),
+                childView.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor),
+                childView.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor),
+                childView.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor)
+            ])
+        }
+        
+        return cell
+    }
+    
+    // UICollectionViewDelegateFlowLayout methods
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        guard let listView = collectionView as? DCListView else { return .zero }
+        
+        let totalSpacing = listView.spacing * (CGFloat(listView.columns) - 1)
+        let availableWidth = collectionView.bounds.width - totalSpacing - collectionView.contentInset.left - collectionView.contentInset.right
+        let itemWidth = availableWidth / CGFloat(listView.columns)
+        
+        // Use the height provided by the item, or match the width for grid style
+        if let height = listView.heightForItem(at: indexPath.item) {
+            return CGSize(width: itemWidth, height: height)
+        } else {
+            return CGSize(width: itemWidth, height: itemWidth)
+        }
     }
 }
 
@@ -185,9 +230,10 @@ private class DCScrollableStackView: UIScrollView {
 }
 
 class DCListView: UICollectionView {
-    private let style: ListViewStyle
-    private let columns: Int
-    private let spacing: CGFloat
+    let style: ListViewStyle
+    let columns: Int
+    let spacing: CGFloat
+    private var items: [(view: UIView, height: CGFloat?)] = []
     
     init(style: ListViewStyle, columns: Int, spacing: CGFloat) {
         self.style = style
@@ -213,6 +259,38 @@ class DCListView: UICollectionView {
         
         // Register cell
         register(UICollectionViewCell.self, forCellWithReuseIdentifier: "Cell")
+    }
+    
+    // Methods to manage items
+    func addItem(_ view: UIView, height: CGFloat? = nil) {
+        items.append((view, height))
+        reloadData()
+    }
+    
+    func removeItem(at index: Int) {
+        guard index < items.count else { return }
+        items.remove(at: index)
+        reloadData()
+    }
+    
+    func clearItems() {
+        items.removeAll()
+        reloadData()
+    }
+    
+    // Helper methods for the data source and delegate
+    var numberOfItems: Int {
+        return items.count
+    }
+    
+    func viewForItem(at index: Int) -> UIView? {
+        guard index < items.count else { return nil }
+        return items[index].view
+    }
+    
+    func heightForItem(at index: Int) -> CGFloat? {
+        guard index < items.count else { return nil }
+        return items[index].height
     }
 }
 
