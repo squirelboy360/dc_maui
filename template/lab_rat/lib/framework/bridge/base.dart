@@ -1,99 +1,85 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'hot_reload.dart';
+import 'hot_restart.dart';
 import 'core.dart';
 
 final bridge = Core();
 
 class Base {
-  static late final HotReloadManager _hotReloadManager;
+  static late final HotReloadManager _manager;
   static bool _isInitialized = false;
+  static final _logger = Logger('Base');
 
   static Future<void> startApp({required Function bindApp}) async {
-    final logger = Logger('Base');
     Logger.root.level = Level.ALL;
     Logger.root.onRecord.listen((record) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     });
 
-    // Initialize Flutter binding
     final binding = WidgetsFlutterBinding.ensureInitialized();
 
     if (kDebugMode) {
-      _setupDebugMode(binding);
+      await _setupDebugMode(binding);
     }
 
     try {
-      //  if you want to ever in sometime in your app embedd a flutter view in your native view with no performance issues,
-      //? call runApp and call the flutter view Api and attatch to parent view. this would allow u use flutter in your native app 
-      //? 100% fast as a native flutter app
-      // runApp(MaterialApp(
-      //   theme: ThemeData.light(),
-      //   color: Colors.indigo,
-      //   home: Center(child: Text("App running")),
-      // ));
-
-      // Run actual native UI binding
       await bindApp();
-      logger.info('App started successfully');
+      _logger.info('App started successfully');
 
       if (kDebugMode) {
-        // Print initial view hierarchy
-        await _hotReloadManager.debugPrintHierarchy();
+        await _manager.debugPrintHierarchy();
       }
     } catch (e, stack) {
-      logger.severe('Failed to start app: $e');
-      logger.severe('Stack trace: $stack');
+      _logger.severe('Failed to start app: $e');
+      _logger.severe('Stack trace: $stack');
     }
   }
 
-  static void _setupDebugMode(WidgetsBinding binding) {
+  static Future<void> _setupDebugMode(WidgetsBinding binding) async {
     if (_isInitialized) return;
     _isInitialized = true;
 
-    _hotReloadManager = HotReloadManager();
+    _manager = HotReloadManager();
+    await _manager.initialize();
 
-    // Listen to reassemble events for hot reload
     binding.addObserver(
-      _HotReloadObserver(
-        onHotReload: () async {
-          Logger('🔄 Hot reload detected');
-          await _hotReloadManager.handleHotReload();
-        },
+      _DebugObserver(
         onHotRestart: () async {
-          print('🔁 Hot restart detected');
-          await _hotReloadManager.handleHotRestart();
+          _logger.info('🔁 Hot restart detected');
+          await _manager.handleHotRestart();
         },
       ),
     );
+
+    if (await _manager.needsCleanup()) {
+      _logger.info('Previous state detected, cleaning up');
+      await _manager.handleHotRestart();
+    }
   }
 
-  // Public API to track views for hot reload
-  static void trackViewForHotReload(
-      String viewId, Map<String, dynamic> properties) {
+  // Public API to track views for debugging
+  static void trackViewForDebug(String viewId, String? parentId) {
     if (kDebugMode) {
-      _hotReloadManager.trackView(viewId, properties);
+      _manager.trackView(viewId, parentId);
+    }
+  }
+
+  // Clean up resources
+  static Future<void> dispose() async {
+    if (kDebugMode) {
+      await _manager.dispose();
     }
   }
 }
 
-class _HotReloadObserver extends WidgetsBindingObserver {
-  final Future<void> Function() onHotReload;
+class _DebugObserver extends WidgetsBindingObserver {
   final Future<void> Function() onHotRestart;
 
-  _HotReloadObserver({
-    required this.onHotReload,
-    required this.onHotRestart,
-  });
+  _DebugObserver({required this.onHotRestart});
 
   @override
   Future<void> didHaveMemoryPressure() async {
     await onHotRestart();
-  }
-
-  @override
-  void didChangeAccessibilityFeatures() {
-    onHotReload();
   }
 }

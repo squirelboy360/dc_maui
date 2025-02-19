@@ -726,6 +726,16 @@ class Core {
       return false;
     }
   }
+
+  Future<bool> clearAllViews() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('clearAllViews');
+      return result ?? false;
+    } catch (e) {
+      _logger.severe('Error clearing views: $e');
+      return false;
+    }
+  }
 }
 
 // Helper classes for type-safe view creation
