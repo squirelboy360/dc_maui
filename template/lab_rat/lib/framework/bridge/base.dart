@@ -1,4 +1,5 @@
 import 'package:dc_test/framework/bridge/hot_restart.dart';
+import 'package:dc_test/framework/core/types/layout/yoga_types.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle;
 import 'package:logging/logging.dart';
@@ -26,8 +27,16 @@ class UIBridge {
         if (testStyle != null) 'textStyle': testStyle.toJson(),
         if (style != null) ...style.toJson(),
       },
-      if (layout != null) 'layout': layout.toJson(),
+      'layout': layout?.toJson() ??
+          {
+            // Add default layout values
+            'display': YGDisplay.flex.name,
+            'alignItems': YGAlign.stretch.name,
+          },
     };
+
+    print(
+        'Creating view with args: $args'); // Debug log to verify layout values
 
     final viewId = await _core.createView(type, args);
     if (viewId == null) {
