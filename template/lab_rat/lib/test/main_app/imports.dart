@@ -9,6 +9,6 @@ import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
 import 'package:flutter/semantics.dart';
 import 'package:logging/logging.dart';
 
-part 'views/home_view/home_view_components.dart';
+part 'views/home_view/components.dart';
 part 'views/home_view/home_view_binder.dart';
 // part 'main.dart';

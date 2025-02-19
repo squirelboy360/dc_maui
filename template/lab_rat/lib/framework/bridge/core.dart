@@ -1,3 +1,4 @@
+import 'package:dc_test/framework/bridge/base.dart';
 import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -152,10 +153,22 @@ class Core {
   /// Returns: bool success
   Future<bool> attachView(String parentId, String childId) async {
     try {
+      // Check if already attached to prevent duplicates
+      final children = await getChildren(parentId) ?? [];
+      if (children.contains(childId)) {
+        _logger.warning('View $childId already attached to $parentId');
+        return false;
+      }
+
       final result = await _channel.invokeMethod<bool>('attachView', {
         'parentId': parentId,
         'childId': childId,
       });
+
+      if (result ?? false) {
+        Base.trackViewForDebug(childId, parentId);
+      }
+
       return result ?? false;
     } catch (e) {
       _logger.severe('Error attaching view: $e');

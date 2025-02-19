@@ -1,11 +1,153 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TextStyle;
 import 'package:logging/logging.dart';
+import '../core/types/events.dart';
+import '../core/types/view/view_types.dart';
+import '../style/view_style.dart';
+import '../layout/layout_config.dart';
 import 'hot_restart.dart';
 import 'core.dart';
 
-final bridge = Core();
+final bridge = UIBridge();
 
+class UIBridge {
+  final Core _core = Core();
+
+  // View Creation - Fully typed
+  Future<String> createView(
+    ViewType type, {
+      TextStyle? testStyle,
+    ViewStyle? style,
+    LayoutConfig? layout,
+  }) async {
+    final viewId = await _core.createView(type);
+    if (viewId == null) {
+      throw ViewCreationException(
+          'Failed to create view of type: ${type.value}');
+    }
+
+    if (style != null) {
+      await setViewStyle(viewId, style);
+    }
+
+      if (testStyle != null) {
+      await (viewId, style);
+    }
+    if (layout != null) {
+      await setViewLayout(viewId, layout);
+    }
+
+    return viewId;
+  }
+
+  // View Styling - Strongly typed
+  Future<void> setViewStyle(String viewId, ViewStyle style) async {
+    final success = await _core.updateView(viewId, style.toJson());
+    if (!success) {
+      throw ViewUpdateException('Failed to update view style: $viewId');
+    }
+  }
+
+  // Layout Configuration - Strongly typed
+  Future<void> setViewLayout(String viewId, LayoutConfig layout) async {
+    final success = await _core.setLayout(viewId, layout);
+    if (!success) {
+      throw ViewLayoutException('Failed to set view layout: $viewId');
+    }
+  }
+
+  // Event Handling - Typed events
+  Future<void> addButtonEvent(
+    String viewId,
+    ButtonEventType eventType,
+    Future<void> Function() callback,
+  ) async {
+    final success =
+        await _core.registerButtonEvent(viewId, eventType.name, callback);
+    if (!success) {
+      throw EventRegistrationException(
+          'Failed to register button event: $eventType');
+    }
+  }
+
+  Future<void> addTouchEvent(
+    String viewId,
+    TouchEventType eventType,
+    void Function(TouchEvent) callback,
+  ) async {
+    // Implementation for touch events
+  }
+
+  // View Hierarchy - Strongly typed operations
+  Future<void> attachView(String parentId, String childId) async {
+    final success = await _core.attachView(parentId, childId);
+    if (!success) {
+      throw ViewHierarchyException(
+          'Failed to attach view $childId to $parentId');
+    }
+  }
+
+  Future<void> attachToRoot(String viewId) async {
+    final success = await _core.attachToRoot(viewId);
+    if (!success) {
+      throw ViewHierarchyException('Failed to attach view to root: $viewId');
+    }
+  }
+
+  // Debug Tools - Type safe
+  Future<void> debugLogHierarchy() async {
+    final rootView = await _core.getRootView();
+    if (rootView == null) {
+      throw DebugException('No root view found');
+    }
+    // Implementation...
+  }
+}
+
+// Custom exceptions for better error handling
+class ViewCreationException implements Exception {
+  final String message;
+  ViewCreationException(this.message);
+  @override
+  String toString() => 'ViewCreationException: $message';
+}
+
+class ViewUpdateException implements Exception {
+  final String message;
+  ViewUpdateException(this.message);
+  @override
+  String toString() => 'ViewUpdateException: $message';
+}
+
+class ViewLayoutException implements Exception {
+  final String message;
+  ViewLayoutException(this.message);
+  @override
+  String toString() => 'ViewLayoutException: $message';
+}
+
+class EventRegistrationException implements Exception {
+  final String message;
+  EventRegistrationException(this.message);
+  @override
+  String toString() => 'EventRegistrationException: $message';
+}
+
+class ViewHierarchyException implements Exception {
+  final String message;
+  ViewHierarchyException(this.message);
+  @override
+  String toString() => 'ViewHierarchyException: $message';
+}
+
+class DebugException implements Exception {
+  final String message;
+  DebugException(this.message);
+  @override
+  String toString() => 'DebugException: $message';
+}
+
+// Debug functionality
 class Base {
   static late final HotReloadManager _manager;
   static bool _isInitialized = false;
@@ -58,17 +200,9 @@ class Base {
     }
   }
 
-  // Public API to track views for debugging
   static void trackViewForDebug(String viewId, String? parentId) {
     if (kDebugMode) {
       _manager.trackView(viewId, parentId);
-    }
-  }
-
-  // Clean up resources
-  static Future<void> dispose() async {
-    if (kDebugMode) {
-      await _manager.dispose();
     }
   }
 }

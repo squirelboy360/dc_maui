@@ -45,13 +45,22 @@ class HotReloadManager {
   }
 
   Future<void> trackView(String viewId, String? parentId) async {
-    if (parentId == null) {
-      _rootViewId = viewId;
-    } else {
-      _viewHierarchy[parentId] ??= [];
-      _viewHierarchy[parentId]!.add(viewId);
+    try {
+      if (parentId == null) {
+        _rootViewId = viewId;
+      } else {
+        _viewHierarchy[parentId] ??= [];
+        if (!_viewHierarchy[parentId]!.contains(viewId)) {  // Prevent duplicates
+          _viewHierarchy[parentId]!.add(viewId);
+        }
+      }
+      await _saveState();
+      
+      // Debug log
+      _logger.fine('Tracked view: $viewId${parentId != null ? ' under parent: $parentId' : ' as root'}');
+    } catch (e) {
+      _logger.severe('Error tracking view: $e');
     }
-    await _saveState();
   }
 
   Future<void> _saveState() async {
@@ -126,16 +135,22 @@ class HotReloadManager {
   }
 
   Future<void> _printViewTree(String viewId, String prefix, bool isLast) async {
-    final children = await _core.getChildren(viewId) ?? [];
+    try {
+      final children = await _core.getChildren(viewId) ?? [];
+      final uniqueChildren = children.toSet().toList(); // Remove duplicates
+      
+      String viewType = viewId.split('-').first; // Extract view type from ID
+      _logger.info('$prefix${isLast ? '└── ' : '├── '}$viewId ($viewType)');
 
-    _logger.info('$prefix${isLast ? '└── ' : '├── '}$viewId');
-
-    for (var i = 0; i < children.length; i++) {
-      await _printViewTree(
-        children[i],
-        '$prefix${isLast ? '    ' : '│   '}',
-        i == children.length - 1,
-      );
+      for (var i = 0; i < uniqueChildren.length; i++) {
+        await _printViewTree(
+          uniqueChildren[i],
+          '$prefix${isLast ? '    ' : '│   '}',
+          i == uniqueChildren.length - 1,
+        );
+      }
+    } catch (e) {
+      _logger.severe('Error printing view tree: $e');
     }
   }
 
