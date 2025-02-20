@@ -35,7 +35,10 @@ enum LayoutType { flex, absolute, relative }
 enum LayoutAlign { auto, start, center, end, stretch, baseline }
 
 // Yoga-compatible layout configuration
-enum ScrollEventType { onScroll, onScrollEnd }
+enum ScrollEventType {
+  onScroll,
+  onScrollEnd
+}
 
 class Core {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
@@ -73,6 +76,8 @@ class Core {
     }
   }
 
+  
+
   // Updated createView method
   Future<String?> createView(
       ViewType viewType, Map<String, dynamic> args) async {
@@ -82,22 +87,22 @@ class Core {
         final events =
             args['events'] as Map<NativeEventType, Function(NativeEventData)>;
         args['events'] = events.map((k, v) => MapEntry(k.name, true));
-
+        
         // Store event handlers for later use
         final viewId = await _channel.invokeMethod<String>('createView', {
-          'viewType': viewType.value,
-          'properties': args['properties'],
-          'layout': args['layout'],
-          'data': args['data'],
-          'useCustomRenderer': args['useCustomRenderer'],
-          'events': args['events'],
+            'viewType': viewType.value,
+            'properties': args['properties'],
+            'layout': args['layout'],
+            'data': args['data'],
+            'useCustomRenderer': args['useCustomRenderer'],
+            'events': args['events'],
         });
 
         // Register events after view creation
         if (viewId != null) {
-          for (final entry in events.entries) {
-            await registerEvent(viewId, entry.key, entry.value);
-          }
+            for (final entry in events.entries) {
+                await registerEvent(viewId, entry.key, entry.value);
+            }
         }
 
         return viewId;

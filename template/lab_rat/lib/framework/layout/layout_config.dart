@@ -21,6 +21,10 @@ class LayoutConfig {
   final EdgeInsets? margin;
   final EdgeInsets? padding;
   final Map<YGEdge, double>? border;
+  final YGValue? left;   // Add these
+  final YGValue? right;  // four edge
+  final YGValue? top;    // position
+  final YGValue? bottom; // properties
 
   const LayoutConfig({
     this.width,
@@ -42,6 +46,10 @@ class LayoutConfig {
     this.margin,
     this.padding,
     this.border,
+    this.left,
+    this.right,
+    this.top,
+    this.bottom,
   });
 
   // Helper constructors
@@ -82,5 +90,15 @@ class LayoutConfig {
           },
         if (border != null)
           'border': border!.map((edge, value) => MapEntry(edge.name, value)),
+        if (left != null) 'left': left!.toJson(),
+        if (right != null) 'right': right!.toJson(),
+        if (top != null) 'top': top!.toJson(),
+        if (bottom != null) 'bottom': bottom!.toJson(),
       };
+
+  // Add convenient static methods for edge positioning
+  static YGValue leftPos(double value) => YGValue(value, YGUnit.point);
+  static YGValue rightPos(double value) => YGValue(value, YGUnit.point);
+  static YGValue topPos(double value) => YGValue(value, YGUnit.point);
+  static YGValue bottomPos(double value) => YGValue(value, YGUnit.point);
 }

@@ -8,14 +8,11 @@ abstract class HomeViewComponents {
       flex: 1,
       alignItems: YGAlign.center,
       justifyContent: YGJustify.flexStart,
-      display: YGDisplay.flex,
     ),
-    style: ViewStyle(
-      backgroundColor: Colors.grey[100],
-    ),
+    style: ViewStyle(backgroundColor: Colors.grey[100]),
   );
 
-  // Header Section
+  // Header with gradient
   final header = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
@@ -27,8 +24,11 @@ abstract class HomeViewComponents {
       justifyContent: YGJustify.center,
     ),
     style: ViewStyle(
-      backgroundColor: Colors.blue[600],
-      cornerRadius: 0,
+      gradient: GradientStyle(
+        colors: [Colors.blue[700]!, Colors.blue[500]!],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       shadows: [
         ShadowStyle(
           color: Colors.black.withOpacity(0.2),
@@ -39,115 +39,102 @@ abstract class HomeViewComponents {
     ),
   );
 
-  final profileImage = bridge.createView(
+  // Counter display
+  final counterDisplay = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
-      width: LayoutConfig.points(80),
-      height: LayoutConfig.points(80),
-      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(16),
+      width: LayoutConfig.percent(90),
+      margin: EdgeInsets.symmetric(vertical: 16),
     ),
     style: ViewStyle(
-      cornerRadius: 40,
       backgroundColor: Colors.white,
-      border: BorderStyle(
-        width: 3,
-        color: Colors.white,
-        style: BorderType.solid,
-      ),
+      cornerRadius: 12,
+      shadows: [
+        ShadowStyle(
+          color: Colors.black.withOpacity(0.1),
+          offset: Offset(0, 2),
+          radius: 4,
+        ),
+      ],
     ),
   );
 
-  final userName = bridge.createView(
+  // Counter text
+  final counterText = bridge.createView(
     ViewType.label,
-    layout: LayoutConfig(
-      margin: EdgeInsets.only(top: 8),
-    ),
     style: ViewStyle(
       textStyle: TextStyle(
-        text: "John Doe",
-        color: Colors.white,
-        fontSize: 24,
+        text: "0",
+        fontSize: 48,
         fontWeight: FontWeight.bold,
+        color: Colors.blue[700],
       ),
     ),
   );
 
-  // Content Section
-  // final scrollContent = bridge.createView(
-  //   ViewType.listView,
-  //   layout: LayoutConfig(
-  //     flex: 1,
-  //     width: LayoutConfig.percent(100),
-  //   ),
-  //   style: ViewStyle(
-  //     backgroundColor: Colors.grey[100],
-  //   ),
-  //   scrollEvents: {
-  //     ScrollEventType.onScroll: (data) {
-  //       print('Scrolled to: ${data.y}');
-  //     },
-  //   },
-  // );
-
+  // List items
   final itemsList = bridge.createView(
     ViewType.listView,
     layout: LayoutConfig(
       width: LayoutConfig.percent(100),
-      height: LayoutConfig.percent(100),
+      flex: 1,
+      padding: EdgeInsets.symmetric(horizontal: 16),
     ),
-    items: [
-      {'name': 'John Doe', 'id': 1},
-      {'name': 'Jane Doe', 'id': 2},
-    ], // Pass raw data
+    items: List.generate(20, (i) => {'id': i, 'title': 'Item ${i + 1}'}),
     attachedListViewChild: (index, item) => bridge.createView(
-      ViewType.label,
+      ViewType.view,
       layout: LayoutConfig(
-        margin: EdgeInsets.only(top: 8),
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(16),
+        flexDirection: YGFlexDirection.row,
+        alignItems: YGAlign.center,
+        justifyContent: YGJustify.spaceBetween,
       ),
       style: ViewStyle(
-        textStyle: TextStyle(
-          text: "${item['name']} (person number $index)",
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
+        backgroundColor: Colors.white,
+        cornerRadius: 8,
+        shadows: [
+          ShadowStyle(
+            color: Colors.black.withOpacity(0.05),
+            offset: Offset(0, 2),
+            radius: 4,
+          ),
+        ],
       ),
     ),
   );
 
-  // Action Button
-  final actionButton = bridge.createView(
+  // FAB
+  final fab = bridge.createView(
     ViewType.button,
-    events: {
-      NativeEventType.onPress: (eventData) {
-        print('Button clicked!');
-        
-      },
-      NativeEventType.onLongPress: (eventData) {
-        print('Button long pressed!');
-      },
-    },
     layout: LayoutConfig(
       position: YGPositionType.absolute,
-      width: YGValue.points(56),
-      height: YGValue.points(56),
+      width: LayoutConfig.points(56),
+      height: LayoutConfig.points(56),
+      left: LayoutConfig.points(16),
+      bottom: LayoutConfig.points(16),
     ),
     style: ViewStyle(
       backgroundColor: Colors.blue[600],
-      cornerRadius: 20,
+      cornerRadius: 28,
       textStyle: TextStyle(
         text: "+",
-        color: Colors.white,
         fontSize: 32,
+        color: Colors.white,
       ),
       shadows: [
         ShadowStyle(
           color: Colors.black.withOpacity(0.3),
           offset: Offset(0, 3),
           radius: 5,
-          opacity: 1.0,
         ),
       ],
     ),
+    events: {
+      NativeEventType.onPress: (event) {
+        print("FAB pressed!");
+      },
+    },
   );
 }
