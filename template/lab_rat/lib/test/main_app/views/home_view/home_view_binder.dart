@@ -1,23 +1,23 @@
 part of '../../imports.dart';
 
 class HomeViewBinder extends HomeViewComponents {
-  Future<void> mountHome() async {
-    final getAppRoot = await Core().getRootView();
-    final appRoot = getAppRoot?['viewId'] as String;
 
-    // Attach root view to app root
+
+  Future<void> mountHome() async {
+    final appRoot = (await Core().getRootView())?['viewId'] as String;
+
+    // Mount root
     await bridge.attachView(appRoot, await rootView);
 
-    // Build header section
+    // Mount header section
     await bridge.attachView(await rootView, await header);
-    await bridge.attachView(await header, await profileImage);
-    await bridge.attachView(await header, await userName);
+    await bridge.attachView(await header, await counterDisplay);
+    await bridge.attachView(await counterDisplay, await counterText);
 
-    // Build scrollable content
-    // await bridge.attachView(await rootView, await scrollContent);
+    // Mount list
     await bridge.attachView(await rootView, await itemsList);
 
-    // Add floating action button
-    await bridge.attachView(await rootView, await actionButton);
+    // Mount FAB
+    await bridge.attachView(await rootView, await fab);
   }
 }
