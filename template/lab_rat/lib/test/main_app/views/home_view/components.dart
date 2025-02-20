@@ -1,39 +1,56 @@
 part of '../../imports.dart';
 
 abstract class HomeViewComponents {
-  // Root container needs proper setup to handle absolute children
+  // Root container with explicit dimensions
   final rootView = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
-      width: LayoutConfig.percent(100), // Explicit width
-      height: LayoutConfig.percent(100), // Explicit height
-      position: YGPositionType.relative, // Explicitly relative
+      width: LayoutConfig.percent(100),
+      height: LayoutConfig.percent(100),
+      position: YGPositionType.relative,
       flexDirection: YGFlexDirection.column,
     ),
     style: ViewStyle(backgroundColor: Colors.red[100]),
   );
 
-  // Absolute positioned view with explicit positioning
+  // Fixed size app bar with absolute positioning
   final appBar = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
-      position: YGPositionType.absolute, // Must be absolute
-      width: LayoutConfig.points(100),
-      height: LayoutConfig.points(100),
-      right: LayoutConfig.points(10), // Use the static helper
-      top: LayoutConfig.points(80), // Use the static helper
+      position: YGPositionType.absolute,
+      width: LayoutConfig.points(200),     // Fixed width
+      height: LayoutConfig.points(80),     // Fixed height
+      left: LayoutConfig.points(16),      // Right padding
+      top: LayoutConfig.points(40),        // Top padding
+      display: YGDisplay.flex,             // Important!
+      flexDirection: YGFlexDirection.row,  // For label alignment
+      alignItems: YGAlign.center,          // Center children vertically
+      justifyContent: YGJustify.center,    // Center children horizontally
     ),
-    style: ViewStyle(backgroundColor: Colors.cyan),
+    style: ViewStyle(
+      backgroundColor: Colors.cyan,
+      cornerRadius: 8,
+    ),
   );
 
-  final appBarTitle = bridge.createView(ViewType.label,
-      layout: LayoutConfig(
-        position: YGPositionType.absolute,
-        width: LayoutConfig.percent(100),
-        height: LayoutConfig.points(100),
-        left: LayoutConfig.points(1),
+  // Title that fills appBar
+  final appBarTitle = bridge.createView(
+    ViewType.label,
+    layout: LayoutConfig(
+      width: LayoutConfig.percent(100),   // Fill parent width
+      height: LayoutConfig.percent(100),  // Fill parent height
+      alignSelf: YGAlign.center,         // Center in parent
+      margin: EdgeInsets.all(8),         // Add some padding
+    ),
+    style: ViewStyle(
+      backgroundColor: Colors.transparent,
+      textStyle: TextStyle(
+        text: "Title",
+        color: Colors.white,
+        fontSize: 16,
       ),
-      style: ViewStyle(backgroundColor: Colors.cyan));
+    ),
+  );
 
   // List items
   final itemsList = bridge.createView(

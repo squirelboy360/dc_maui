@@ -9,7 +9,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
     private var rootViewId: String?
-    private var window: UIWindow?
+    internal var window: UIWindow?
     internal var layoutConfigs: [String: LayoutConfig] = [:]
     internal var yogaNodes: [String: YGNodeRef] = [:]
     internal var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:] // Move to internal
