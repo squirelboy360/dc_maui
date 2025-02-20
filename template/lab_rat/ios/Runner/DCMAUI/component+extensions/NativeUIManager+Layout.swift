@@ -178,52 +178,32 @@ struct LayoutConfig {
 @available(iOS 13.0, *)
 extension NativeUIManager {
     internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-        // Store original parent dimensions
         let parentView = view.superview
         let originalParentFrame = parentView?.frame
         
-        // Enable yoga
         view.yoga.isEnabled = true
         parentView?.yoga.isEnabled = true
         
-        // If using percentage height/width, ensure parent has valid dimensions
         if config.height.unit == .percent || config.width.unit == .percent {
             if let parent = parentView {
-                // Preserve parent's dimensions
                 if parent.frame.height == 0 {
                     parent.frame.size.height = originalParentFrame?.height ?? UIScreen.main.bounds.height
                 }
                 if parent.frame.width == 0 {
                     parent.frame.size.width = originalParentFrame?.width ?? UIScreen.main.bounds.width
                 }
-                
-                // Force parent layout update
                 parent.yoga.applyLayout(preservingOrigin: true)
             }
         }
 
-        // Configure view layout
         view.configureLayout { layout in
-            // Existing layout configuration...
             layout.isEnabled = true
             
-            // Set dimensions with parent context
-            if config.width.unit == .percent {
-                layout.width = YGValue(value: config.width.value, unit: .percent)
-                print("Setting percentage width: \(config.width.value)% of parent width: \(parentView?.frame.width ?? 0)")
-            }
-            
-            if config.height.unit == .percent {
-                layout.height = YGValue(value: config.height.value, unit: .percent)
-                print("Setting percentage height: \(config.height.value)% of parent height: \(parentView?.frame.height ?? 0)")
-            }
-            
-            // Rest of your existing layout configuration...
-            // Set dimensions
+            // Handle width configuration
             switch config.width.unit {
             case .percent:
                 layout.width = YGValue(value: config.width.value, unit: .percent)
-                print("Setting width: \(config.width.value)%")
+                print("Setting width: \(config.width.value)% of parent width: \(parentView?.frame.width ?? 0)")
             case .point:
                 layout.width = YGValue(value: config.width.value, unit: .point)
                 print("Setting width: \(config.width.value)pt")
@@ -234,10 +214,11 @@ extension NativeUIManager {
                 layout.width = .auto
             }
             
+            // Handle height configuration
             switch config.height.unit {
             case .percent:
                 layout.height = YGValue(value: config.height.value, unit: .percent)
-                print("Setting height: \(config.height.value)%")
+                print("Setting height: \(config.height.value)% of parent height: \(parentView?.frame.height ?? 0)")
             case .point:
                 layout.height = YGValue(value: config.height.value, unit: .point)
                 print("Setting height: \(config.height.value)pt")
@@ -248,7 +229,6 @@ extension NativeUIManager {
                 layout.height = .auto
             }
 
-            // Core layout properties
             layout.flexDirection = config.flexDirection
             layout.justifyContent = config.justifyContent
             layout.alignItems = config.alignItems
@@ -258,7 +238,6 @@ extension NativeUIManager {
                 layout.flex = CGFloat(flex)
             }
 
-            // Set margins
             if config.margin != .zero {
                 layout.marginLeft = YGValue(value: Float(config.margin.left), unit: .point)
                 layout.marginTop = YGValue(value: Float(config.margin.top), unit: .point)
@@ -266,20 +245,22 @@ extension NativeUIManager {
                 layout.marginBottom = YGValue(value: Float(config.margin.bottom), unit: .point)
             }
 
-            // Set padding
             if config.padding != .zero {
                 layout.paddingLeft = YGValue(value: Float(config.padding.left), unit: .point)
                 layout.paddingTop = YGValue(value: Float(config.padding.top), unit: .point)
                 layout.paddingRight = YGValue(value: Float(config.padding.right), unit: .point)
                 layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
             }
+
+            // Handle position values
+            if let left = config.left { layout.left = left }
+            if let top = config.top { layout.top = top }
+            if let right = config.right { layout.right = right }
+            if let bottom = config.bottom { layout.bottom = bottom }
         }
         
-        // Calculate layout
         if let rootView = getRootView(for: view) {
             rootView.yoga.applyLayout(preservingOrigin: false)
-            
-            // Verify dimensions after layout
             print("Final view dimensions - width: \(view.frame.width), height: \(view.frame.height)")
             print("Parent dimensions - width: \(parentView?.frame.width ?? 0), height: \(parentView?.frame.height ?? 0)")
         }
