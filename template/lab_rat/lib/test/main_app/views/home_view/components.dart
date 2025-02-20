@@ -1,32 +1,37 @@
 part of '../../imports.dart';
 
 abstract class HomeViewComponents {
-  // Root container
+  // Root container needs proper setup to handle absolute children
   final rootView = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
+      width: LayoutConfig.percent(100), // Explicit width
+      height: LayoutConfig.percent(100), // Explicit height
+      position: YGPositionType.relative, // Explicitly relative
       flexDirection: YGFlexDirection.column,
-      flex: 1,
-      alignItems: YGAlign.center,
-      justifyContent: YGJustify.flexStart,
-      right: LayoutConfig.points(0),
     ),
     style: ViewStyle(backgroundColor: Colors.red[100]),
   );
 
-  final appBar = bridge.createView(ViewType.view,
-      layout: LayoutConfig(
-        width: LayoutConfig.points(100),
-        height: LayoutConfig.points(100),
-        top: LayoutConfig.points(0),
-      ),
-      style: ViewStyle(backgroundColor: Colors.cyan));
+  // Absolute positioned view with explicit positioning
+  final appBar = bridge.createView(
+    ViewType.view,
+    layout: LayoutConfig(
+      position: YGPositionType.absolute, // Must be absolute
+      width: LayoutConfig.points(100),
+      height: LayoutConfig.points(100),
+      right: LayoutConfig.points(10), // Use the static helper
+      top: LayoutConfig.points(80), // Use the static helper
+    ),
+    style: ViewStyle(backgroundColor: Colors.cyan),
+  );
 
   final appBarTitle = bridge.createView(ViewType.label,
       layout: LayoutConfig(
+        position: YGPositionType.absolute,
         width: LayoutConfig.percent(100),
         height: LayoutConfig.points(100),
-        top: LayoutConfig.points(0),
+        left: LayoutConfig.points(1),
       ),
       style: ViewStyle(backgroundColor: Colors.cyan));
 
@@ -38,8 +43,10 @@ abstract class HomeViewComponents {
       height: LayoutConfig.percent(100),
       flex: 1,
       padding: EdgeInsets.symmetric(horizontal: 16),
+      position: YGPositionType.relative, // Explicitly set relative positioning
+      flexDirection: YGFlexDirection.column, // Ensure vertical layout
     ),
-    items: List.generate(20, (i) => {'id': i, 'title': 'Item ${i + 1}'}),
+    items: List.generate(20, (i) => {'id': i, 'title': 'Item ${i + 5}'}),
     attachedListViewChild: (index, item) => bridge.createView(
       ViewType.view,
       layout: LayoutConfig(

@@ -6,11 +6,9 @@ class HomeViewBinder extends HomeViewComponents {
 
     // Mount root
     await bridge.attachView(appRoot, await rootView);
-
-    // Mount list
-    await bridge.attachView(await rootView, await itemsList);
-
     await bridge.attachView(await rootView, await appBar);
+    // Mount list
+    // await bridge.attachView(await rootView, await itemsList);
 
     // Mount FAB
     // await bridge.attachView(await rootView, await fab);
