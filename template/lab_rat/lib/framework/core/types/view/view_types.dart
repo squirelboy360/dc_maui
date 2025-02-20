@@ -27,20 +27,6 @@ enum ViewType {
   }
 }
 
-// Strongly typed scroll events
-enum ScrollEventType { onScroll, onScrollEnd }
-
-class ScrollEventData {
-  final double x;
-  final double y;
-  final double velocity;
-
-  const ScrollEventData({
-    required this.x,
-    required this.y,
-    this.velocity = 0.0,
-  });
-}
 
 // Example usage:
 /*

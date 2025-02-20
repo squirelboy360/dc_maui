@@ -1,13 +1,12 @@
 import 'package:dc_test/framework/bridge/hot_restart.dart';
+import 'package:dc_test/framework/core/types/events.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle, ScrollView, ListView;
 import 'package:logging/logging.dart';
-import '../core/types/events.dart';
 import '../core/types/view/view_types.dart';
 import '../style/view_style.dart';
 import '../layout/layout_config.dart';
 import 'core.dart';
-import '../core/types/layout/yoga_types.dart';
 
 final bridge = UIBridge();
 
@@ -19,8 +18,9 @@ class UIBridge {
     TextStyle? textStyle,
     ViewStyle? style,
     LayoutConfig? layout,
-    List<ListViewItem>? listViewData,
-    Map<ScrollEventType, Function(ScrollEventData)>? scrollEvents,
+    List<dynamic>? items, // Changed from List<ListViewItem> to List<dynamic>
+    Function(int, dynamic)? attachedListViewChild, // Updated to include item data
+    Map<NativeEventType, Function(NativeEventData)>? events,
   }) async {
     // Transform configs to match native expectations
     final Map<String, dynamic> args = {
@@ -30,21 +30,36 @@ class UIBridge {
         if (style != null) ...style.toJson(),
       },
       if (layout != null) 'layout': layout.toJson(),
-      if (listViewData != null && type == ViewType.listView)
-        'data': listViewData.map((item) => item.toJson()).toList(),
+      if (items != null && type == ViewType.listView)
+        'items': items, // Just pass the raw items list
+      if (attachedListViewChild != null && type == ViewType.listView)
+        'useCustomRenderer': true, // Flag for native side
+      if (events != null) 'events': events.map((k, _) => MapEntry(k.name, true)),
     };
 
     final viewId = await _core.createView(type, args);
+
+    // Handle list view child creation if needed
+    if (viewId != null &&
+        type == ViewType.listView &&
+        attachedListViewChild != null &&
+        items != null) {
+      for (var i = 0; i < items.length; i++) {
+        final childView = await attachedListViewChild(i, items[i]); // Pass both index and item data
+        await _core.attachView(viewId, childView);
+      }
+    }
+
+    // Register events after view creation
+    if (viewId != null && events != null) {
+      for (final entry in events.entries) {
+        await _core.registerEvent(viewId, entry.key, entry.value);
+      }
+    }
+
     if (viewId == null) {
       throw ViewCreationException(
           'Failed to create view of type: ${type.value}');
-    }
-
-    // Register scroll events if provided
-    if (scrollEvents != null) {
-      for (final entry in scrollEvents.entries) {
-        await registerScrollEvent(viewId, entry.key, entry.value);
-      }
     }
 
     return viewId;
@@ -66,60 +81,12 @@ class UIBridge {
     }
   }
 
-  // Event Handling - Typed events
-  Future<void> addButtonEvent(
-    String viewId,
-    ButtonEventType eventType,
-    Future<void> Function() callback,
-  ) async {
-    final success =
-        await _core.registerButtonEvent(viewId, eventType.name, callback);
-    if (!success) {
-      throw EventRegistrationException(
-          'Failed to register button event: $eventType');
-    }
-  }
-
-  Future<void> addTouchEvent(
-    String viewId,
-    TouchEventType eventType,
-    void Function(TouchEvent) callback,
-  ) async {
-    // Todo
-    // Implementation for touch events
-  }
-
-  Future<void> registerScrollEvent(
-    String viewId,
-    ScrollEventType eventType,
-    Function(ScrollEventData) callback,
-  ) async {
-    await _core.invokeMethod('registerScrollEvent', {
-      'viewId': viewId,
-      'eventType': eventType.name,
-    });
-
-    _scrollEventHandlers[viewId] ??= {};
-    _scrollEventHandlers[viewId]![eventType] = callback;
-  }
-
-  // Add scroll event handlers storage
-  final Map<String, Map<ScrollEventType, Function(ScrollEventData)>>
-      _scrollEventHandlers = {};
-
   // View Hierarchy - Strongly typed operations
   Future<void> attachView(String parentId, String childId) async {
     final success = await _core.attachView(parentId, childId);
     if (!success) {
       throw ViewHierarchyException(
           'Failed to attach view $childId to $parentId');
-    }
-  }
-
-  Future<void> attachToRoot(String viewId) async {
-    final success = await _core.attachToRoot(viewId);
-    if (!success) {
-      throw ViewHierarchyException('Failed to attach view to root: $viewId');
     }
   }
 

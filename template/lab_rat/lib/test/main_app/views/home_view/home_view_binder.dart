@@ -14,8 +14,8 @@ class HomeViewBinder extends HomeViewComponents {
     await bridge.attachView(await header, await userName);
 
     // Build scrollable content
-    await bridge.attachView(await rootView, await scrollContent);
-    await bridge.attachView(await scrollContent, await itemsList);
+    // await bridge.attachView(await rootView, await scrollContent);
+    await bridge.attachView(await rootView, await itemsList);
 
     // Add floating action button
     await bridge.attachView(await rootView, await actionButton);

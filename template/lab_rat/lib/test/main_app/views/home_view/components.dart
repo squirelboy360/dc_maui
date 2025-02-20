@@ -73,60 +73,43 @@ abstract class HomeViewComponents {
   );
 
   // Content Section
-  final scrollContent = bridge.createView(
-    ViewType.scrollable,
-    layout: LayoutConfig(
-      flex: 1,
-      width: LayoutConfig.percent(100),
-    ),
-    style: ViewStyle(
-      backgroundColor: Colors.grey[100],
-    ),
-    scrollEvents: {
-      ScrollEventType.onScroll: (data) {
-        print('Scrolled to: ${data.y}');
-      },
-    },
-  );
+  // final scrollContent = bridge.createView(
+  //   ViewType.listView,
+  //   layout: LayoutConfig(
+  //     flex: 1,
+  //     width: LayoutConfig.percent(100),
+  //   ),
+  //   style: ViewStyle(
+  //     backgroundColor: Colors.grey[100],
+  //   ),
+  //   scrollEvents: {
+  //     ScrollEventType.onScroll: (data) {
+  //       print('Scrolled to: ${data.y}');
+  //     },
+  //   },
+  // );
 
   final itemsList = bridge.createView(
     ViewType.listView,
     layout: LayoutConfig(
-      flex: 1,
       width: LayoutConfig.percent(100),
-      padding: EdgeInsets.all(16),
+      height: LayoutConfig.percent(100),
     ),
-    style: ViewStyle(
-      backgroundColor: Colors.transparent,
-    ),
-    listViewData: List.generate(
-      20,
-      (index) => ListViewItem(
-        viewType: ViewType.view,
-        style: ViewStyle(
-          backgroundColor: Colors.white,
-          cornerRadius: 8.0,
-          shadows: [
-            ShadowStyle(
-              color: Colors.black.withOpacity(0.1),
-              offset: Offset(0, 2),
-              radius: 4.0,
-            )
-          ],
-          // Add content to each list item
-          textStyle: TextStyle(
-            text: "Item ${index + 1}",
-            color: Colors.black,
-            fontSize: 16.0,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        layout: LayoutConfig(
-          height: LayoutConfig.points(80),
-          margin: EdgeInsets.only(bottom: 12),
-          padding: EdgeInsets.all(16),
-          justifyContent: YGJustify.center,
-          alignItems: YGAlign.center,
+    items: [
+      {'name': 'John Doe', 'id': 1},
+      {'name': 'Jane Doe', 'id': 2},
+    ], // Pass raw data
+    attachedListViewChild: (index, item) => bridge.createView(
+      ViewType.label,
+      layout: LayoutConfig(
+        margin: EdgeInsets.only(top: 8),
+      ),
+      style: ViewStyle(
+        textStyle: TextStyle(
+          text: "${item['name']} (person number $index)",
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
         ),
       ),
     ),
@@ -135,14 +118,23 @@ abstract class HomeViewComponents {
   // Action Button
   final actionButton = bridge.createView(
     ViewType.button,
+    events: {
+      NativeEventType.onPress: (eventData) {
+        print('Button clicked!');
+        
+      },
+      NativeEventType.onLongPress: (eventData) {
+        print('Button long pressed!');
+      },
+    },
     layout: LayoutConfig(
       position: YGPositionType.absolute,
-      width: LayoutConfig.points(56),
-      height: LayoutConfig.points(56),
+      width: YGValue.points(56),
+      height: YGValue.points(56),
     ),
     style: ViewStyle(
       backgroundColor: Colors.blue[600],
-      cornerRadius: 28,
+      cornerRadius: 20,
       textStyle: TextStyle(
         text: "+",
         color: Colors.white,
@@ -153,6 +145,7 @@ abstract class HomeViewComponents {
           color: Colors.black.withOpacity(0.3),
           offset: Offset(0, 3),
           radius: 5,
+          opacity: 1.0,
         ),
       ],
     ),

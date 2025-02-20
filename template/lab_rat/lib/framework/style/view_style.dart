@@ -120,7 +120,8 @@ class TextStyle implements JsonSerializable {
       if (fontFamily != null) 'fontFamily': fontFamily,
       if (fontSize != null) 'fontSize': fontSize,
       if (fontWeight != null) 'fontWeight': fontWeight!.value,
-      if (color != null) 'color': color!.value, // Use value instead of toARGB32
+      if (color != null)
+        'color': color!.toARGB32(), // Use toARGB32 instead of value
       if (letterSpacing != null) 'letterSpacing': letterSpacing,
       if (wordSpacing != null) 'wordSpacing': wordSpacing,
       if (lineHeight != null) 'lineHeight': lineHeight,
@@ -131,7 +132,7 @@ class TextStyle implements JsonSerializable {
       if (overflow != null) 'overflow': overflow!.name,
     };
 
-    print('TextStyle JSON: $style'); // Debug log
+    debugPrint('TextStyle JSON: $style'); // Replace print with logger
     return style;
   }
 }

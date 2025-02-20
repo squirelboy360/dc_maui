@@ -1,13 +1,11 @@
 import 'package:dc_test/framework/bridge/base.dart';
 import 'package:dc_test/framework/core/types/events.dart';
-import 'package:dc_test/framework/style/view_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import '../layout/layout_config.dart';
 import '../core/types/layout/yoga_types.dart'; // Add this import
 import '../core/types/view/view_types.dart';
-
 
 // Add these enums
 enum FlexDirection { row, column }
@@ -31,14 +29,14 @@ extension ColorExtension on Color {
   }
 }
 
-
-
 // Layout system enums and types
 enum LayoutType { flex, absolute, relative }
 
 enum LayoutAlign { auto, start, center, end, stretch, baseline }
 
 // Yoga-compatible layout configuration
+enum ScrollEventType { onScroll, onScrollEnd }
+
 class Core {
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   final _logger = Logger('NativeUIBridge');
@@ -47,102 +45,67 @@ class Core {
   static const double matchParent = -1.0;
   static const double wrapContent = -2.0;
 
-  // Singleton pattern
-  static final Core _instance = Core._();
-  factory Core() => _instance;
-  Core._() {
-    _setupEventHandler();
-  }
+  // Single event handler map
+  final Map<String, Map<NativeEventType, Function(NativeEventData)>>
+      _eventHandlers = {};
 
-  // Callback registry
-  final Map<String, Map<String, Function>> _eventCallbacks = {};
-
-  // Event handler setup
-  void _setupEventHandler() {
-    _channel.setMethodCallHandler((call) async {
-      try {
-        switch (call.method) {
-          case 'onNativeEvent':
-          case 'onButtonEvent':
-            final args = Map<String, dynamic>.from(call.arguments as Map);
-            final String viewId = args['viewId'] as String;
-            final String eventType = args['eventType'] as String;
-
-            if (_eventHandlers.containsKey(viewId) &&
-                _eventHandlers[viewId]!.containsKey(eventType)) {
-              await _eventHandlers[viewId]![eventType]!();
-              return true;
-            }
-            return false;
-
-          default:
-            return null;
-        }
-      } catch (e, stack) {
-        _logger.severe('Error handling method call: $e');
-        _logger.severe('Stack trace: $stack');
-        return null;
-      }
-    });
-  }
-
-  // Add new method for button event registration
-  Future<bool> registerButtonEvent(
-    String buttonId,
-    String eventType,
-    Future<void> Function() callback,
+  // Unified event registration
+  Future<bool> registerEvent(
+    String viewId,
+    NativeEventType type,
+    Function(NativeEventData) callback,
   ) async {
     try {
-      // First store the callback
-      _eventHandlers[buttonId] ??= {};
-      _eventHandlers[buttonId]![eventType] = callback;
+      // Store callback
+      _eventHandlers[viewId] ??= {};
+      _eventHandlers[viewId]![type] = callback;
 
-      // Then register with native side
+      // Register with native
       final result = await _channel.invokeMethod('registerEvent', {
-        'viewId': buttonId,
-        'eventType': eventType,
-        'handler':
-            true, // Just send a flag, actual handler is stored in _eventHandlers
+        'viewId': viewId,
+        'eventType': type.name,
       });
 
       return result ?? false;
     } catch (e) {
-      _logger.severe('Error registering button event: $e');
+      _logger.severe('Error registering event: $e');
       return false;
     }
   }
 
-  // View Management Methods
-
-  /// Creates a new native view
-  /// Native expects:
-  /// - viewType: String (e.g. 'Button', 'TextView', 'LinearLayout')
-  /// - properties: {
-  ///     text?: String,
-  ///     textSize?: double,
-  ///     backgroundColor?: String (hex color),
-  ///     width?: int,
-  ///     height?: int,
-  ///     padding?: int,
-  ///     margin?: int,
-  ///     isEnabled?: bool
-  ///   }
-  /// Returns: String viewId or null if failed
+  // Updated createView method
   Future<String?> createView(
       ViewType viewType, Map<String, dynamic> args) async {
     try {
-      // Sending exactly what native expects
-      final Map<String, dynamic> nativeArgs = {
-        'viewType': viewType.value,
-        if (args['properties'] != null) 'properties': args['properties'],
-        if (args['layout'] != null) 'layout': args['layout'],
-      };
+      // Convert events to serializable format
+      if (args['events'] != null) {
+        final events =
+            args['events'] as Map<NativeEventType, Function(NativeEventData)>;
+        args['events'] = events.map((k, v) => MapEntry(k.name, true));
 
-      final viewId =
-          await _channel.invokeMethod<String>('createView', nativeArgs);
-      return viewId;
-    } catch (e, stack) {
-      _logger.severe('Error creating view: $e\n$stack');
+        // Store event handlers for later use
+        final viewId = await _channel.invokeMethod<String>('createView', {
+          'viewType': viewType.value,
+          'properties': args['properties'],
+          'layout': args['layout'],
+          'data': args['data'],
+          'useCustomRenderer': args['useCustomRenderer'],
+          'events': args['events'],
+        });
+
+        // Register events after view creation
+        if (viewId != null) {
+          for (final entry in events.entries) {
+            await registerEvent(viewId, entry.key, entry.value);
+          }
+        }
+
+        return viewId;
+      } else {
+        return await _channel.invokeMethod<String>('createView', args);
+      }
+    } catch (e) {
+      _logger.severe('Error creating view: $e');
       return null;
     }
   }
@@ -172,18 +135,6 @@ class Core {
     }
   }
 
-  Future<bool> deleteView(String viewId) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('deleteView', {
-        'viewId': viewId,
-      });
-      return result ?? false;
-    } catch (e) {
-      _logger.severe('Error deleting view: $e');
-      return false;
-    }
-  }
-
   /// Updates properties of existing native view
   /// Native expects:
   /// - viewId: String (must be existing view ID)
@@ -198,7 +149,7 @@ class Core {
   ///   }
   Future<bool> updateView(String viewId, Map<String, dynamic> styles) async {
     try {
-      print('Updating view $viewId with styles: $styles'); // Debug log
+      _logger.info('Updating view $viewId with styles: $styles');
 
       final result = await _channel.invokeMethod<bool>('updateView', {
         'viewId': viewId,
@@ -302,8 +253,6 @@ class Core {
       return null;
     }
   }
-
-
 
   Future<bool> setViewLayout(
     String viewId, {
@@ -418,7 +367,6 @@ class Core {
     }
   }
 
-
   // Single unified layout method
   Future<bool> setLayout(String viewId, LayoutConfig config) async {
     try {
@@ -522,125 +470,14 @@ class Core {
         ));
   }
 
-  // Add new method for creating touchable components
-  Future<String?> createTouchable({
-    Map<String, dynamic>? properties,
-    Map<TouchEventType, Function(TouchEvent)>? events,
-  }) async {
-    // Fix: Convert properties to proper args map format
-    final args = {
-      'viewType': ViewType.touchableOpacity.value,
-      if (properties != null) 'properties': properties,
-    };
-
-    final viewId = await createView(ViewType.touchableOpacity, args);
-    if (viewId != null && events != null) {
-      for (final entry in events.entries) {
-        _registerTouchEvent(viewId, entry.key, entry.value);
-      }
-    }
-    return viewId;
-  }
-
-  // Update createButton method
-  Future<String?> createButton({
-    required String text,
-    required Map<String, dynamic> style,
-    LayoutConfig? layout,
-    Map<ButtonEventType, Future<void> Function()>? events,
-  }) async {
+  Future<bool> deleteView(String viewId) async {
     try {
-      // Convert events to a format that can be serialized
-      final Map<String, dynamic>? serializedEvents = events?.map(
-        (key, value) => MapEntry(key.name, {'type': key.name}),
-      );
-
-      final viewId = await _channel.invokeMethod<String>('createView', {
-        'viewType': ViewType.button.value,
-        'properties': style,
-        if (layout != null) 'layout': layout.toJson(),
-        if (serializedEvents != null) 'events': serializedEvents,
+      final result = await _channel.invokeMethod<bool>('deleteView', {
+        'viewId': viewId,
       });
-
-      if (viewId != null && events != null) {
-        // Store callbacks for later use
-        _eventHandlers[viewId] = {};
-
-        for (final entry in events.entries) {
-          // Register the event type with native
-          await _channel.invokeMethod('registerEvent', {
-            'viewId': viewId,
-            'eventType': entry.key.name,
-          });
-
-          // Store the callback
-          _eventHandlers[viewId]![entry.key.name] = entry.value;
-        }
-
-        // Set up method channel handler if not already done
-        _channel.setMethodCallHandler((call) async {
-          if (call.method == 'onButtonEvent') {
-            final args = call.arguments as Map<String, dynamic>;
-            final eventViewId = args['viewId'] as String;
-            final eventType = args['type'] as String;
-
-            if (_eventHandlers.containsKey(eventViewId) &&
-                _eventHandlers[eventViewId]!.containsKey(eventType)) {
-              await _eventHandlers[eventViewId]![eventType]!();
-              return true;
-            }
-          }
-          return null;
-        });
-      }
-
-      return viewId;
-    } catch (e, stack) {
-      _logger.severe('Error creating button: $e');
-      _logger.severe('Stack trace: $stack');
-      return null;
-    }
-  }
-
-  // Internal event registration methods
-  void _registerTouchEvent(
-      String viewId, TouchEventType type, Function(TouchEvent) callback) {
-    // Store in a separate map for touch events
-    _touchEventCallbacks[viewId] ??= {};
-    _touchEventCallbacks[viewId]![type] = callback;
-  }
-
-  // Add new maps for typed events
-  final Map<String, Map<TouchEventType, Function(TouchEvent)>>
-      _touchEventCallbacks = {};
-
-  // Update event handlers storage to use string keys (enum names)
-  final Map<String, Map<String, Future<void> Function()>> _eventHandlers = {};
-
-  // Add new convenience method for root handling
-  Future<bool> attachToRoot(String viewId) async {
-    try {
-      final rootInfo = await getRootView();
-      if (rootInfo == null) {
-        _logger.severe('Failed to get root view');
-        return false;
-      }
-
-      final rootId = rootInfo['viewId'] as String;
-      await attachView(rootId, viewId);
-
-      // Handle root layout automatically
-      await setLayout(
-        rootId,
-        LayoutConfig(
-          width: YGValue.percent(100),
-          height: YGValue.percent(100),
-        ),
-      );
-
-      return true;
+      return result ?? false;
     } catch (e) {
-      _logger.severe('Error attaching to root: $e');
+      _logger.severe('Error deleting view: $e');
       return false;
     }
   }
@@ -667,10 +504,6 @@ class Core {
       return false;
     }
   }
-
-  
-
-
 }
 
 // Helper classes for type-safe view creation
@@ -703,5 +536,4 @@ class NativeView {
   Future<bool> setFlex(double flex) {
     return _bridge.setViewLayout(viewId, flex: flex);
   }
-
 }

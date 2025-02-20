@@ -2,64 +2,28 @@ import UIKit
 import Flutter
 import yoga  
 
-enum TouchEventType: String {
-    case onPress
-    case onLongPress
-    case onPressIn
-    case onPressOut
-    case onDoublePress
-}
-
-enum ButtonEventType: String {
-    case onClick
-    case onLongPress
-    case onPressIn
-    case onPressOut
-}
-
-enum GestureEventType: String {
-    case onTap
-    case onDoubleTap
-    case onLongPress
-    case onPanStart
-    case onPanUpdate
-    case onPanEnd
-    case onScaleStart
-    case onScaleUpdate
-    case onScaleEnd
-}
-
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
-    // Change from private to internal
+    // Properties
     internal var methodChannel: FlutterMethodChannel?
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
     private var rootViewId: String?
     private var window: UIWindow?
-    private var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:]
     internal var layoutConfigs: [String: LayoutConfig] = [:]
     internal var yogaNodes: [String: YGNodeRef] = [:]
+    internal var registeredGestureRecognizers: [String: [UIGestureRecognizer]] = [:] // Move to internal
     
-    private var touchEventHandlers: [String: [TouchEventType: () -> Void]] = [:]
-    private var buttonEventHandlers: [String: [ButtonEventType: () -> Void]] = [:]
-    private var gestureEventHandlers: [String: [GestureEventType: () -> Void]] = [:]
+    // unified handler
+    internal var eventHandlers: [String: [EventType: (EventData) -> Void]] = [:]
 
-    static func register(with registrar: FlutterPluginRegistrar) {
-          let instance = NativeUIManager()
-          let channel = FlutterMethodChannel(
-              name: "com.dcmaui.framework",
-              binaryMessenger: registrar.messenger()
-          )
-          registrar.addMethodCallDelegate(instance, channel: channel)
-          instance.methodChannel = channel
-          
-          // Initialize after a brief delay to ensure Flutter is ready
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-              instance.setupRootView()
-          }
-      }
-    private func setupRootView() {
+    // Make getViewId internal so extensions can access it
+    internal func getViewId(for view: UIView) -> String? {
+        return views.first(where: { $0.value == view })?.key
+    }
+    
+    // Add setupRootView back
+    internal func setupRootView() {
         print("Setting up root view")
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             window = UIWindow(frame: windowScene.coordinateSpace.bounds)
@@ -67,17 +31,12 @@ class NativeUIManager: NSObject, FlutterPlugin {
             
             let rootVC = UIViewController()
             rootVC.view.backgroundColor = .white
-            print("Root view controller frame: \(rootVC.view.frame)")
             
             let rootView = UIView(frame: rootVC.view.bounds)
             rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             rootView.backgroundColor = .white
-            rootView.yoga.isEnabled = true // Enable yoga on root
+            rootView.yoga.isEnabled = true
             rootView.yoga.flexDirection = .column
-            rootView.yoga.width = YGValue(value: Float(rootVC.view.bounds.width), unit: .point)
-            rootView.yoga.height = YGValue(value: Float(rootVC.view.bounds.height), unit: .point)
-            
-            print("Root view frame: \(rootView.frame)")
             
             rootVC.view.addSubview(rootView)
             
@@ -87,13 +46,27 @@ class NativeUIManager: NSObject, FlutterPlugin {
             
             window?.rootViewController = rootVC
             window?.makeKeyAndVisible()
-            
-            print("Root view setup complete with ID: \(rootViewId!)")
-            print("Window frame: \(window?.frame ?? .zero)")
         }
     }
-
-    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    
+    // Required FlutterPlugin method
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        let instance = NativeUIManager()
+        let channel = FlutterMethodChannel(
+            name: "com.dcmaui.framework",
+            binaryMessenger: registrar.messenger()
+        )
+        registrar.addMethodCallDelegate(instance, channel: channel)
+        instance.methodChannel = channel
+        
+        // Initialize after a brief delay to ensure Flutter is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            instance.setupRootView()
+        }
+    }
+    
+    // Required FlutterPlugin method
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -104,8 +77,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleAttachView(call, result: result)
             case "deleteView":
                 self.handleDeleteView(call, result: result)
-//!                DONT CALL THIS METHOD, HAS BUGS TO FIX LATER //!
-              case "clearAllViews":
+            case "clearAllViews":
                 self.handleDeleteAllViews(call, result: result)
             case "updateView":
                 self.handleUpdateView(call, result: result)
@@ -125,17 +97,37 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleSetViewVisibility(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
-        
             case "setViewLayout":
                 self.handleSetViewLayout(call, result: result)
-      
-            case "applyLayout":  // Add this case to handle layout application
+            case "applyLayout":
                 self.applyLayout(call, result: result)
-      
+            case "registerEvent":
+                self.handleRegisterEvent(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
         }
+    }
+
+    // Required FlutterPlugin method
+    public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+        methodChannel = nil
+        cleanup()
+    }
+    
+    // Add new method to handle event registration
+    private func handleRegisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let eventTypeString = args["eventType"] as? String,
+              let view = views[viewId],
+              let eventType = EventType(rawValue: eventTypeString) else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid event registration arguments", details: nil))
+            return
+        }
+        
+        registerEvent(viewId, type: eventType)
+        result(true)
     }
 
     private func handleCreateView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -168,15 +160,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
             button.titleLabel?.minimumScaleFactor = 0.5
             button.titleLabel?.lineBreakMode = .byTruncatingTail
             button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
-            
-            // Setup event handlers immediately
-            print("Setting up button events for new button")
-            button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-            button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
-            button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-            
-            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
-            button.addGestureRecognizer(longPress)
             
             // Apply layout first
             if let layout = args["layout"] as? [String: Any] {
@@ -229,7 +212,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
             
         case "TouchableOpacity":
             let touchable = createTouchableView()
-            setupTouchableEvents(touchable)
             touchable.alpha = 1.0
             touchable.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
             touchable.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
@@ -455,48 +437,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
         result(true)
     }
 
-   
-
-    private func setupButtonEvent(_ view: UIView, viewId: String, eventType: ButtonEventType) {
-        guard let button = view as? UIButton else { return }
-        
-        switch eventType {
-        case .onClick:
-            button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-        case .onLongPress:
-            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
-            button.addGestureRecognizer(longPress)
-        case .onPressIn:
-            button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
-        case .onPressOut:
-            button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-        }
-    }
-
-    private func setupTouchEvent(_ view: UIView, viewId: String, eventType: TouchEventType) {
-        switch eventType {
-        case .onPress:
-            let tap = UITapGestureRecognizer(target: self, action: #selector(handleTouchablePress(_:)))
-            view.addGestureRecognizer(tap)
-        case .onDoublePress:
-            let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleTouchableDoublePress(_:)))
-            doubleTap.numberOfTapsRequired = 2
-            view.addGestureRecognizer(doubleTap)
-        case .onLongPress:
-            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleTouchableLongPress(_:)))
-            view.addGestureRecognizer(longPress)
-        case .onPressIn:
-            if let button = view as? UIButton {
-                button.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
-            }
-        case .onPressOut:
-            if let button = view as? UIButton {
-                button.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-            }
-        }
-    }
-
-
     internal func handleGetRootView(result: @escaping FlutterResult) {
         guard let rootViewId = self.rootViewId,
               let rootView = views[rootViewId] else {
@@ -509,228 +449,56 @@ class NativeUIManager: NSObject, FlutterPlugin {
             "width": rootView.frame.width,
             "height": rootView.frame.height
         ])
-            }
+    }
             
-            @objc private func handleButtonClick(_ sender: UIButton) {
-                guard let viewId = views.first(where: { $0.value == sender })?.key else {
-                    print("Warning: Could not find viewId for clicked button")
-                    return
-                }
-                print("Button click detected for viewId: \(viewId)") // Debug log
-                
-                // Send event to Flutter
-                let eventData: [String: Any] = [
-                    "viewId": viewId,
-                    "type": ButtonEventType.onClick.rawValue,
-                    "timestamp": Date().timeIntervalSince1970
-                ]
-                
-                methodChannel?.invokeMethod("onButtonEvent", arguments: eventData, result: { result in
-                    if let error = result as? FlutterError {
-                        print("Error sending button event: \(error.message ?? "unknown")")
-                    } else {
-                        print("Button event sent successfully")
-                    }
-                })
-            }
-            
-            @objc private func handleViewTap(_ sender: UITapGestureRecognizer) {
-                guard let view = sender.view,
-                      let viewId = views.first(where: { $0.value == view })?.key else { return }
-                sendEventToFlutter(viewId: viewId, eventType: "onClick")
-            }
-            
-            @objc private func handleLongPress(_ sender: UILongPressGestureRecognizer) {
-                guard sender.state == .began,
-                      let view = sender.view,
-                      let viewId = views.first(where: { $0.value == view })?.key else { return }
-                sendEventToFlutter(viewId: viewId, eventType: "onLongPress")
-            }
-            
-            private func sendEventToFlutter(viewId: String, eventType: String) {
-                // Explicitly type the dictionary
-                let eventData: [String: Any] = [
-                    "viewId": viewId as String,
-                    "eventType": eventType as String,
-                    "timestamp": Date().timeIntervalSince1970 as Double
-                ]
-                
-                DispatchQueue.main.async { [weak self] in
-                    self?.methodChannel?.invokeMethod(
-                        "onNativeEvent",
-                        arguments: eventData as [String: Any],
-                        result: { (result) in
-                            if let error = result as? FlutterError {
-                                print("Warning: Event callback completed with error: \(error.message ?? "unknown")")
-                            } else if FlutterMethodNotImplemented.isEqual(result) {
-                                print("Warning: Event callback not implemented on Flutter side")
-                            } else {
-                                print("Event successfully delivered to Flutter: \(eventType) for view \(viewId)")
-                            }
-                        }
-                    )
+    private func cleanup() {
+        for (_, recognizers) in registeredGestureRecognizers {
+            for recognizer in recognizers {
+                if let view = recognizer.view {
+                    view.removeGestureRecognizer(recognizer)
                 }
             }
+        }
+        
+        registeredGestureRecognizers.removeAll()
+        
+        for (_, view) in views {
+            view.removeFromSuperview()
+        }
+        
+        views.removeAll()
+        childViews.removeAll()
+    }
             
-            private func cleanup() {
-                for (_, recognizers) in registeredGestureRecognizers {
-                    for recognizer in recognizers {
-                        if let view = recognizer.view {
-                            view.removeGestureRecognizer(recognizer)
-                        }
-                    }
-                }
-                
-                registeredGestureRecognizers.removeAll()
-                
-                for (_, view) in views {
-                    if let button = view as? UIButton {
-                        button.removeTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-                    }
-                    view.removeFromSuperview()
-                }
-                
-                views.removeAll()
-                childViews.removeAll()
-            }
+    deinit {
+        cleanup()
+    }
             
-            deinit {
-                cleanup()
-            }
-            
-            private func createTouchableView() -> UIButton {
-                let touchable = UIButton(type: .custom)
-                touchable.backgroundColor = .clear
-                touchable.adjustsImageWhenHighlighted = true
-                touchable.showsTouchWhenHighlighted = true
-                return touchable
-            }
+    private func createTouchableView() -> UIButton {
+        let touchable = UIButton(type: .custom)
+        touchable.backgroundColor = .clear
+        touchable.adjustsImageWhenHighlighted = true
+        touchable.showsTouchWhenHighlighted = true
+        return touchable
+    }
 
-            @objc private func handleTouchDown(_ sender: UIButton) {
-                UIView.animate(withDuration: 0.1) {
-                    sender.alpha = 0.6
-                }
-            }
+    @objc private func handleTouchDown(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.alpha = 0.6
+        }
+    }
 
-            @objc private func handleTouchUp(_ sender: UIButton) {
-                UIView.animate(withDuration: 0.1) {
-                    sender.alpha = 1.0
-                }
-            }
+    @objc private func handleTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.alpha = 1.0
+        }
+    }
 
     private func createButtonView() -> UIButton {
         let button = UIButton(type: .system)
         button.backgroundColor = .clear
         button.layer.masksToBounds = true
         return button
-    }
-
-    private func setupButtonEvents(_ button: UIButton) {
-        print("Setting up button events") // Debug log
-        button.addTarget(self, action: #selector(handleButtonPressIn(_:)), for: .touchDown)
-        button.addTarget(self, action: #selector(handleButtonPressOut(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-        button.addTarget(self, action: #selector(handleButtonClick(_:)), for: .touchUpInside)
-        
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleButtonLongPress(_:)))
-        button.addGestureRecognizer(longPress)
-        print("Button events setup complete") // Debug log
-    }
-
-    private func setupTouchableEvents(_ view: UIView) {
-        // Tap gesture
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTouchablePress(_:)))
-        view.addGestureRecognizer(tap)
-        
-        // Double tap
-        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleTouchableDoublePress(_:)))
-        doubleTap.numberOfTapsRequired = 2
-        tap.require(toFail: doubleTap)
-        view.addGestureRecognizer(doubleTap)
-        
-        // Long press
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleTouchableLongPress(_:)))
-        view.addGestureRecognizer(longPress)
-    }
-
-    @objc private func handleButtonPress(_ sender: UIButton) {
-        guard let viewId = getViewId(for: sender) else { return }
-        sendButtonEvent(viewId: viewId, type: .onPressIn)
-    }
-
-    @objc private func handleButtonPressUp(_ sender: UIButton) {
-        guard let viewId = getViewId(for: sender) else { return }
-        sendButtonEvent(viewId: viewId, type: .onPressOut)
-        sendButtonEvent(viewId: viewId, type: .onClick)
-    }
-
-    @objc private func handleButtonLongPress(_ sender: UILongPressGestureRecognizer) {
-        guard let button = sender.view as? UIButton,
-              let viewId = getViewId(for: button) else { return }
-        
-        if sender.state == .began {
-            sendButtonEvent(viewId: viewId, type: .onLongPress)
-        }
-    }
-
-    @objc private func handleTouchablePress(_ sender: UITapGestureRecognizer) {
-        guard let view = sender.view,
-              let viewId = getViewId(for: view) else { return }
-        
-        let location = sender.location(in: view)
-        sendTouchEvent(viewId: viewId, type: .onPress, location: location)
-    }
-
-    @objc private func handleTouchableDoublePress(_ sender: UITapGestureRecognizer) {
-        guard let view = sender.view,
-              let viewId = getViewId(for: view) else { return }
-        
-        let location = sender.location(in: view)
-        sendTouchEvent(viewId: viewId, type: .onDoublePress, location: location)
-    }
-
-    private func sendTouchEvent(viewId: String, type: TouchEventType, location: CGPoint) {
-        let eventData: [String: Any] = [
-            "viewId": viewId,
-            "type": type.rawValue,
-            "x": location.x,
-            "y": location.y,
-            "timestamp": Date().timeIntervalSince1970
-        ]
-        
-        methodChannel?.invokeMethod("onTouchEvent", arguments: eventData)
-    }
-
-    private func sendButtonEvent(viewId: String, type: ButtonEventType) {
-        print("Sending button event: \(type.rawValue) for view: \(viewId)") // Debug log
-        let eventData: [String: Any] = [
-            "viewId": viewId,
-            "type": type.rawValue,
-            "timestamp": Date().timeIntervalSince1970
-        ]
-        
-        methodChannel?.invokeMethod("onButtonEvent", arguments: eventData)
-    }
-
-    private func getViewId(for view: UIView) -> String? {
-        return views.first(where: { $0.value == view })?.key
-    }
-
-    @objc private func handleButtonPressIn(_ sender: UIButton) {
-        guard let viewId = views.first(where: { $0.value == sender })?.key else { return }
-        print("Button press in: \(viewId)")
-        UIView.animate(withDuration: 0.1) {
-            sender.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-        }
-        sendButtonEvent(viewId: viewId, type: .onPressIn)
-    }
-
-    @objc private func handleButtonPressOut(_ sender: UIButton) {
-        guard let viewId = views.first(where: { $0.value == sender })?.key else { return }
-        print("Button press out: \(viewId)")
-        UIView.animate(withDuration: 0.1) {
-            sender.transform = .identity
-        }
-        sendButtonEvent(viewId: viewId, type: .onPressOut)
     }
 }
 
@@ -768,16 +536,6 @@ extension NativeUIManager {
         view.layoutIfNeeded()
         
         result(true)
-    }
-
-    @objc private func handleTouchableLongPress(_ sender: UILongPressGestureRecognizer) {
-        guard let view = sender.view,
-              let viewId = getViewId(for: view) else { return }
-        
-        if sender.state == .began {
-            let location = sender.location(in: view)
-            sendTouchEvent(viewId: viewId, type: .onLongPress, location: location)
-        }
     }
 }
 
