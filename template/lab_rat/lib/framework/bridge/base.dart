@@ -16,24 +16,35 @@ class UIBridge {
 
   Future<String> createView(
     ViewType type, {
-    TextStyle? testStyle,
+    TextStyle? textStyle,
     ViewStyle? style,
     LayoutConfig? layout,
+    List<ListViewItem>? listViewData,
+    Map<ScrollEventType, Function(ScrollEventData)>? scrollEvents,
   }) async {
     // Transform configs to match native expectations
     final Map<String, dynamic> args = {
       'viewType': type.value,
       'properties': {
-        if (testStyle != null) 'textStyle': testStyle.toJson(),
+        if (textStyle != null) 'textStyle': textStyle.toJson(),
         if (style != null) ...style.toJson(),
       },
       if (layout != null) 'layout': layout.toJson(),
+      if (listViewData != null && type == ViewType.listView)
+        'data': listViewData.map((item) => item.toJson()).toList(),
     };
 
     final viewId = await _core.createView(type, args);
     if (viewId == null) {
       throw ViewCreationException(
           'Failed to create view of type: ${type.value}');
+    }
+
+    // Register scroll events if provided
+    if (scrollEvents != null) {
+      for (final entry in scrollEvents.entries) {
+        await registerScrollEvent(viewId, entry.key, entry.value);
+      }
     }
 
     return viewId;
@@ -78,6 +89,24 @@ class UIBridge {
     // Implementation for touch events
   }
 
+  Future<void> registerScrollEvent(
+    String viewId,
+    ScrollEventType eventType,
+    Function(ScrollEventData) callback,
+  ) async {
+    await _core.invokeMethod('registerScrollEvent', {
+      'viewId': viewId,
+      'eventType': eventType.name,
+    });
+
+    _scrollEventHandlers[viewId] ??= {};
+    _scrollEventHandlers[viewId]![eventType] = callback;
+  }
+
+  // Add scroll event handlers storage
+  final Map<String, Map<ScrollEventType, Function(ScrollEventData)>>
+      _scrollEventHandlers = {};
+
   // View Hierarchy - Strongly typed operations
   Future<void> attachView(String parentId, String childId) async {
     final success = await _core.attachView(parentId, childId);
@@ -92,139 +121,6 @@ class UIBridge {
     if (!success) {
       throw ViewHierarchyException('Failed to attach view to root: $viewId');
     }
-  }
-
-  // Updated ScrollView creation
-  Future<String> createScrollView({
-    ScrollAxis axis = ScrollAxis.vertical,
-    EdgeInsets padding = EdgeInsets.zero,
-    ViewStyle? style,
-    LayoutConfig? layout,
-  }) async {
-    // First create the base view with style
-    final viewId = await createView(
-      ViewType.view,
-      style: style ?? ViewStyle(),
-      layout: layout,
-    );
-
-    // Then configure it as a scroll view
-    final result = await _core.invokeMethod('configureAsScrollView', {
-      'viewId': viewId,
-      'axis': axis.toString().split('.').last,
-      'padding': {
-        'top': padding.top,
-        'left': padding.left,
-        'bottom': padding.bottom,
-        'right': padding.right,
-      },
-    });
-
-    if (result == null || result == false) {
-      throw ViewCreationException('Failed to configure ScrollView');
-    }
-
-    return viewId;
-  }
-
-  Future<void> setScrollContent(
-      String scrollViewId, String contentViewId) async {
-    final success = await _core.setScrollContent(scrollViewId, contentViewId);
-    if (!success) {
-      throw ViewUpdateException(
-          'Failed to set scroll content for view: $scrollViewId');
-    }
-  }
-
-  // Updated ListView creation
-  Future<ListViewController> createListView({
-    ListViewStyle style = ListViewStyle.list,
-    int columns = 1,
-    double spacing = 8.0,
-    EdgeInsets padding = EdgeInsets.zero,
-    bool enableRefresh = false,
-    bool enablePagination = false,
-    ViewStyle? viewStyle,
-    LayoutConfig? layout,
-  }) async {
-    // First create the base view with style
-    final viewId = await createView(
-      ViewType.view,
-      style: viewStyle ?? ViewStyle(),
-      layout: layout,
-    );
-
-    // Then configure it as a list view
-    final result = await _core.invokeMethod('configureAsListView', {
-      'viewId': viewId,
-      'style': style.toString().split('.').last,
-      'columns': columns,
-      'spacing': spacing,
-      'padding': {
-        'top': padding.top,
-        'left': padding.left,
-        'bottom': padding.bottom,
-        'right': padding.right,
-      },
-      'enableRefresh': enableRefresh,
-      'enablePagination': enablePagination,
-    });
-
-    if (result == null || result == false) {
-      throw ViewCreationException('Failed to configure ListView');
-    }
-
-    return ListViewController(_core, viewId);
-  }
-
-  // Add helper method for filling parent with scroll content
-  Future<void> fillParentWithScroll(String scrollViewId) async {
-    final layout = LayoutConfig(
-      width: YGValue.percent(100),
-      height: YGValue.percent(100),
-      flexGrow: 1,
-      flexShrink: 1,
-    );
-
-    await setViewLayout(scrollViewId, layout);
-  }
-
-  // Updated vertical scroll container helper
-  Future<String> createVerticalScrollContainer({
-    EdgeInsets padding = EdgeInsets.zero,
-    ViewStyle? style,
-    LayoutConfig? layout,
-  }) async {
-    final scrollViewId = await createScrollView(
-      axis: ScrollAxis.vertical,
-      padding: padding,
-      style: style ??
-          ViewStyle(
-            backgroundColor: Colors.transparent,
-          ),
-      layout: layout ??
-          LayoutConfig(
-            width: YGValue.percent(100),
-            height: YGValue.percent(100),
-            flexGrow: 1,
-          ),
-    );
-
-    final contentId = await createView(
-      ViewType.view,
-      style: ViewStyle(
-        backgroundColor: Colors.transparent,
-      ),
-      layout: LayoutConfig(
-        width: YGValue.percent(100),
-        flexGrow: 1,
-        flexShrink: 1,
-        flexDirection: YGFlexDirection.column,
-      ),
-    );
-
-    await setScrollContent(scrollViewId, contentId);
-    return scrollViewId;
   }
 
   // Debug Tools - Type safe

@@ -8,8 +8,6 @@ import '../layout/layout_config.dart';
 import '../core/types/layout/yoga_types.dart'; // Add this import
 import '../core/types/view/view_types.dart';
 
-// Add this enum at the top of the file after imports
-enum ScrollDirection { vertical, horizontal }
 
 // Add these enums
 enum FlexDirection { row, column }
@@ -33,10 +31,7 @@ extension ColorExtension on Color {
   }
 }
 
-enum ListViewStyle { list, grid }
 
-// Add this enum after existing enums
-enum ScrollAxis { vertical, horizontal, free }
 
 // Layout system enums and types
 enum LayoutType { flex, absolute, relative }
@@ -308,38 +303,7 @@ class Core {
     }
   }
 
-  Future<ListViewController?> createListView({
-    ListViewStyle style = ListViewStyle.list,
-    int columns = 1,
-    double spacing = 8.0,
-    EdgeInsets padding = EdgeInsets.zero,
-    bool enableRefresh = false,
-    bool enablePagination = false,
-  }) async {
-    try {
-      final viewId = await _channel.invokeMethod<String>('createListView', {
-        'style': style.toString(),
-        'columns': columns,
-        'spacing': spacing,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-        'enableRefresh': enableRefresh,
-        'enablePagination': enablePagination,
-      });
 
-      if (viewId != null) {
-        return ListViewController(this, viewId);
-      }
-      return null;
-    } catch (e) {
-      _logger.severe('Error creating list view: $e');
-      return null;
-    }
-  }
 
   Future<bool> setViewLayout(
     String viewId, {
@@ -454,40 +418,6 @@ class Core {
     }
   }
 
-  Future<String?> createScrollView({
-    ScrollAxis axis = ScrollAxis.vertical,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) async {
-    try {
-      final result = await _channel.invokeMethod('createScrollView', {
-        'axis': axis.toString().split('.').last,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-      });
-      return result as String?;
-    } catch (e) {
-      _logger.severe('Error creating scroll view: $e');
-      return null;
-    }
-  }
-
-  Future<bool> setScrollContent(
-      String scrollViewId, String contentViewId) async {
-    try {
-      final result = await _channel.invokeMethod('setScrollContent', {
-        'scrollViewId': scrollViewId,
-        'contentViewId': contentViewId,
-      });
-      return result as bool? ?? false;
-    } catch (e) {
-      _logger.severe('Error setting scroll content: $e');
-      return false;
-    }
-  }
 
   // Single unified layout method
   Future<bool> setLayout(String viewId, LayoutConfig config) async {
@@ -738,86 +668,9 @@ class Core {
     }
   }
 
-  Future<bool> configureAsScrollView(String viewId, {
-    ScrollAxis axis = ScrollAxis.vertical,
-    EdgeInsets padding = EdgeInsets.zero,
-  }) async {
-    try {
-      final result = await _channel.invokeMethod('configureAsScrollView', {
-        'viewId': viewId,
-        'axis': axis.toString().split('.').last,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-      });
-      return result ?? false;
-    } catch (e) {
-      _logger.severe('Error configuring scroll view: $e');
-      return false;
-    }
-  }
+  
 
-  Future<bool> configureAsListView(String viewId, {
-    ListViewStyle style = ListViewStyle.list,
-    int columns = 1,
-    double spacing = 8.0,
-    EdgeInsets padding = EdgeInsets.zero,
-    bool enableRefresh = false,
-    bool enablePagination = false,
-  }) async {
-    try {
-      final result = await _channel.invokeMethod('configureAsListView', {
-        'viewId': viewId,
-        'style': style.toString().split('.').last,
-        'columns': columns,
-        'spacing': spacing,
-        'padding': {
-          'top': padding.top,
-          'left': padding.left,
-          'bottom': padding.bottom,
-          'right': padding.right,
-        },
-        'enableRefresh': enableRefresh,
-        'enablePagination': enablePagination,
-      });
-      return result ?? false;
-    } catch (e) {
-      _logger.severe('Error configuring list view: $e');
-      return false;
-    }
-  }
 
-  // Enhanced ScrollController
-  Future<bool> scrollToOffset(String viewId, double offset, {bool animated = true}) async {
-    try {
-      final result = await _channel.invokeMethod('scrollToOffset', {
-        'viewId': viewId,
-        'offset': offset,
-        'animated': animated,
-      });
-      return result ?? false;
-    } catch (e) {
-      _logger.severe('Error scrolling to offset: $e');
-      return false;
-    }
-  }
-
-  Future<bool> scrollToIndex(String viewId, int index, {bool animated = true}) async {
-    try {
-      final result = await _channel.invokeMethod('scrollToIndex', {
-        'viewId': viewId,
-        'index': index,
-        'animated': animated,
-      });
-      return result ?? false;
-    } catch (e) {
-      _logger.severe('Error scrolling to index: $e');
-      return false;
-    }
-  }
 }
 
 // Helper classes for type-safe view creation
@@ -850,38 +703,5 @@ class NativeView {
   Future<bool> setFlex(double flex) {
     return _bridge.setViewLayout(viewId, flex: flex);
   }
-}
 
-class ListViewController {
-  final Core _bridge;
-  final String viewId;
-  final List<String> itemIds = [];
-
-  ListViewController(this._bridge, this.viewId);
-
-  Future<bool> addItem(Future<String?> Function() itemBuilder) async {
-    try {
-      final itemId = await itemBuilder();
-      if (itemId != null) {
-        itemIds.add(itemId);
-        await _bridge.attachView(viewId, itemId);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      _bridge._logger.severe('Error adding item to list: $e');
-      return false;
-    }
-  }
-
-  Future<bool> removeItem(int index) async {
-    if (index >= 0 && index < itemIds.length) {
-      final itemId = itemIds[index];
-      if (await _bridge.deleteView(itemId)) {
-        itemIds.removeAt(index);
-        return true;
-      }
-    }
-    return false;
-  }
 }

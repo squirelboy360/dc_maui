@@ -31,7 +31,8 @@ enum GestureEventType: String {
 
 @available(iOS 13.0, *)
 class NativeUIManager: NSObject, FlutterPlugin {
-    private var methodChannel: FlutterMethodChannel?
+    // Change from private to internal
+    internal var methodChannel: FlutterMethodChannel?
     internal var views: [String: UIView] = [:]
     internal var childViews: [String: [String]] = [:]
     private var rootViewId: String?
@@ -124,16 +125,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleSetViewVisibility(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
-            case "createListView":
-                self.handleCreateListView(call, result: result)
+        
             case "setViewLayout":
                 self.handleSetViewLayout(call, result: result)
-            case "createScrollView":
-                self.handleCreateScrollView(call, result: result)
-            case "setScrollContent":
-                self.handleSetScrollContent(call, result: result)
+      
             case "applyLayout":  // Add this case to handle layout application
                 self.applyLayout(call, result: result)
+      
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -236,7 +234,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             touchable.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
             touchable.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
             view = touchable
-            
+
+        case "Scrollable", "ListView":
+            // Use unified scrollable implementation
+            view = createScrollableBase(viewType: viewType, args: args)
+
         default:
             view = UIView()
         }
@@ -783,29 +785,5 @@ extension UIView {
     func setupForBackground() {
         backgroundColor = .clear
         clipsToBounds = true
-    }
-}
-
-extension NativeUIManager: UIScrollViewDelegate {
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let viewId = String(scrollView.tag)
-        methodChannel?.invokeMethod("onScroll", arguments: [
-            "viewId": viewId,
-            "offset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ]
-        ])
-    }
-    
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        let viewId = String(scrollView.tag)
-        methodChannel?.invokeMethod("onScrollEnd", arguments: [
-            "viewId": viewId,
-            "offset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ]
-        ])
     }
 }

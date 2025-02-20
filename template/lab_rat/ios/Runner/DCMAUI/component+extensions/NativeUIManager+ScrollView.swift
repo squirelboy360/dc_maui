@@ -1,111 +1,128 @@
 import UIKit
-
+import YogaKit
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    internal func handleCreateScrollView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
-            return
+    // Move listData to main class
+    internal var listData: [UICollectionView: [[String: Any]]] {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.listDataKey) as? [UICollectionView: [[String: Any]]] ?? [:]
         }
-
-        // Extract scroll axis configuration
-        let axis: ScrollAxis
-        if let axisString = args["axis"] as? String {
-            switch axisString {
-            case "vertical": axis = .vertical
-            case "horizontal": axis = .horizontal
-            case "free": axis = .free
-            default: axis = .vertical
-            }
-        } else {
-            axis = .vertical
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.listDataKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
-
-        // Extract padding
-        let padding = args["padding"] as? [String: CGFloat] ?? [:]
-        let insets = UIEdgeInsets(
-            top: padding["top"] ?? 0,
-            left: padding["left"] ?? 0,
-            bottom: padding["bottom"] ?? 0,
-            right: padding["right"] ?? 0
-        )
-
-        // Create scroll view with axis and padding
-        let scrollView = DCScrollView(frame: .zero)
-        scrollView.scrollAxis = axis
-        scrollView.contentInset = insets
-        
-        // Generate view ID and store
-        let viewId = "scrollview-\(UUID().uuidString)"
-        views[viewId] = scrollView
-        childViews[viewId] = []
-        
-        result(viewId)
     }
     
-    internal func handleSetScrollContent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let scrollViewId = args["scrollViewId"] as? String,
-              let contentViewId = args["contentViewId"] as? String,
-              let scrollView = views[scrollViewId] as? DCScrollView,
-              let contentView = views[contentViewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view IDs", details: nil))
-            return
-        }
+    // Shared scroll view creation
+    internal func createScrollableBase(viewType: String, args: [String: Any]) -> UIView {
+        let isListView = viewType == "ListView"
+        let view: UIView
         
-        scrollView.setContent(contentView)
-        result(true)
-    }
-    
-    internal func handleConfigureAsScrollView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid viewId", details: nil))
-            return
-        }
-        
-        // Create scroll view with existing view's frame
-        let scrollView = DCScrollView(frame: view.frame)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.yoga.isEnabled = true
-        
-        // Configure scroll view
-        if let axisString = args["axis"] as? String {
-            scrollView.scrollAxis = ScrollAxis(rawValue: axisString) ?? .vertical
-        }
-        
-        if let padding = args["padding"] as? [String: CGFloat] {
-            scrollView.contentInset = UIEdgeInsets(
-                top: padding["top"] ?? 0,
-                left: padding["left"] ?? 0,
-                bottom: padding["bottom"] ?? 0,
-                right: padding["right"] ?? 0
-            )
-        }
-        
-        // Replace old view with scroll view
-        if let superview = view.superview {
-            view.removeFromSuperview()
-            superview.addSubview(scrollView)
+        if isListView {
+            let layout = UICollectionViewFlowLayout()
+            layout.minimumInteritemSpacing = 0
+            layout.minimumLineSpacing = 0
+            layout.scrollDirection = .vertical
             
-            // Transfer existing constraints
-            NSLayoutConstraint.activate([
-                scrollView.leadingAnchor.constraint(equalTo: superview.leadingAnchor),
-                scrollView.trailingAnchor.constraint(equalTo: superview.trailingAnchor),
-                scrollView.topAnchor.constraint(equalTo: superview.topAnchor),
-                scrollView.bottomAnchor.constraint(equalTo: superview.bottomAnchor)
-            ])
+            let listView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+            listView.backgroundColor = .clear
+            listView.delegate = self as? UICollectionViewDelegate
+            listView.dataSource = self as? UICollectionViewDataSource
+            listView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "Cell")
+            listView.isPrefetchingEnabled = true
+            
+            // Handle list data if provided
+            if let data = args["data"] as? [[String: Any]] {
+                listData[listView] = data
+            }
+            
+            view = listView
+        } else {
+            let scrollView = UIScrollView()
+            scrollView.showsVerticalScrollIndicator = true
+            scrollView.showsHorizontalScrollIndicator = true
+            scrollView.delegate = self as? UIScrollViewDelegate
+            scrollView.backgroundColor = .clear
+            
+            view = scrollView
         }
         
-        // Update view registry
-        views[viewId] = scrollView
+        // Common configuration
+        view.yoga.isEnabled = true
+        view.clipsToBounds = true
         
-        // Setup scroll monitoring
-        scrollView.delegate = self
-        scrollView.tag = viewId.hash
+        // Apply layout if provided
+        if let layout = args["layout"] as? [String: Any] {
+            let config = LayoutConfig(from: layout)
+            applyYogaLayout(to: view, config: config)
+        }
         
-        result(true)
+        return view
+    }
+    
+    // Helper method for scroll events
+    internal func sendScrollEvent(viewId: String, type: String, offset: CGPoint) {
+        methodChannel?.invokeMethod("onScrollEvent", arguments: [
+            "viewId": viewId,
+            "type": type,
+            "offset": [
+                "x": offset.x,
+                "y": offset.y
+            ]
+        ])
+    }
+    
+    internal func configureCell(_ cell: UICollectionViewCell, withData data: [String: Any]) {
+        cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+        
+        if let viewType = data["type"] as? String {
+            let childView = createScrollableBase(viewType: viewType, args: data)
+            cell.contentView.addSubview(childView)
+            
+            childView.yoga.isEnabled = true
+            childView.yoga.width = YGValue(value: 100, unit: .percent)
+            childView.yoga.height = YGValue(value: 100, unit: .percent)
+            
+            cell.contentView.yoga.applyLayout(preservingOrigin: true)
+        }
+    }
+}
+
+// Add associated object key for list data storage
+private struct AssociatedKeys {
+    static var listDataKey = "listDataKey"
+}
+
+// Add protocol conformance in main class
+@available(iOS 13.0, *)
+extension NativeUIManager: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+    public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return listData[collectionView]?.count ?? 0
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath)
+        
+        if let data = listData[collectionView]?[indexPath.item] {
+            configureCell(cell, withData: data)
+        }
+        
+        return cell
+    }
+}
+
+// Add ScrollView delegate in main class
+@available(iOS 13.0, *)
+extension NativeUIManager: UIScrollViewDelegate {
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let viewId = views.first(where: { $0.value == scrollView })?.key {
+            sendScrollEvent(viewId: viewId, type: "onScroll", offset: scrollView.contentOffset)
+        }
+    }
+    
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if let viewId = views.first(where: { $0.value == scrollView })?.key {
+            sendScrollEvent(viewId: viewId, type: "onScrollEnd", offset: scrollView.contentOffset)
+        }
     }
 }

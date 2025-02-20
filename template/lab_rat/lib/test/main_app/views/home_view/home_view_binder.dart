@@ -5,15 +5,19 @@ class HomeViewBinder extends HomeViewComponents {
     final getAppRoot = await Core().getRootView();
     final appRoot = getAppRoot?['viewId'] as String;
 
-   
-    bridge.attachView(await rootView, await appbar).then((_) async {
-      // appbar attaches
-      bridge.attachView(await appbar, await decrementButton);
-      bridge.attachView(await appbar, await title);
-      bridge.attachView(await appbar, await incrementButton);
-    });
+    // Attach root view to app root
+    await bridge.attachView(appRoot, await rootView);
 
-     bridge.attachView(appRoot, await rootView);
-   
+    // Build header section
+    await bridge.attachView(await rootView, await header);
+    await bridge.attachView(await header, await profileImage);
+    await bridge.attachView(await header, await userName);
+
+    // Build scrollable content
+    await bridge.attachView(await rootView, await scrollContent);
+    await bridge.attachView(await scrollContent, await itemsList);
+
+    // Add floating action button
+    await bridge.attachView(await rootView, await actionButton);
   }
 }
