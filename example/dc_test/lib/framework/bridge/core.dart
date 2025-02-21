@@ -4,7 +4,7 @@ typedef EventCallback = void Function(String type, Map<String, dynamic> data);
 
 class Core {
   static const _channel = MethodChannel('com.dcmaui.framework');
-  
+
   // Internal state management
   static final Map<String, EventCallback> _eventHandlers = {};
 
@@ -18,7 +18,7 @@ class Core {
       final viewId = args['viewId'] as String;
       final type = args['type'] as String;
       final data = Map<String, dynamic>.from(args['data'] ?? {});
-      
+
       _eventHandlers[viewId]?.call(type, data);
     }
   }
@@ -37,7 +37,7 @@ class Core {
       };
 
       final String? viewId = await _channel.invokeMethod('createView', args);
-      
+
       if (viewId != null && onEvent != null) {
         _eventHandlers[viewId] = onEvent;
       }
@@ -49,7 +49,8 @@ class Core {
     }
   }
 
-  static Future<bool> updateView(String viewId, {
+  static Future<bool> updateView(
+    String viewId, {
     Map<String, dynamic>? style,
     Map<String, dynamic>? layout,
     Map<String, dynamic>? state,
