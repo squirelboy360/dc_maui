@@ -48,8 +48,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 self.handleDeleteView(call, result: result)
             case "getRootView":
                 self.handleGetRootView(result: result)
-            case "registerEvent":
-                self.handleRegisterEvent(call, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -75,6 +73,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
         // Apply initial style if provided
         if let style = args["style"] as? [String: Any] {
             view.applyStyle(style)
+        }
+        
+        // Handle events if provided in properties
+        if let events = args["properties"]?["events"] as? [String: Any] {
+            view.setupEvents(events, channel: methodChannel)
         }
         
         views[viewId] = view
@@ -162,27 +165,5 @@ class NativeUIManager: NSObject, FlutterPlugin {
             "width": rootView.frame.width,
             "height": rootView.frame.height
         ])
-    }
-    
-    // Register event handler
-    private func handleRegisterEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let viewId = args["viewId"] as? String,
-              let eventType = args["eventType"] as? String,
-              let view = views[viewId] else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
-            return
-        }
-        
-        // Event will be handled by the component itself through its eventHandlers dictionary
-        view.eventHandlers[eventType] = { [weak self] in
-            self?.methodChannel?.invokeMethod("onNativeEvent", arguments: [
-                "viewId": viewId,
-                "eventType": eventType,
-                "timestamp": Date().timeIntervalSince1970
-            ])
-        }
-        
-        result(true)
     }
 }

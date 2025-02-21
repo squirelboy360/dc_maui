@@ -4,6 +4,7 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
     private let collectionView: UICollectionView
     private let layout = UICollectionViewFlowLayout()
     private var items: [DCView] = []
+    private weak var methodChannel: FlutterMethodChannel?
     
     override init(viewId: String) {
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -39,6 +40,27 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
     func setItems(_ items: [DCView]) {
         self.items = items
         collectionView.reloadData()
+    }
+    
+    override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
+        self.methodChannel = channel
+        
+        if events["onScroll"] != nil {
+            // Setup scroll event handling
+        }
+        
+        if events["onEndReached"] != nil {
+            // Setup end reached detection
+        }
+    }
+    
+    private func handleScroll() {
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onScroll",
+            "data": ["offset": collectionView.contentOffset.y],
+            "timestamp": Date().timeIntervalSince1970
+        ])
     }
     
     // UICollectionViewDataSource
