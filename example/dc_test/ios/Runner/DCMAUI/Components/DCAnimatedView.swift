@@ -2,6 +2,12 @@ import UIKit
 
 class DCAnimatedView: DCView {
     private var currentAnimation: UIViewPropertyAnimator?
+    private var animations: [String: UIViewPropertyAnimator] = [:]
+    
+    // New animation options
+    enum AnimationType: String {
+        case basic, spring, keyframe, chain
+    }
     
     override func setupDefaults() {
         super.setupDefaults()
@@ -12,7 +18,17 @@ class DCAnimatedView: DCView {
         super.handleStateChange(newState)
         
         if let animation = newState["animation"] as? [String: Any] {
-            animate(with: animation)
+            let type = AnimationType(rawValue: animation["type"] as? String ?? "basic") ?? .basic
+            switch type {
+            case .basic:
+                animate(with: animation)
+            case .spring:
+                animateSpring(with: animation)
+            case .keyframe:
+                animateKeyframes(with: animation)
+            case .chain:
+                animateChain(with: animation)
+            }
         }
     }
     
@@ -37,6 +53,62 @@ class DCAnimatedView: DCView {
         }
         
         currentAnimation?.startAnimation(afterDelay: delay)
+    }
+    
+    private func animateSpring(with config: [String: Any]) {
+        let dampingRatio = config["dampingRatio"] as? CGFloat ?? 0.8
+        let initialVelocity = config["initialVelocity"] as? CGFloat ?? 0.0
+        
+        currentAnimation = UIViewPropertyAnimator(duration: 0, dampingRatio: dampingRatio) { [weak self] in
+            self?.applyAnimationChanges(config)
+        }
+        currentAnimation?.startAnimation()
+    }
+    
+    private func animateKeyframes(with config: [String: Any]) {
+        guard let keyframes = config["keyframes"] as? [[String: Any]] else { return }
+        
+        UIView.animateKeyframes(withDuration: config["duration"] as? Double ?? 1.0, delay: 0) {
+            keyframes.enumerated().forEach { index, frame in
+                let relativeStartTime = frame["startTime"] as? Double ?? Double(index) / Double(keyframes.count)
+                let relativeDuration = frame["duration"] as? Double ?? 1.0 / Double(keyframes.count)
+                
+                UIView.addKeyframe(withRelativeStartTime: relativeStartTime, relativeDuration: relativeDuration) {
+                    self.applyAnimationChanges(frame)
+                }
+            }
+        }
+    }
+    
+    private func animateChain(with config: [String: Any]) {
+        guard let chain = config["chain"] as? [[String: Any]] else { return }
+        
+        var previousAnimation: UIViewPropertyAnimator?
+        
+        chain.forEach { animationConfig in
+            let animation = UIViewPropertyAnimator(duration: animationConfig["duration"] as? Double ?? 0.3, curve: .easeInOut) {
+                self.applyAnimationChanges(animationConfig)
+            }
+            
+            if let previous = previousAnimation {
+                previous.addCompletion { _ in
+                    animation.startAnimation()
+                }
+            } else {
+                animation.startAnimation()
+            }
+            
+            previousAnimation = animation
+        }
+    }
+    
+    private func applyAnimationChanges(_ config: [String: Any]) {
+        if let transform = config["transform"] as? [String: Any] {
+            applyTransform(transform)
+        }
+        if let style = config["style"] as? [String: Any] {
+            applyStyle(style)
+        }
     }
     
     private func applyTransform(_ transform: [String: Any]) {

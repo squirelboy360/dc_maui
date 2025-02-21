@@ -116,9 +116,41 @@ class NativeUIManager: NSObject, FlutterPlugin {
         guard let args = call.arguments as? [String: Any],
               let parentId = args["parentId"] as? String,
               let childId = args["childId"] as? String,
-              let parentView = views[parentId],
-              let childView = views[childId] else {
+              let parentView = views[parentId] else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid parent or child ID", details: nil))
+            return
+        }
+        
+        // Check if view is already attached somewhere
+        if let childView = views[childId],
+           childView.superview != nil {
+            // Create a copy if duplicate flag is true, otherwise error
+            if args["duplicate"] as? Bool == true {
+                let newChildId = "\(childId)-copy-\(UUID().uuidString)"
+                guard let copiedView = copyComponent(childView, withNewId: newChildId) else {
+                    result(FlutterError(code: "COPY_FAILED", message: "Failed to copy component", details: nil))
+                    return
+                }
+                
+                views[newChildId] = copiedView
+                childViews[newChildId] = []
+                
+                parentView.addSubview(copiedView)
+                childViews[parentId]?.append(newChildId)
+                
+                // Trigger layout calculation
+                parentView.yoga.applyLayout(preservingOrigin: true)
+                result(newChildId) // Return new ID so dart side can track it
+                return
+            } else {
+                result(FlutterError(code: "ALREADY_ATTACHED", message: "View is already attached. Use duplicate: true to create a copy", details: nil))
+                return
+            }
+        }
+        
+        // Normal attachment for unattached views
+        guard let childView = views[childId] else {
+            result(FlutterError(code: "INVALID_VIEW", message: "Child view not found", details: nil))
             return
         }
         
@@ -128,6 +160,52 @@ class NativeUIManager: NSObject, FlutterPlugin {
         // Trigger layout calculation
         parentView.yoga.applyLayout(preservingOrigin: true)
         result(true)
+    }
+    
+    private func copyComponent(_ originalView: DCView, withNewId newId: String) -> DCView? {
+        // Get original properties
+        let properties = getViewProperties(originalView)
+        
+        // Create new component of same type
+        let type = ViewType(rawValue: String(originalView.viewId.split(separator: "-")[0]))!
+        let newView = createComponent(ofType: type, withId: newId, properties: properties)
+        
+        // Copy layout and style
+        if let layout = originalView.yoga.toJSON() {
+            newView.applyStyle(layout)
+        }
+        
+        // Copy state if component supports it
+        newView.handleStateChange(properties)
+        
+        // Copy events
+        if let channel = self.methodChannel {
+            newView.setupEvents(properties["events"] as? [String: Any] ?? [:], channel: channel)
+        }
+        
+        return newView
+    }
+    
+    private func getViewProperties(_ view: DCView) -> [String: Any] {
+        var properties: [String: Any] = [:]
+        
+        // Capture basic properties
+        if let text = (view as? DCText)?.text {
+            properties["text"] = text
+        }
+        
+        if let image = (view as? DCImage)?.imageView.image {
+            properties["image"] = image
+        }
+        
+        // Capture style properties
+        if let backgroundColor = view.backgroundColor {
+            properties["backgroundColor"] = backgroundColor
+        }
+        
+        // Add other properties as needed...
+        
+        return properties
     }
     
     // Delete view and its children
@@ -165,5 +243,38 @@ class NativeUIManager: NSObject, FlutterPlugin {
             "width": rootView.frame.width,
             "height": rootView.frame.height
         ])
+    }
+}
+
+@available(iOS 13.0, *)
+extension NativeUIManager {
+    func cleanup() {
+        // Clear all views
+        views.values.forEach { view in
+            view.removeFromSuperview()
+        }
+        views.removeAll()
+        childViews.removeAll()
+        
+        // Clear root
+        rootViewId = nil
+        
+        // Release window if needed
+        window = nil
+        
+        // Clear method channel
+        methodChannel = nil
+    }
+    
+    deinit {
+        cleanup()
+    }
+}
+
+// Add to ViewType enum
+extension ViewType {
+    init?(fromViewId viewId: String) {
+        let baseType = viewId.split(separator: "-")[0]
+        self.init(rawValue: String(baseType))
     }
 }

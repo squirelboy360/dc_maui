@@ -1,6 +1,6 @@
 import UIKit
 
-class DCScrollView: DCView {
+class DCScrollView: DCView, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let contentContainer = DCView(viewId: "scroll-content")
     
@@ -8,6 +8,7 @@ class DCScrollView: DCView {
         super.setupDefaults()
         
         scrollView.yoga.isEnabled = true
+        scrollView.delegate = self
         addSubview(scrollView)
         
         contentContainer.yoga.isEnabled = true
@@ -50,5 +51,41 @@ class DCScrollView: DCView {
     func setContent(_ view: DCView) {
         contentContainer.subviews.forEach { $0.removeFromSuperview() }
         contentContainer.addSubview(view)
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onScroll",
+            "data": [
+                "offset": [
+                    "x": scrollView.contentOffset.x,
+                    "y": scrollView.contentOffset.y
+                ],
+                "velocity": [
+                    "x": scrollView.panGestureRecognizer.velocity(in: scrollView).x,
+                    "y": scrollView.panGestureRecognizer.velocity(in: scrollView).y
+                ],
+                "contentSize": [
+                    "width": scrollView.contentSize.width,
+                    "height": scrollView.contentSize.height
+                ],
+                "timestamp": Date().timeIntervalSince1970
+            ]
+        ])
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onScrollEnd",
+            "data": [
+                "offset": [
+                    "x": scrollView.contentOffset.x,
+                    "y": scrollView.contentOffset.y
+                ],
+                "timestamp": Date().timeIntervalSince1970
+            ]
+        ])
     }
 }

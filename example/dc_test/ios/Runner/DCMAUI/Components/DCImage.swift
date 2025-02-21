@@ -39,10 +39,33 @@ class DCImage: DCView {
     }
     
     private func loadImage(from url: URL) {
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self?.imageView.image = image
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                if let error = error {
+                    self.methodChannel?.invokeMethod("onComponentEvent", arguments: [
+                        "viewId": self.viewId,
+                        "type": "onError",
+                        "data": [
+                            "error": error.localizedDescription,
+                            "timestamp": Date().timeIntervalSince1970
+                        ]
+                    ])
+                    return
+                }
+                
+                if let data = data, let image = UIImage(data: data) {
+                    self.imageView.image = image
+                    self.methodChannel?.invokeMethod("onComponentEvent", arguments: [
+                        "viewId": self.viewId,
+                        "type": "onLoad",
+                        "data": [
+                            "width": image.size.width,
+                            "height": image.size.height,
+                            "timestamp": Date().timeIntervalSince1970
+                        ]
+                    ])
                 }
             }
         }.resume()
