@@ -175,6 +175,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
 
     // New helper method to create view instances
     private func createViewInstance(viewType: String, properties: [String: Any], layout: [String: Any]?) -> UIView? {
+        print("Creating view of type \(viewType) with properties: \(properties)")  // Add debug log
         let view: UIView?
         
         switch viewType {
@@ -217,18 +218,25 @@ class NativeUIManager: NSObject, FlutterPlugin {
             label.yoga.isEnabled = true
             label.numberOfLines = 0
             label.textAlignment = .left
-            label.textColor = .black
             
             if let textStyle = properties["textStyle"] as? [String: Any] {
+                print("Creating label with text style: \(textStyle)")  // Debug log
+                
                 if let text = textStyle["text"] as? String {
                     label.text = text
+                    print("Setting label text: \(text)")
                 }
+                
                 if let fontSize = textStyle["fontSize"] as? CGFloat {
                     label.font = .systemFont(ofSize: fontSize)
                 }
+                
+                // Important: Handle color as UInt32
                 if let color = textStyle["color"] as? UInt32 {
                     label.textColor = UIColor(rgb: color)
+                    print("Setting label color: \(color)")
                 }
+                
                 if let alignment = textStyle["textAlign"] as? String {
                     switch alignment {
                     case "center": label.textAlignment = .center
@@ -238,6 +246,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
                     }
                 }
             }
+            
+            // Apply other styles
+            let style = NativeViewStyle(from: properties)
+            style.apply(to: label)
             
             view = label
             
@@ -330,26 +342,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
         return view
     }
 
-    // Add this method for when you need to clone a view
-    private func cloneView(_ originalView: UIView) -> UIView {
-        // Get the view type and properties
-        let viewType = String(describing: type(of: originalView))
-        var properties: [String: Any] = [:]
-        
-        // Extract properties based on view type
-        if let button = originalView as? UIButton {
-            properties["textStyle"] = [
-                "text": button.title(for: .normal) ?? "",
-                "color": button.titleColor(for: .normal)?.cgColor ?? UIColor.black.cgColor
-            ]
-        }
-        
-        // Get layout config
-        let layout = layoutConfigs[getViewId(for: originalView) ?? ""]?.toJson()
-        
-        // Create new instance with same properties
-        return createViewInstance(viewType: viewType, properties: properties, layout: layout) ?? UIView()
-    }
 
     private func applyLayout(to view: UIView, layout: [String: Any]) {
         if let width = layout["width"] as? Double {
@@ -417,24 +409,61 @@ class NativeUIManager: NSObject, FlutterPlugin {
 
     // Helper method to extract properties from existing view
     private func getViewProperties(_ view: UIView) -> [String: Any] {
-        var properties: [String: Any] = [
-            "backgroundColor": view.backgroundColor ?? .clear
-        ]
+        var properties: [String: Any] = [:]
         
-        if let button = view as? UIButton {
-            properties["textStyle"] = [
-                "text": button.title(for: .normal) ?? "",
-                "color": button.titleColor(for: .normal) ?? .black
-            ]
-        } else if let label = view as? UILabel {
+        // Copy background color
+        if let backgroundColor = view.backgroundColor {
+            properties["backgroundColor"] = backgroundColor
+        }
+        
+        // Handle text properties comprehensively
+        if let label = view as? UILabel {
             properties["textStyle"] = [
                 "text": label.text ?? "",
-                "color": label.textColor ?? .black,
-                "fontSize": label.font.pointSize
+                // Important: Convert UIColor to UInt32 for color
+                "color": label.textColor?.cgColor.components?.reduce(UInt32(0)) { result, component in
+                    (result << 8) + UInt32(component * 255)
+                } ?? 0xFF000000,
+                "fontSize": label.font.pointSize,
+                "textAlign": getTextAlignmentString(label.textAlignment)
+            ]
+            print("Label properties: \(properties)")  // Debug log
+        } else if let button = view as? UIButton {
+            properties["textStyle"] = [
+                "text": button.title(for: .normal) ?? "",
+                "color": button.titleColor(for: .normal)?.cgColor.components?.reduce(UInt32(0)) { result, component in
+                    (result << 8) + UInt32(component * 255)
+                } ?? 0xFF000000,
+                "fontSize": button.titleLabel?.font.pointSize ?? 16.0
             ]
         }
         
+        // Copy shadow if exists
+        if view.layer.shadowOpacity > 0 {
+            properties["shadows"] = [[
+                "color": view.layer.shadowColor ?? UIColor.black.cgColor,
+                "offset": ["x": view.layer.shadowOffset.width, "y": view.layer.shadowOffset.height],
+                "radius": view.layer.shadowRadius,
+                "opacity": view.layer.shadowOpacity
+            ]]
+        }
+        
+        // Copy corner radius
+        if view.layer.cornerRadius > 0 {
+            properties["cornerRadius"] = view.layer.cornerRadius
+        }
+        
         return properties
+    }
+
+    private func getTextAlignmentString(_ alignment: NSTextAlignment) -> String {
+        switch alignment {
+        case .left: return "left"
+        case .center: return "center"
+        case .right: return "right"
+        case .justified: return "justify"
+        default: return "left"
+        }
     }
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

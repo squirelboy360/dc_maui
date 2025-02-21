@@ -16,6 +16,7 @@ class HomeViewBinder extends HomeViewComponents {
     await bridge.attachView(await content, await sidebar);
     await bridge.attachView(await content, await title);
     await bridge.attachView(await content, await mainArea);
+      await bridge.attachView(await mainArea, await title);
 
 
     // Mount FAB last to ensure it's on top

@@ -135,7 +135,7 @@ abstract class HomeViewComponents {
       textStyle: TextStyle(
         text: "Home View",
         fontSize: 24,
-        color: Colors.black,
+        color: Colors.red,
       ),
     ),
   );
