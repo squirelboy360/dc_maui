@@ -27,8 +27,9 @@ Future<void> startApp() async {
     }
 
     final rootId = rootInfo['viewId'] as String;
+    print(rootId);
 
-    final mainContainer = View(
+    final mainContainer = await View(
       style: ViewStyle(
         backgroundColor: 0xFFFAFAFA,
       ),
@@ -42,11 +43,10 @@ Future<void> startApp() async {
         width: YogaValue.percent(100), // Use static constructors
         height: YogaValue.percent(100),
       ),
-    );
-
-    final mainId = await mainContainer.create();
-    if (mainId == null) return;
-    await Core.attachView(rootId, mainId);
+    ).create();
+    // attach
+    Core.attachView(rootId, mainContainer ?? '');
+    print("mainContainer: $mainContainer");
 
     final colors = [
       0xFFE57373,
@@ -60,32 +60,30 @@ Future<void> startApp() async {
     ];
 
     for (var color in colors) {
-      final gridItem = View(
+      final gridItem = await  View(
         style: ViewStyle(
           backgroundColor: color,
           cornerRadius: 8,
           shadow: ViewShadow(
-            color: Color(0xFF000000),
+            color: Color.fromARGB(255, 250, 80, 80),
             opacity: 0.2,
             offset: Offset(0, 4),
             radius: 8,
           ),
         ),
         layout: YogaLayout(
+          padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
           width: YogaValue(100, YogaUnit.point),
           height: YogaValue(100, YogaUnit.point),
           margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
         ),
-      );
-
-      final itemId = await gridItem.create(
+      ).create(
         onEvent: (type, data) {
           _logger.info('Grid item event: $type, data: $data');
         },
       );
-
-      if (itemId == null) continue;
-      await Core.attachView(mainId, itemId);
+      print("itemId: $gridItem");
+      await Core.attachView(mainContainer ?? '', gridItem ?? '');
     }
   } catch (e) {
     debugPrint('Error in startApp: $e');

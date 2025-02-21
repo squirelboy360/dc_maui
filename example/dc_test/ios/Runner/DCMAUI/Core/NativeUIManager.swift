@@ -63,6 +63,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
         registrar.addMethodCallDelegate(instance, channel: channel)
         instance.methodChannel = channel
         
+        // Create native window immediately
         instance.setupRootView()
     }
     
@@ -264,62 +265,46 @@ class NativeUIManager: NSObject, FlutterPlugin {
     
     // Get root view info
     private func handleGetRootView(result: @escaping FlutterResult) {
-        // First check if we have an existing root view
         if let rootViewId = self.rootViewId,
            let rootView = views[rootViewId] {
             result([
                 "viewId": rootViewId,
                 "width": rootView.frame.width,
                 "height": rootView.frame.height
-            ] as [String: Any])
-            return
+            ])
+        } else {
+            // If no root view exists, create one
+            setupRootView()
+            handleGetRootView(result: result) // Retry after setup
         }
-
-        // If no root view exists, create one
-        let rootView = DCView(viewId: "root")
-        rootView.yoga.isEnabled = true
-        rootView.yoga.flexDirection = .column
-        
-        self.rootViewId = rootView.viewId
-        self.views[rootView.viewId] = rootView
-        self.childViews[rootView.viewId] = []
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            if let rootVC = window.rootViewController {
-                rootVC.view.addSubview(rootView)
-                rootView.frame = rootVC.view.bounds
-                rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            }
-        }
-
-        result([
-            "viewId": rootView.viewId,
-            "width": rootView.frame.width,
-            "height": rootView.frame.height
-        ] as [String: Any])
     }
 
     private func setupRootView() {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            window = UIWindow(frame: windowScene.coordinateSpace.bounds)
-            window?.windowScene = windowScene
+            // Create a separate window for native UI
+            let nativeWindow = UIWindow(frame: windowScene.coordinateSpace.bounds)
+            nativeWindow.windowScene = windowScene
             
+            // Create root view controller
+            let rootVC = UIViewController()
+            
+            // Create and configure root view
             let rootView = DCView(viewId: "root")
+            rootView.frame = rootVC.view.bounds
+            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             rootView.yoga.isEnabled = true
             rootView.yoga.flexDirection = .column
-            rootView.frame = window!.bounds
-            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             
-            rootViewId = rootView.viewId
-            views[rootViewId!] = rootView
-            childViews[rootViewId!] = []
-            
-            let rootVC = UIViewController()
+            // Set up view hierarchy
             rootVC.view.addSubview(rootView)
+            nativeWindow.rootViewController = rootVC
+            nativeWindow.makeKeyAndVisible()
             
-            window?.rootViewController = rootVC
-            window?.makeKeyAndVisible()
+            // Store references
+            self.window = nativeWindow
+            self.rootViewId = rootView.viewId
+            self.views[rootView.viewId] = rootView
+            self.childViews[rootView.viewId] = []
         }
     }
 }
