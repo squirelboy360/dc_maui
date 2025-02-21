@@ -285,26 +285,97 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        print("Attaching view with arguments: \(String(describing: call.arguments))")
-        
         guard let args = call.arguments as? [String: Any],
               let parentId = args["parentId"] as? String,
               let childId = args["childId"] as? String,
-              let parentView = views[parentId],
-              let childView = views[childId] else {
+              let parentView = views[parentId] else {
             result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
             return
         }
         
-        childView.translatesAutoresizingMaskIntoConstraints = false
-        childView.yoga.isEnabled = true // Enable yoga on child
-        parentView.addSubview(childView)
+        // Handle view duplication if requested
+        if args["duplicate"] as? Bool == true {
+            guard let originalView = views[childId] else {
+                result(FlutterError(code: "INVALID_VIEW", message: "Original view not found", details: nil))
+                return
+            }
+            
+            // Create new view ID for duplicate
+            let newChildId = "\(childId)-copy-\(UUID().uuidString)"
+            
+            // Duplicate the view
+            let duplicateView = duplicateView(originalView, withId: newChildId)
+            views[newChildId] = duplicateView
+            childViews[newChildId] = []
+            
+            // Attach the duplicate
+            attachViewToParent(duplicateView, toParent: parentView, withId: newChildId, parentId: parentId)
+            result(newChildId)
+        } else {
+            // Regular attachment
+            guard let childView = views[childId] else {
+                result(FlutterError(code: "INVALID_VIEW", message: "Child view not found", details: nil))
+                return
+            }
+            
+            attachViewToParent(childView, toParent: parentView, withId: childId, parentId: parentId)
+            result(true)
+        }
+    }
+
+    private func duplicateView(_ original: UIView, withId newId: String) -> UIView {
+        let duplicate: UIView
+        
+        // Create appropriate duplicate based on view type
+        switch original {
+        case let button as UIButton:
+            let newButton = UIButton(type: button.buttonType)
+            newButton.setTitle(button.title(for: .normal), for: .normal)
+            newButton.setTitleColor(button.titleColor(for: .normal), for: .normal)
+            newButton.backgroundColor = button.backgroundColor
+            newButton.layer.cornerRadius = button.layer.cornerRadius
+            // Copy other button properties
+            duplicate = newButton
+            
+        case let label as UILabel:
+            let newLabel = UILabel()
+            newLabel.text = label.text
+            newLabel.font = label.font
+            newLabel.textColor = label.textColor
+            newLabel.textAlignment = label.textAlignment
+            // Copy other label properties
+            duplicate = newLabel
+            
+        default:
+            duplicate = UIView()
+            duplicate.backgroundColor = original.backgroundColor
+        }
+        
+        // Copy common properties
+        duplicate.frame = original.frame
+        duplicate.alpha = original.alpha
+        duplicate.isHidden = original.isHidden
+        duplicate.layer.masksToBounds = original.layer.masksToBounds
+        duplicate.clipsToBounds = original.clipsToBounds
+        
+        // Copy layout configuration if exists
+        if let originalConfig = layoutConfigs[original.hashValue.description] {
+            duplicate.yoga.applyConfig(originalConfig)
+        }
+        
+        return duplicate
+    }
+
+    private func attachViewToParent(_ child: UIView, toParent parent: UIView, withId childId: String, parentId: String) {
+        child.translatesAutoresizingMaskIntoConstraints = false
+        child.yoga.isEnabled = true
+        parent.addSubview(child)
         childViews[parentId]?.append(childId)
         
         // Trigger layout calculation
-        parentView.yoga.applyLayout(preservingOrigin: false)
-        
-        result(true)
+        parent.yoga.applyLayout(preservingOrigin: false)
+        parent.setNeedsLayout()
+        parent.layoutIfNeeded()
     }
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

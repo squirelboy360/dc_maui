@@ -22,27 +22,49 @@ enum LayoutType: String {
 }
 
 struct LayoutConfig {
-    var width: YGValue = YGValue(value: Float.nan, unit: .auto)
-    var height: YGValue = YGValue(value: Float.nan, unit: .auto)
+    // Existing properties...
+    
+    // Size properties
+    var width: YGValue = .auto
+    var height: YGValue = .auto
     var minWidth: YGValue?
-    var minHeight: YGValue?
     var maxWidth: YGValue?
+    var minHeight: YGValue?
     var maxHeight: YGValue?
+    
+    // Flex properties
     var flex: Float?
     var flexGrow: Float?
     var flexShrink: Float?
     var flexBasis: YGValue?
     var flexDirection: YGFlexDirection = .column
+    var flexWrap: YGWrap = .noWrap
+    var gap: CGFloat = 0
+    var rowGap: CGFloat = 0
+    var columnGap: CGFloat = 0
+    
+    // Alignment & Positioning
     var justifyContent: YGJustify = .flexStart
     var alignItems: YGAlign = .stretch
     var alignSelf: YGAlign = .auto
+    var alignContent: YGAlign = .flexStart
     var position: YGPositionType = .relative
+    
+    // Spacing
     var margin = UIEdgeInsets.zero
     var padding = UIEdgeInsets.zero
+    var border = UIEdgeInsets.zero
+    
+    // Position coordinates
     var left: YGValue?
     var top: YGValue?
     var right: YGValue?
     var bottom: YGValue?
+    
+    // Additional properties
+    var aspectRatio: Float?
+    var display: YGDisplay = .flex
+    var overflow: YGOverflow = .visible
     
     init(from dict: [String: Any]) {
         print("Initializing LayoutConfig with: \(dict)")
@@ -172,6 +194,35 @@ struct LayoutConfig {
                 right: paddings["right"] ?? 0
             )
         }
+        
+        // Additional parsing
+        if let wrap = dict["flexWrap"] as? String {
+            flexWrap = wrap == "wrap" ? .wrap : .noWrap
+        }
+        
+        if let gap = dict["gap"] as? CGFloat {
+            self.gap = gap
+            self.rowGap = gap
+            self.columnGap = gap
+        }
+        
+        if let rowGap = dict["rowGap"] as? CGFloat {
+            self.rowGap = rowGap
+        }
+        
+        if let columnGap = dict["columnGap"] as? CGFloat {
+            self.columnGap = columnGap
+        }
+        
+        if let ratio = dict["aspectRatio"] as? Float {
+            self.aspectRatio = ratio
+        }
+        
+        if let displayStr = dict["display"] as? String {
+            self.display = displayStr == "none" ? .none : .flex
+        }
+        
+        // ... Add parsing for other new properties
     }
 }
 
@@ -268,6 +319,93 @@ extension NativeUIManager {
             current = parent
         }
         return current
+    }
+}
+
+// Add this extension to improve layout application
+extension YGLayout {
+    func applyConfig(_ config: LayoutConfig) {
+        isEnabled = true
+        
+        // Dimensions
+        width = config.width
+        height = config.height
+        minWidth = config.minWidth ?? .undefined
+        maxWidth = config.maxWidth ?? .undefined
+        minHeight = config.minHeight ?? .undefined
+        maxHeight = config.maxHeight ?? .undefined
+        
+        // Flex
+        flex = CGFloat(config.flex ?? 0)
+        flexGrow = CGFloat(config.flexGrow ?? 0)
+        flexShrink = CGFloat(config.flexShrink ?? 1)
+        flexBasis = config.flexBasis ?? .auto
+        flexDirection = config.flexDirection
+        flexWrap = config.flexWrap
+        
+        // Alignment
+        justifyContent = config.justifyContent
+        alignItems = config.alignItems
+        alignSelf = config.alignSelf
+        alignContent = config.alignContent
+        
+        // Position
+        position = config.position
+        
+        // Fix the position assignments
+        if let leftVal = config.left {
+            left = leftVal
+        }
+        if let topVal = config.top {
+            top = topVal
+        }
+        if let rightVal = config.right {
+            right = rightVal
+        }
+        if let bottomVal = config.bottom {
+            bottom = bottomVal
+        }
+        
+        // Spacing - set individual values instead of tuple assignment
+        let marginValues = config.margin.toYGValue()
+        marginLeft = marginValues.left
+        marginTop = marginValues.top
+        marginRight = marginValues.right
+        marginBottom = marginValues.bottom
+        
+        let paddingValues = config.padding.toYGValue()
+        paddingLeft = paddingValues.left
+        paddingTop = paddingValues.top
+        paddingRight = paddingValues.right
+        paddingBottom = paddingValues.bottom
+        
+        // Border - use borderWidth property instead of setBorder
+        if config.border != .zero {
+            let borderValues = config.border.toYGValue()
+            borderLeftWidth = CGFloat(borderValues.left.value)
+            borderTopWidth = CGFloat(borderValues.top.value)
+            borderRightWidth = CGFloat(borderValues.right.value)
+            borderBottomWidth = CGFloat(borderValues.bottom.value)
+        }
+        
+        // Additional
+        if let ratio = config.aspectRatio {
+            aspectRatio = CGFloat(ratio)
+        }
+        display = config.display
+        overflow = config.overflow
+    }
+}
+
+// First add this extension for UIEdgeInsets
+extension UIEdgeInsets {
+    func toYGValue() -> (left: YGValue, top: YGValue, right: YGValue, bottom: YGValue) {
+        return (
+            YGValue(value: Float(left), unit: .point),
+            YGValue(value: Float(top), unit: .point),
+            YGValue(value: Float(right), unit: .point),
+            YGValue(value: Float(bottom), unit: .point)
+        )
     }
 }
 

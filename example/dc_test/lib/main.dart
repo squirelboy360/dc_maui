@@ -1,11 +1,11 @@
-import 'package:dc_test/core/types/events.dart';
-import 'package:dc_test/core/types/view/view_types.dart';
+import 'package:dc_test/framework/types/events.dart';
+import 'package:dc_test/framework/types/view/view_types.dart';
 import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
 import 'package:logging/logging.dart';
-import 'package:dc_test/core/types/layout/yoga_types.dart';
-import 'package:dc_test/layout/layout_config.dart';
-import 'package:dc_test/style/view_style.dart';
-import 'package:dc_test/bridge/base.dart';
+import 'package:dc_test/framework/types/layout/yoga_types.dart';
+import 'package:dc_test/framework/layout/layout_config.dart';
+import 'package:dc_test/framework/style/view_style.dart';
+import 'package:dc_test/framework/bridge/base.dart';
 
 final _logger = Logger('ModernApp');
 final bridge = NativeUIBridge();
@@ -169,17 +169,20 @@ Future<void> startApp() async {
   // Buttons container
   final buttonsContainer = await bridge.createView(ViewType.view);
   if (buttonsContainer == null) return;
-  await bridge.attachView(card, buttonsContainer);
+  await bridge.attachView(
+      mainContainer, buttonsContainer); // Changed from card to mainContainer
 
   await bridge.setLayout(
       buttonsContainer,
       LayoutConfig(
-        flexDirection: YGFlexDirection.row,
-        justifyContent: YGJustify.spaceBetween,
-        alignItems: YGAlign.center,
-        width: YGValue(100, YGUnit.percent),
-        margin: const EdgeInsets.only(top: 24),
-        padding: const EdgeInsets.all(32),
+        position: YGPositionType.absolute,
+        flexDirection: YGFlexDirection.column,
+        justifyContent: YGJustify.flexEnd, // Changed to flexEnd
+        alignItems: YGAlign.flexEnd, // Changed to flexEnd
+        right: YGValue(24, YGUnit.point), // Position from right
+        bottom: YGValue(32, YGUnit.point), // Position from bottom
+        width: YGValue(56, YGUnit.point), // Fixed width
+        gap: 8, // Spacing between buttons
       ));
 
   // Replace the old button creation and event handling with new typed version:
@@ -190,7 +193,6 @@ Future<void> startApp() async {
       backgroundColor: Color(0xFFFF3B30),
       cornerRadius: 28,
       textStyle: TextStyle(
-        // Important: text should be part of textStyle
         text: '-',
         color: Colors.white,
         fontSize: 24,
@@ -327,7 +329,7 @@ Future<void> startApp() async {
   );
 
   // Attach buttons (no need for registerEvent anymore)
-  await bridge.attachView(buttonsContainer, decrementButton!);
-  await bridge.attachView(buttonsContainer, resetButton!);
   await bridge.attachView(buttonsContainer, incrementButton!);
+  await bridge.attachView(buttonsContainer, resetButton!);
+  await bridge.attachView(buttonsContainer, decrementButton!);
 }

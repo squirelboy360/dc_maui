@@ -1,4 +1,6 @@
 // YGValue type definition
+import 'package:flutter/material.dart';
+
 class YGValue {
   final double value;
   final YGUnit unit;
@@ -44,3 +46,27 @@ enum YGPositionType { static, relative, absolute }
 enum YGDisplay { flex, none }
 
 enum YGEdge { left, top, right, bottom, start, end, horizontal, vertical, all }
+
+enum YGWrap {
+  noWrap,
+  wrap,
+  wrapReverse
+}
+
+enum YGOverflow {
+  visible,
+  hidden,
+  scroll
+}
+
+// Add this extension
+extension EdgeInsetsExtension on EdgeInsets {
+  Map<String, dynamic> toEdgeMap() {
+    return {
+      'top': top,
+      'right': right,
+      'bottom': bottom,
+      'left': left,
+    };
+  }
+}
