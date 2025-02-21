@@ -25,15 +25,18 @@ class Core {
 
   static Future<String?> createView({
     required String viewType,
-    Map<String, dynamic>? style,
-    Map<String, dynamic>? events,
+    Map<String, dynamic>? properties, // Contains style, layout, AND events
     EventCallback? onEvent,
   }) async {
     try {
       final args = {
         'viewType': viewType,
-        if (style != null) 'style': style,
-        if (events != null) 'events': events,
+        if (properties != null) 'properties': {
+          ...properties,
+          if (onEvent != null) 'events': {
+            'onEvent': true
+          }
+        },
       };
 
       final String? viewId = await _channel.invokeMethod('createView', args);
@@ -51,16 +54,12 @@ class Core {
 
   static Future<bool> updateView(
     String viewId, {
-    Map<String, dynamic>? style,
-    Map<String, dynamic>? layout,
-    Map<String, dynamic>? state,
+    Map<String, dynamic>? properties, // Changed: properties includes style and layout
   }) async {
     try {
       final args = {
         'viewId': viewId,
-        if (style != null) 'style': style,
-        if (layout != null) 'layout': layout,
-        if (state != null) 'state': state,
+        if (properties != null) 'properties': properties,
       };
 
       await _channel.invokeMethod('updateView', args);
