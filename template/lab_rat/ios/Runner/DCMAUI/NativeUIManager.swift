@@ -151,107 +151,172 @@ class NativeUIManager: NSObject, FlutterPlugin {
         }
 
         let properties = args["properties"] as? [String: Any] ?? [:]
-        print("Creating \(viewType) with properties: \(properties)") // Debug log
+        print("Creating \(viewType) with properties: \(properties)")
 
-        let view: UIView?
+        // Create the view
+        let view = createViewInstance(viewType: viewType, properties: properties, layout: args["layout"] as? [String: Any])
         let viewId = "\(viewType.lowercased())-\(UUID().uuidString)"
+        
+        if let view = view {
+            // Store view and setup
+            views[viewId] = view
+            childViews[viewId] = []
+            
+            // Store layout config for potential reuse
+            if let layout = args["layout"] as? [String: Any] {
+                layoutConfigs[viewId] = LayoutConfig(from: layout)
+            }
+            
+            result(viewId)
+        } else {
+            result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
+        }
+    }
 
+    // New helper method to create view instances
+    private func createViewInstance(viewType: String, properties: [String: Any], layout: [String: Any]?) -> UIView? {
+        let view: UIView?
+        
         switch viewType {
         case "Button":
             let button = UIButton(type: .system)
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.yoga.isEnabled = true
             
-            // Set default appearance
+            // Default button styling
             button.backgroundColor = .systemBlue
             button.setTitleColor(.white, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 24, weight: .semibold)
-            button.layer.cornerRadius = 28
+            button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+            button.layer.cornerRadius = 8
             
-            // Force layout mode that preserves text
-            button.contentHorizontalAlignment = .center
-            button.contentVerticalAlignment = .center
-            button.titleLabel?.adjustsFontSizeToFitWidth = true
-            button.titleLabel?.minimumScaleFactor = 0.5
-            button.titleLabel?.lineBreakMode = .byTruncatingTail
-            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
-            
-            // Apply layout first
-            if let layout = args["layout"] as? [String: Any] {
-                let config = LayoutConfig(from: layout)
-                applyYogaLayout(to: button, config: config)
-            }
-            
-            // Apply styles after events and layout
             if let style = properties["textStyle"] as? [String: Any] {
                 if let text = style["text"] as? String {
                     button.setTitle(text, for: .normal)
-                    print("Setting button text to: \(text)")
+                }
+                if let fontSize = style["fontSize"] as? CGFloat {
+                    button.titleLabel?.font = .systemFont(ofSize: fontSize)
                 }
                 if let color = style["color"] as? UInt32 {
                     button.setTitleColor(UIColor(rgb: color), for: .normal)
-                }
-                if let fontSize = style["fontSize"] as? CGFloat {
-                    button.titleLabel?.font = .systemFont(ofSize: fontSize, weight: .bold)
                 }
             }
             
             let style = NativeViewStyle(from: properties)
             style.apply(to: button)
             
-            // Add default text color if none specified
-            button.setTitleColor(.black, for: .normal)
-            
             view = button
-            print("Button creation complete with ID: \(viewId)")
-
+            
         case "View":
             let containerView = UIView(frame: .zero)
+            containerView.yoga.isEnabled = true
             containerView.backgroundColor = .clear
             view = containerView
             
         case "Label":
             let label = UILabel()
-            // Add better text handling and debugging
-            if let properties = args["properties"] as? [String: Any],
-               let textStyle = properties["textStyle"] as? [String: Any],
-               let text = textStyle["text"] as? String {
-                print("Setting label text: \(text)")  // Debug log
-                label.text = text
-            }
-            label.textAlignment = .center
+            label.yoga.isEnabled = true
             label.numberOfLines = 0
-            label.adjustsFontSizeToFitWidth = true
-            label.textColor = .black  // Add default text color
+            label.textAlignment = .left
+            label.textColor = .black
+            
+            if let textStyle = properties["textStyle"] as? [String: Any] {
+                if let text = textStyle["text"] as? String {
+                    label.text = text
+                }
+                if let fontSize = textStyle["fontSize"] as? CGFloat {
+                    label.font = .systemFont(ofSize: fontSize)
+                }
+                if let color = textStyle["color"] as? UInt32 {
+                    label.textColor = UIColor(rgb: color)
+                }
+                if let alignment = textStyle["textAlign"] as? String {
+                    switch alignment {
+                    case "center": label.textAlignment = .center
+                    case "right": label.textAlignment = .right
+                    case "justify": label.textAlignment = .justified
+                    default: label.textAlignment = .left
+                    }
+                }
+            }
+            
             view = label
             
         case "TouchableOpacity":
             let touchable = createTouchableView()
+            touchable.yoga.isEnabled = true
             touchable.alpha = 1.0
             touchable.addTarget(self, action: #selector(handleTouchDown(_:)), for: .touchDown)
             touchable.addTarget(self, action: #selector(handleTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
             view = touchable
-
-        case "Scrollable", "ListView":
-            // Use unified scrollable implementation
-            view = createScrollableBase(viewType: viewType, args: args)
-
+            
+        case "Scrollable":
+            let scrollView = UIScrollView()
+            scrollView.yoga.isEnabled = true
+            scrollView.showsVerticalScrollIndicator = true
+            scrollView.showsHorizontalScrollIndicator = false
+            scrollView.alwaysBounceVertical = true
+            
+            // Create content view for scroll view
+            let contentView = UIView()
+            contentView.yoga.isEnabled = true
+            contentView.translatesAutoresizingMaskIntoConstraints = false
+            scrollView.addSubview(contentView)
+            
+            // Setup content view constraints
+            NSLayoutConstraint.activate([
+                contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+                contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+                contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+                contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+                contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            ])
+            
+            view = scrollView
+            
+        case "ListView":
+            let listView = UIScrollView()
+            listView.yoga.isEnabled = true
+            listView.showsVerticalScrollIndicator = true
+            listView.showsHorizontalScrollIndicator = false
+            
+            // Create stack view for list items
+            let stackView = UIStackView()
+            stackView.axis = .vertical
+            stackView.spacing = 8
+            stackView.yoga.isEnabled = true
+            stackView.translatesAutoresizingMaskIntoConstraints = false
+            listView.addSubview(stackView)
+            
+            // Setup stack view constraints
+            NSLayoutConstraint.activate([
+                stackView.leadingAnchor.constraint(equalTo: listView.leadingAnchor),
+                stackView.trailingAnchor.constraint(equalTo: listView.trailingAnchor),
+                stackView.topAnchor.constraint(equalTo: listView.topAnchor),
+                stackView.bottomAnchor.constraint(equalTo: listView.bottomAnchor),
+                stackView.widthAnchor.constraint(equalTo: listView.widthAnchor)
+            ])
+            
+            view = listView
+            
         default:
-            view = UIView()
+            let defaultView = UIView()
+            defaultView.yoga.isEnabled = true
+            defaultView.backgroundColor = .clear
+            view = defaultView
         }
         
-        view?.translatesAutoresizingMaskIntoConstraints = false
-        
+        // Common setup for all views
         if let view = view {
-            views[viewId] = view
-            childViews[viewId] = []
+            view.translatesAutoresizingMaskIntoConstraints = false
             
-            // Important: Apply styles before layout
-            if let properties = args["properties"] as? [String: Any] {
+            // Apply styles
+            if !properties.isEmpty {
                 let style = NativeViewStyle(from: properties)
                 style.apply(to: view)
             }
             
-            // Apply layout with proper parent bounds
-            if let layout = args["layout"] as? [String: Any] {
+            // Apply layout
+            if let layout = layout {
                 let config = LayoutConfig(from: layout)
                 if let superview = view.superview {
                     view.frame = CGRect(origin: .zero, size: superview.bounds.size)
@@ -260,11 +325,30 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 }
                 applyYogaLayout(to: view, config: config)
             }
-            
-            result(viewId)
-        } else {
-            result(FlutterError(code: "CREATION_FAILED", message: "Failed to create view", details: nil))
         }
+        
+        return view
+    }
+
+    // Add this method for when you need to clone a view
+    private func cloneView(_ originalView: UIView) -> UIView {
+        // Get the view type and properties
+        let viewType = String(describing: type(of: originalView))
+        var properties: [String: Any] = [:]
+        
+        // Extract properties based on view type
+        if let button = originalView as? UIButton {
+            properties["textStyle"] = [
+                "text": button.title(for: .normal) ?? "",
+                "color": button.titleColor(for: .normal)?.cgColor ?? UIColor.black.cgColor
+            ]
+        }
+        
+        // Get layout config
+        let layout = layoutConfigs[getViewId(for: originalView) ?? ""]?.toJson()
+        
+        // Create new instance with same properties
+        return createViewInstance(viewType: viewType, properties: properties, layout: layout) ?? UIView()
     }
 
     private func applyLayout(to view: UIView, layout: [String: Any]) {
@@ -289,20 +373,68 @@ class NativeUIManager: NSObject, FlutterPlugin {
               let parentId = args["parentId"] as? String,
               let childId = args["childId"] as? String,
               let parentView = views[parentId],
-              let childView = views[childId] else {
+              let originalChild = views[childId] else {
             result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid parent or child ID", details: nil))
             return
         }
         
+        // Check if view needs to be cloned (already has a superview)
+        let childView: UIView
+        let actualChildId: String
+        
+        if originalChild.superview != nil {
+            // Create clone
+            childView = createViewInstance(
+                viewType: String(describing: type(of: originalChild)),
+                properties: getViewProperties(originalChild),
+                layout: layoutConfigs[childId]?.toJson()
+            ) ?? UIView()
+            
+            // Generate new ID for clone
+            actualChildId = "\(String(describing: type(of: originalChild)))-\(UUID().uuidString)"
+            
+            // Store clone
+            views[actualChildId] = childView
+            childViews[actualChildId] = []
+            
+            print("Created clone with ID: \(actualChildId)")
+        } else {
+            childView = originalChild
+            actualChildId = childId
+        }
+        
+        // Setup and attach view
         childView.translatesAutoresizingMaskIntoConstraints = false
-        childView.yoga.isEnabled = true // Enable yoga on child
+        childView.yoga.isEnabled = true
         parentView.addSubview(childView)
-        childViews[parentId]?.append(childId)
+        childViews[parentId]?.append(actualChildId)
         
         // Trigger layout calculation
         parentView.yoga.applyLayout(preservingOrigin: false)
         
         result(true)
+    }
+
+    // Helper method to extract properties from existing view
+    private func getViewProperties(_ view: UIView) -> [String: Any] {
+        var properties: [String: Any] = [
+            "backgroundColor": view.backgroundColor ?? .clear
+        ]
+        
+        if let button = view as? UIButton {
+            properties["textStyle"] = [
+                "text": button.title(for: .normal) ?? "",
+                "color": button.titleColor(for: .normal) ?? .black
+            ]
+        } else if let label = view as? UILabel {
+            properties["textStyle"] = [
+                "text": label.text ?? "",
+                "color": label.textColor ?? .black,
+                "fontSize": label.font.pointSize
+            ]
+        }
+        
+        return properties
     }
 
     private func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

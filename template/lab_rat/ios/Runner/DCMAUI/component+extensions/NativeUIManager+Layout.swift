@@ -252,6 +252,77 @@ struct LayoutConfig {
         default: return nil
         }
     }
+
+    // Add this method to LayoutConfig struct
+    func toJson() -> [String: Any] {
+        var json: [String: Any] = [:]
+        
+        // Width
+        if width.unit != .undefined {
+            json["width"] = ["value": width.value, "unit": width.unit == .percent ? "percent" : "point"]
+        }
+        
+        // Height
+        if height.unit != .undefined {
+            json["height"] = ["value": height.value, "unit": height.unit == .percent ? "percent" : "point"]
+        }
+        
+        // Minimum dimensions
+        if let minWidth = minWidth {
+            json["minWidth"] = ["value": minWidth.value, "unit": minWidth.unit == .percent ? "percent" : "point"]
+        }
+        if let minHeight = minHeight {
+            json["minHeight"] = ["value": minHeight.value, "unit": minHeight.unit == .percent ? "percent" : "point"]
+        }
+        
+        // Maximum dimensions
+        if let maxWidth = maxWidth {
+            json["maxWidth"] = ["value": maxWidth.value, "unit": maxWidth.unit == .percent ? "percent" : "point"]
+        }
+        if let maxHeight = maxHeight {
+            json["maxHeight"] = ["value": maxHeight.value, "unit": maxHeight.unit == .percent ? "percent" : "point"]
+        }
+        
+        // Flex properties
+        if let flex = flex { json["flex"] = flex }
+        if let flexGrow = flexGrow { json["flexGrow"] = flexGrow }
+        if let flexShrink = flexShrink { json["flexShrink"] = flexShrink }
+        if let flexBasis = flexBasis {
+            json["flexBasis"] = ["value": flexBasis.value, "unit": flexBasis.unit == .percent ? "percent" : "point"]
+        }
+        
+        // Layout properties
+        json["flexDirection"] = flexDirection == .row ? "row" : "column"
+        json["justifyContent"] = justifyContent == .center ? "center" : "flexStart"
+        json["alignItems"] = alignItems == .center ? "center" : "stretch"
+        json["position"] = position == .absolute ? "absolute" : "relative"
+        
+        // Spacing
+        if margin != .zero {
+            json["margin"] = [
+                "top": margin.top,
+                "left": margin.left,
+                "bottom": margin.bottom,
+                "right": margin.right
+            ]
+        }
+        
+        if padding != .zero {
+            json["padding"] = [
+                "top": padding.top,
+                "left": padding.left,
+                "bottom": padding.bottom,
+                "right": padding.right
+            ]
+        }
+        
+        // Border
+        if let border = border {
+            json["border"] = border
+        }
+        
+        return json
+    }
 }
 
 @available(iOS 13.0, *)
@@ -275,49 +346,56 @@ extension NativeUIManager {
     }
     
     internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-        // 1. Get or create yoga node
-        guard let node = getYogaNode(for: view) else { return }
         view.yoga.isEnabled = true
         
-        // 2. Configure parent
-        if let parentView = view.superview {
-            guard let parentNode = getYogaNode(for: parentView) else { return }
-            parentView.yoga.isEnabled = true
-            
-            // Parent dimensions for percentage calculations - convert CGFloat to Float
-            parentView.yoga.width = YGValue(value: Float(parentView.bounds.width), unit: .point)
-            parentView.yoga.height = YGValue(value: Float(parentView.bounds.height), unit: .point)
-            
-            // Attach child to parent node
-            YGNodeInsertChild(parentNode, node, UInt32(parentView.subviews.firstIndex(of: view) ?? 0))
-        }
-
-        // 3. Configure node
+        // Important: Set initial frame to parent bounds or screen size
+        let screenSize = UIScreen.main.bounds.size
+        let parentSize = view.superview?.bounds.size ?? screenSize
+        view.frame = CGRect(origin: .zero, size: parentSize)
+        
         view.configureLayout { layout in
-            // Ensure root level views get proper screen dimensions
-            let screenSize = UIScreen.main.bounds.size
-            let parentSize = view.superview?.bounds.size ?? screenSize
-            
-            // Handle percentage-based width
+            // Handle percentage dimensions
             if config.width.unit == .percent {
                 let percentValue = config.width.value
-                let actualWidth = (parentSize.width * CGFloat(percentValue)) / 100.0
+                let actualWidth = parentSize.width * (CGFloat(percentValue) / 100.0)
                 layout.width = YGValue(value: Float(actualWidth), unit: .point)
-                print("Converting \(percentValue)% width to points: \(actualWidth)")
+                print("Setting width: \(actualWidth)pt from \(percentValue)%")
             } else {
                 layout.width = config.width
             }
             
-            // Handle percentage-based height
             if config.height.unit == .percent {
                 let percentValue = config.height.value
-                let actualHeight = (parentSize.height * CGFloat(percentValue)) / 100.0
+                let actualHeight = parentSize.height * (CGFloat(percentValue) / 100.0)
                 layout.height = YGValue(value: Float(actualHeight), unit: .point)
-                print("Converting \(percentValue)% height to points: \(actualHeight)")
+                print("Setting height: \(actualHeight)pt from \(percentValue)%")
             } else {
                 layout.height = config.height
             }
-
+            
+            // Handle absolute positioning
+            if config.position == .absolute {
+                layout.position = .absolute
+                
+                // Convert position values to points if needed
+                if let left = config.left {
+                    layout.left = (left.unit == .percent) ? 
+                        YGValue(value: Float(parentSize.width * CGFloat(left.value) / 100.0), unit: .point) : left
+                }
+                if let right = config.right {
+                    layout.right = (right.unit == .percent) ?
+                        YGValue(value: Float(parentSize.width * CGFloat(right.value) / 100.0), unit: .point) : right
+                }
+                if let top = config.top {
+                    layout.top = (top.unit == .percent) ?
+                        YGValue(value: Float(parentSize.height * CGFloat(top.value) / 100.0), unit: .point) : top
+                }
+                if let bottom = config.bottom {
+                    layout.bottom = (bottom.unit == .percent) ?
+                        YGValue(value: Float(parentSize.height * CGFloat(bottom.value) / 100.0), unit: .point) : bottom
+                }
+            }
+            
             // 1. Dimensions
             if let minWidth = config.minWidth { layout.minWidth = minWidth }
             if let minHeight = config.minHeight { layout.minHeight = minHeight }
@@ -381,18 +459,11 @@ extension NativeUIManager {
             }
         }
 
-        // 4. Calculate layout from root
-        if let rootView = getRootView(for: view) {
-            rootView.yoga.applyLayout(preservingOrigin: true)
-            print("Applied layout to root view: \(rootView.bounds)")
-        }
-        
-        // 5. Persist layout
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+        // Force layout calculation
+        view.yoga.applyLayout(preservingOrigin: true)
         
         // Debug
-        print("Layout applied to \(view) - Frame: \(view.frame)")
+        print("Applied layout to \(String(describing: view.self)) - Frame: \(view.frame)")
     }
     
     private func getRootView(for view: UIView) -> UIView? {

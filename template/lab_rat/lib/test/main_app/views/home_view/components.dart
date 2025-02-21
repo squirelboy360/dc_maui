@@ -95,15 +95,19 @@ abstract class HomeViewComponents {
   // Floating action button
   final fab = bridge.createView(
     ViewType.button,
+    // events: {
+    //   NativeEventType.onPress: (_) => print("FAB clicked!"),
+    // },
     layout: LayoutConfig(
+      margin: EdgeInsets.only(right: 16),
       position: YGPositionType.absolute,
-      width: LayoutConfig.points(56),
-      height: LayoutConfig.points(56),
-      right: LayoutConfig.points(16),
+      width: LayoutConfig.points(100),
+      height: LayoutConfig.points(100),
+      left: LayoutConfig.points(16),
       bottom: LayoutConfig.points(16),
     ),
     style: ViewStyle(
-      backgroundColor: Colors.blue[600],
+      backgroundColor: Colors.pink[600],
       cornerRadius: 28,
       textStyle: TextStyle(
         text: "+",
@@ -117,6 +121,22 @@ abstract class HomeViewComponents {
           radius: 5,
         ),
       ],
+    ),
+  );
+
+
+  final title = bridge.createView(
+    ViewType.label,
+    layout: LayoutConfig(
+      margin: EdgeInsets.only(bottom: 16),
+    ),
+    style: ViewStyle(
+      backgroundColor: Colors.green,
+      textStyle: TextStyle(
+        text: "Home View",
+        fontSize: 24,
+        color: Colors.black,
+      ),
     ),
   );
 }
