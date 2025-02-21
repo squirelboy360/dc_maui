@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 typedef EventCallback = void Function(String type, dynamic data);
 
 class Core {
-  static const MethodChannel _channel = MethodChannel('dc_maui');
+  static const MethodChannel _channel = MethodChannel('com.dcmaui.framework'); // Match iOS channel name
   static final Map<String, EventCallback> _eventCallbacks = {};
 
   static Future<void> initialize() async {

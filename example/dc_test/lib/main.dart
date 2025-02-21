@@ -9,78 +9,85 @@ import 'framework/bridge/types/view_types.dart';
 final _logger = Logger('GridExample');
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // Move this up
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen(
       (record) => debugPrint('${record.level.name}: ${record.message}'));
 
-  runApp(const SizedBox());
   startApp();
 }
 
 Future<void> startApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Core.initialize();
+  try {
+    await Core.initialize();
+    final rootInfo = await Core.getRootView();
+    if (rootInfo == null) {
+      debugPrint('Failed to get root view');
+      return;
+    }
 
-  final rootInfo = await Core.getRootView();
-  if (rootInfo == null) return;
-  final rootId = rootInfo['viewId'] as String;
+    final rootId = rootInfo['viewId'] as String;
 
-  final mainContainer = View(
-    style: ViewStyle(
-      backgroundColor: 0xFFFAFAFA,
-    ),
-    layout: YogaLayout(
-      flexDirection: YogaFlexDirection.column,
-      padding: EdgeValues(all: YogaValue.point(16)), // Use static constructors
-      flexWrap: YogaWrap.wrap,
-      justifyContent: YogaJustify.spaceEvenly,
-      alignItems: YogaAlign.center,
-      width: YogaValue.percent(100), // Use static constructors
-      height: YogaValue.percent(100),
-    ),
-  );
-
-  final mainId = await mainContainer.create();
-  if (mainId == null) return;
-  await Core.attachView(rootId, mainId);
-
-  final colors = [
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFF7986CB
-  ];
-
-  for (var color in colors) {
-    final gridItem = View(
+    final mainContainer = View(
       style: ViewStyle(
-        backgroundColor: color,
-        cornerRadius: 8,
-        shadow: ViewShadow(
-          color: Color(0xFF000000),
-          opacity: 0.2,
-          offset: Offset(0, 4),
-          radius: 8,
-        ),
+        backgroundColor: 0xFFFAFAFA,
       ),
       layout: YogaLayout(
-        width: YogaValue(100, YogaUnit.point),
-        height: YogaValue(100, YogaUnit.point),
-        margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+        flexDirection: YogaFlexDirection.column,
+        padding:
+            EdgeValues(all: YogaValue.point(16)), // Use static constructors
+        flexWrap: YogaWrap.wrap,
+        justifyContent: YogaJustify.spaceEvenly,
+        alignItems: YogaAlign.center,
+        width: YogaValue.percent(100), // Use static constructors
+        height: YogaValue.percent(100),
       ),
     );
 
-    final itemId = await gridItem.create(
-      onEvent: (type, data) {
-        _logger.info('Grid item event: $type, data: $data');
-      },
-    );
+    final mainId = await mainContainer.create();
+    if (mainId == null) return;
+    await Core.attachView(rootId, mainId);
 
-    if (itemId == null) continue;
-    await Core.attachView(mainId, itemId);
+    final colors = [
+      0xFFE57373,
+      0xFF81C784,
+      0xFF64B5F6,
+      0xFFFFB74D,
+      0xFFBA68C8,
+      0xFF4DB6AC,
+      0xFFFFD54F,
+      0xFF7986CB
+    ];
+
+    for (var color in colors) {
+      final gridItem = View(
+        style: ViewStyle(
+          backgroundColor: color,
+          cornerRadius: 8,
+          shadow: ViewShadow(
+            color: Color(0xFF000000),
+            opacity: 0.2,
+            offset: Offset(0, 4),
+            radius: 8,
+          ),
+        ),
+        layout: YogaLayout(
+          width: YogaValue(100, YogaUnit.point),
+          height: YogaValue(100, YogaUnit.point),
+          margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+        ),
+      );
+
+      final itemId = await gridItem.create(
+        onEvent: (type, data) {
+          _logger.info('Grid item event: $type, data: $data');
+        },
+      );
+
+      if (itemId == null) continue;
+      await Core.attachView(mainId, itemId);
+    }
+  } catch (e) {
+    debugPrint('Error in startApp: $e');
   }
 }
