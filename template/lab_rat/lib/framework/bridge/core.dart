@@ -7,19 +7,6 @@ import '../layout/layout_config.dart';
 import '../core/types/layout/yoga_types.dart'; // Add this import
 import '../core/types/view/view_types.dart';
 
-// Add these enums
-enum FlexDirection { row, column }
-
-enum FlexAlignment {
-  start,
-  center,
-  end,
-  spaceBetween,
-  spaceAround,
-  spaceEvenly
-}
-
-// Update Color extension to use correct integer conversion
 extension ColorExtension on Color {
   String toHexString() {
     final r = red.round().toRadixString(16).padLeft(2, '0');
