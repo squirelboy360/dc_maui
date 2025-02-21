@@ -1,3 +1,34 @@
+/*
+ BSD 3-Clause License
+
+Copyright (c) 2025, Tahiru Agbanwa
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 import UIKit
 import Flutter
 import YogaKit
@@ -76,7 +107,8 @@ class NativeUIManager: NSObject, FlutterPlugin {
         }
         
         // Handle events if provided in properties
-        if let events = args["properties"]?["events"] as? [String: Any] {
+        if let properties = args["properties"] as? [String: Any],
+           let events = properties["events"] as? [String: Any] {
             view.setupEvents(events, channel: methodChannel)
         }
         
@@ -163,24 +195,25 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
     
     private func copyComponent(_ originalView: DCView, withNewId newId: String) -> DCView? {
-        // Get original properties
         let properties = getViewProperties(originalView)
         
-        // Create new component of same type
-        let type = ViewType(rawValue: String(originalView.viewId.split(separator: "-")[0]))!
+        // Safe dictionary access
+        let viewTypeString = originalView.viewId.split(separator: "-").first.map(String.init) ?? ""
+        guard let type = ViewType(rawValue: viewTypeString) else { return nil }
+        
         let newView = createComponent(ofType: type, withId: newId, properties: properties)
         
-        // Copy layout and style
-        if let layout = originalView.yoga.toJSON() {
-            newView.applyStyle(layout)
+        // Copy yoga layout properties
+        if let yogaConfig = properties["layout"] as? [String: Any] {
+            newView.yoga.applyFlexbox(yogaConfig)
+            newView.yoga.applySpacing(yogaConfig)
         }
         
-        // Copy state if component supports it
         newView.handleStateChange(properties)
         
-        // Copy events
         if let channel = self.methodChannel {
-            newView.setupEvents(properties["events"] as? [String: Any] ?? [:], channel: channel)
+            let events = properties["events"] as? [String: Any] ?? [:]
+            newView.setupEvents(events, channel: channel)
         }
         
         return newView
@@ -189,21 +222,20 @@ class NativeUIManager: NSObject, FlutterPlugin {
     private func getViewProperties(_ view: DCView) -> [String: Any] {
         var properties: [String: Any] = [:]
         
-        // Capture basic properties
-        if let text = (view as? DCText)?.text {
-            properties["text"] = text
+        if let textView = view as? DCText {
+            properties["text"] = textView.getText()
         }
         
-        if let image = (view as? DCImage)?.imageView.image {
-            properties["image"] = image
+        if let imageView = view as? DCImage {
+            if let image = imageView.getImage() {
+                properties["image"] = image
+            }
         }
         
-        // Capture style properties
+        // Add other properties as needed
         if let backgroundColor = view.backgroundColor {
-            properties["backgroundColor"] = backgroundColor
+            properties["backgroundColor"] = backgroundColor.toARGB32()
         }
-        
-        // Add other properties as needed...
         
         return properties
     }
@@ -244,30 +276,38 @@ class NativeUIManager: NSObject, FlutterPlugin {
             "height": rootView.frame.height
         ])
     }
+    
+    private func setupRootView() {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            window = UIWindow(frame: windowScene.coordinateSpace.bounds)
+            window?.windowScene = windowScene
+            
+            let rootView = DCView(viewId: "root")
+            rootView.yoga.isEnabled = true
+            rootView.yoga.flexDirection = .column
+            
+            rootViewId = rootView.viewId
+            views[rootViewId!] = rootView
+            childViews[rootViewId!] = []
+            
+            let rootVC = UIViewController()
+            rootVC.view.addSubview(rootView)
+            
+            window?.rootViewController = rootVC
+            window?.makeKeyAndVisible()
+        }
+    }
 }
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
     func cleanup() {
-        // Clear all views
-        views.values.forEach { view in
-            view.removeFromSuperview()
-        }
+        views.values.forEach { $0.removeFromSuperview() }
         views.removeAll()
         childViews.removeAll()
-        
-        // Clear root
         rootViewId = nil
-        
-        // Release window if needed
         window = nil
-        
-        // Clear method channel
         methodChannel = nil
-    }
-    
-    deinit {
-        cleanup()
     }
 }
 

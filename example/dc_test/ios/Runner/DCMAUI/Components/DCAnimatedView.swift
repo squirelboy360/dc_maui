@@ -74,9 +74,16 @@ class DCAnimatedView: DCView {
         
         let duration = config["duration"] as? Double ?? 0.3
         let delay = config["delay"] as? Double ?? 0
-        let curve = AnimationCurve(rawValue: config["curve"] as? String ?? "easeInOut")?.uiCurve ?? .easeInOut
+        let options: UIView.AnimationOptions = {
+            switch config["curve"] as? String {
+            case "linear": return .curveLinear
+            case "easeIn": return .curveEaseIn
+            case "easeOut": return .curveEaseOut
+            case "easeInOut", _: return .curveEaseInOut
+            }
+        }()
         
-        currentAnimation = UIViewPropertyAnimator(duration: duration, curve: curve) { [weak self] in
+        currentAnimation = UIViewPropertyAnimator(duration: duration, curve: .easeInOut) { [weak self] in
             guard let self = self else { return }
             
             if let transform = config["transform"] as? [String: Any] {
@@ -165,21 +172,5 @@ class DCAnimatedView: DCView {
         }
         
         self.transform = transformations
-    }
-}
-
-private enum AnimationCurve: String {
-    case linear
-    case easeIn
-    case easeOut
-    case easeInOut
-    
-    var uiCurve: UIView.AnimationCurve {
-        switch self {
-        case .linear: return .linear
-        case .easeIn: return .easeIn
-        case .easeOut: return .easeOut
-        case .easeInOut: return .easeInOut
-        }
     }
 }
