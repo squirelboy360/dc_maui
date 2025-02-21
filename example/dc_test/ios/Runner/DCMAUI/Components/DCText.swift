@@ -1,4 +1,5 @@
 import UIKit
+import YogaKit
 
 class DCText: DCView {
     private let label = UILabel()
@@ -20,10 +21,10 @@ class DCText: DCView {
         
         // Make label fill parent
         label.yoga.position = .absolute
-        label.yoga.left = YGValue(value: 0, unit: .point)
-        label.yoga.top = YGValue(value: 0, unit: .point)
-        label.yoga.right = YGValue(value: 0, unit: .point)
-        label.yoga.bottom = YGValue(value: 0, unit: .point)
+        label.yoga.left = YGValue.zero
+        label.yoga.top = YGValue.zero
+        label.yoga.right = YGValue.zero
+        label.yoga.bottom = YGValue.zero
     }
     
     override func handleStateChange(_ newState: [String: Any]) {

@@ -7,15 +7,7 @@ class DCTouchable: DCView {
     
     override func setupDefaults() {
         super.setupDefaults()
-        
         isUserInteractionEnabled = true
-        
-        // Add gesture recognizers
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
-        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-        
-        addGestureRecognizer(tapGesture)
-        addGestureRecognizer(longPressGesture)
     }
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
@@ -30,6 +22,23 @@ class DCTouchable: DCView {
             let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
             addGestureRecognizer(longPress)
         }
+    }
+    
+    @objc private func handleTap() {
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onPress",
+            "timestamp": Date().timeIntervalSince1970
+        ])
+    }
+    
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onLongPress",
+            "timestamp": Date().timeIntervalSince1970
+        ])
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -48,33 +57,6 @@ class DCTouchable: DCView {
         super.touchesCancelled(touches, with: event)
         animate(to: defaultOpacity)
         eventHandlers["onPressOut"]?()
-    }
-    
-    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-        eventHandlers["onPress"]?()
-    }
-    
-    @objc private func handleTap() {
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPress",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-    }
-    
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        if gesture.state == .began {
-            eventHandlers["onLongPress"]?()
-        }
-    }
-    
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        guard gesture.state == .began else { return }
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onLongPress",
-            "timestamp": Date().timeIntervalSince1970
-        ])
     }
     
     private func animate(to opacity: CGFloat) {

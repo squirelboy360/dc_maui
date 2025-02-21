@@ -1,4 +1,5 @@
 import UIKit
+import YogaKit
 
 /**
  DCButton: Native button component
@@ -62,10 +63,10 @@ class DCButton: DCView {
         
         // Fill parent
         button.yoga.position = .absolute
-        button.yoga.left = .zero
-        button.yoga.top = .zero
-        button.yoga.right = .zero
-        button.yoga.bottom = .zero
+        button.yoga.left = YGValue.zero
+        button.yoga.top = YGValue.zero
+        button.yoga.right = YGValue.zero
+        button.yoga.bottom = YGValue.zero
     }
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
