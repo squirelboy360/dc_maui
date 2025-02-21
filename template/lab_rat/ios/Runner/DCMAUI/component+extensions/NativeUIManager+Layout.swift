@@ -1,5 +1,18 @@
 import UIKit
-import YogaKit  
+import YogaKit
+
+// Add these extensions right after imports
+private extension CGFloat {
+    var toYGFloat: Float {
+        return Float(self)
+    }
+}
+
+private extension Float {
+    var toCGFloat: CGFloat {
+        return CGFloat(self)
+    }
+}
 
 // YGValue helpers
 extension YGValue {
@@ -11,7 +24,7 @@ extension YGValue {
     }
     
     static func percent(_ value: Float) -> YGValue {
-        YGValue(value: value, unit: .percent) 
+        YGValue(value: value, unit: .percent)
     }
 }
 
@@ -21,6 +34,7 @@ enum LayoutType: String {
     case relative
 }
 
+// Step 1: Keep the property as CGFloat
 struct LayoutConfig {
     var width: YGValue = YGValue(value: Float.nan, unit: .auto)
     var height: YGValue = YGValue(value: Float.nan, unit: .auto)
@@ -44,8 +58,9 @@ struct LayoutConfig {
     var right: YGValue?
     var bottom: YGValue?
     var display: YGDisplay?
-    var border: [String: Float]?
+    var border: [String: CGFloat]?  // Changed from Float to CGFloat since border properties expect CGFloat
 
+    // Step 2: Update the initialization
     init(from dict: [String: Any]) {
         print("Initializing LayoutConfig with: \(dict)")
         
@@ -159,19 +174,19 @@ struct LayoutConfig {
         // Parse margins and padding
         if let margins = dict["margin"] as? [String: Double] {
             margin = UIEdgeInsets(
-                top: margins["top"] ?? 0,
-                left: margins["left"] ?? 0,
-                bottom: margins["bottom"] ?? 0,
-                right: margins["right"] ?? 0
+                top: CGFloat(margins["top"] ?? 0),
+                left: CGFloat(margins["left"] ?? 0),
+                bottom: CGFloat(margins["bottom"] ?? 0),
+                right: CGFloat(margins["right"] ?? 0)
             )
         }
         
         if let paddings = dict["padding"] as? [String: Double] {
             padding = UIEdgeInsets(
-                top: paddings["top"] ?? 0,
-                left: paddings["left"] ?? 0,
-                bottom: paddings["bottom"] ?? 0,
-                right: paddings["right"] ?? 0
+                top: CGFloat(paddings["top"] ?? 0),
+                left: CGFloat(paddings["left"] ?? 0),
+                bottom: CGFloat(paddings["bottom"] ?? 0),
+                right: CGFloat(paddings["right"] ?? 0)
             )
         }
 
@@ -205,8 +220,9 @@ struct LayoutConfig {
         if let flexBasisDict = dict["flexBasis"] as? [String: Any] {
             flexBasis = parseYGValue(from: flexBasisDict)
         }
+        // Convert border values directly to CGFloat
         if let borderDict = dict["border"] as? [String: Double] {
-            border = borderDict.mapValues { Float($0) }
+            border = borderDict.mapValues { CGFloat($0) }  // Convert to CGFloat during initialization
         }
     }
     
@@ -268,7 +284,7 @@ extension NativeUIManager {
             guard let parentNode = getYogaNode(for: parentView) else { return }
             parentView.yoga.isEnabled = true
             
-            // Parent dimensions for percentage calculations
+            // Parent dimensions for percentage calculations - convert CGFloat to Float
             parentView.yoga.width = YGValue(value: Float(parentView.bounds.width), unit: .point)
             parentView.yoga.height = YGValue(value: Float(parentView.bounds.height), unit: .point)
             
@@ -278,31 +294,97 @@ extension NativeUIManager {
 
         // 3. Configure node
         view.configureLayout { layout in
-            // Position type 
-            layout.position = config.position
+            // Ensure root level views get proper screen dimensions
+            let screenSize = UIScreen.main.bounds.size
+            let parentSize = view.superview?.bounds.size ?? screenSize
             
-            // Dimensions with percentage handling
-            layout.width = config.width
+            // Handle percentage-based width
             if config.width.unit == .percent {
-                if let parentView = view.superview {
-                    layout.maxWidth = YGValue(value: Float(parentView.bounds.width), unit: .point)
-                }
+                let percentValue = config.width.value
+                let actualWidth = (parentSize.width * CGFloat(percentValue)) / 100.0
+                layout.width = YGValue(value: Float(actualWidth), unit: .point)
+                print("Converting \(percentValue)% width to points: \(actualWidth)")
+            } else {
+                layout.width = config.width
             }
             
-            layout.height = config.height
+            // Handle percentage-based height
             if config.height.unit == .percent {
-                if let parentView = view.superview {
-                    layout.maxHeight = YGValue(value: Float(parentView.bounds.height), unit: .point)  
+                let percentValue = config.height.value
+                let actualHeight = (parentSize.height * CGFloat(percentValue)) / 100.0
+                layout.height = YGValue(value: Float(actualHeight), unit: .point)
+                print("Converting \(percentValue)% height to points: \(actualHeight)")
+            } else {
+                layout.height = config.height
+            }
+
+            // 1. Dimensions
+            if let minWidth = config.minWidth { layout.minWidth = minWidth }
+            if let minHeight = config.minHeight { layout.minHeight = minHeight }
+            if let maxWidth = config.maxWidth { layout.maxWidth = maxWidth }
+            if let maxHeight = config.maxHeight { layout.maxHeight = maxHeight }
+            
+            // 2. Position & Display
+            layout.position = config.position
+            if let display = config.display { layout.display = display }
+            
+            // 3. Flex Properties
+            layout.flexDirection = config.flexDirection
+            layout.justifyContent = config.justifyContent
+            layout.alignItems = config.alignItems
+            layout.alignSelf = config.alignSelf
+            if let flex = config.flex { layout.flex = CGFloat(flex) }
+            if let flexGrow = config.flexGrow { layout.flexGrow = CGFloat(flexGrow) }
+            if let flexShrink = config.flexShrink { layout.flexShrink = CGFloat(flexShrink) }
+            if let flexBasis = config.flexBasis { layout.flexBasis = flexBasis }
+            
+            // 4. Spacing (Margin, Padding, Border)
+            // Margins
+            layout.marginTop = YGValue(value: config.margin.top.toYGFloat, unit: .point)
+            layout.marginLeft = YGValue(value: config.margin.left.toYGFloat, unit: .point)
+            layout.marginBottom = YGValue(value: config.margin.bottom.toYGFloat, unit: .point)
+            layout.marginRight = YGValue(value: config.margin.right.toYGFloat, unit: .point)
+            
+            // Padding
+            layout.paddingTop = YGValue(value: config.padding.top.toYGFloat, unit: .point)
+            layout.paddingLeft = YGValue(value: config.padding.left.toYGFloat, unit: .point)
+            layout.paddingBottom = YGValue(value: config.padding.bottom.toYGFloat, unit: .point)
+            layout.paddingRight = YGValue(value: config.padding.right.toYGFloat, unit: .point)
+            
+            // Border handling - values are already CGFloat
+            if let border = config.border {
+                for (edge, value) in border {
+                    let cgValue = value  // Already CGFloat, no conversion needed
+                    switch edge {
+                    case "left": layout.borderLeftWidth = cgValue
+                    case "right": layout.borderRightWidth = cgValue
+                    case "top": layout.borderTopWidth = cgValue
+                    case "bottom": layout.borderBottomWidth = cgValue
+                    case "all": layout.borderWidth = cgValue
+                    default: break
+                    }
                 }
             }
             
-            // Rest of the layout configuration remains the same
-            // ...existing code...
+            // 5. Edge Position Properties
+            if let left = config.left { layout.left = left }
+            if let right = config.right { layout.right = right }
+            if let top = config.top { layout.top = top }
+            if let bottom = config.bottom { layout.bottom = bottom }
+            
+            // Update position settings to work with percentages
+            if let parentView = view.superview {
+                if config.position == .absolute {
+                    layout.position = .absolute
+                    view.frame = CGRect(origin: .zero, size: parentView.bounds.size)
+                }
+            }
         }
-        
+
         // 4. Calculate layout from root
         if let rootView = getRootView(for: view) {
             rootView.yoga.applyLayout(preservingOrigin: true)
+            print("Applied layout to root view: \(rootView.bounds)")
         }
         
         // 5. Persist layout
