@@ -1,7 +1,7 @@
 part of '../../imports.dart';
 
 abstract class HomeViewComponents {
-  // Root container with explicit dimensions
+  // Root view with flex column layout
   final rootView = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
@@ -9,137 +9,114 @@ abstract class HomeViewComponents {
       height: LayoutConfig.percent(100),
       position: YGPositionType.relative,
       flexDirection: YGFlexDirection.column,
+      padding: EdgeInsets.all(16),
     ),
-    style: ViewStyle(backgroundColor: Colors.amber),
+    style: ViewStyle(backgroundColor: Colors.grey[100]),
   );
 
-  // Fixed size app bar with absolute positioning
-  final appBar = bridge.createView(
+  // Header section with absolute positioning
+  final header = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
-      position: YGPositionType.relative,
-      width: LayoutConfig.percent(100), // Fixed width
-      height: LayoutConfig.points(80), // Fixed height
-      left: LayoutConfig.points(16), // Right padding
-      top: LayoutConfig.points(40), // Top padding
-      display: YGDisplay.flex, // Important!
-      flexDirection: YGFlexDirection.row, // For label alignment
-      alignItems: YGAlign.center, // Center children vertically
-      justifyContent: YGJustify.center, // Center children horizontally
+      position: YGPositionType.absolute,
+      width: LayoutConfig.percent(100),
+      height: LayoutConfig.points(100),
+      left: LayoutConfig.points(0),
+      top: LayoutConfig.points(0),
+      flexDirection: YGFlexDirection.row,
+      justifyContent: YGJustify.spaceBetween,
+      alignItems: YGAlign.center,
+      padding: EdgeInsets.symmetric(horizontal: 16),
     ),
     style: ViewStyle(
-      backgroundColor: Colors.cyan,
+      backgroundColor: Colors.blue,
+      shadows: [
+        ShadowStyle(
+          color: Colors.black.withOpacity(0.1),
+          offset: Offset(0, 4),
+          radius: 8,
+        ),
+      ],
+    ),
+  );
+
+  // Main content area with flex layout
+  final content = bridge.createView(
+    ViewType.view,
+    layout: LayoutConfig(
+      width: LayoutConfig.percent(100),
+      margin: EdgeInsets.only(top: 120), // Account for header
+      flex: 1,
+      flexDirection: YGFlexDirection.row,
+      justifyContent: YGJustify.spaceBetween,
+      alignItems: YGAlign.stretch,
+    ),
+    style: ViewStyle(backgroundColor: Colors.white),
+  );
+
+  // Left sidebar
+  final sidebar = bridge.createView(
+    ViewType.view,
+    layout: LayoutConfig(
+      width: LayoutConfig.points(200),
+      height: LayoutConfig.percent(100),
+      padding: EdgeInsets.all(16),
+      flexDirection: YGFlexDirection.column,
+      justifyContent: YGJustify.spaceBetween,
+    ),
+    style: ViewStyle(
+      backgroundColor: Colors.grey[200],
       cornerRadius: 8,
     ),
   );
 
-  // Title that fills appBar
-  final appBarTitle = bridge.createView(
-    ViewType.label,
+  // Main content scrollable area
+  final mainArea = bridge.createView(
+    ViewType.scrollable,
     layout: LayoutConfig(
-     flex: 1,
-      alignSelf: YGAlign.center, // Center in parent
-      margin: EdgeInsets.all(8), // Add some padding
-    ),
-    style: ViewStyle(
-      backgroundColor: Colors.transparent,
-      textStyle: TextStyle(
-        text: "Title",
-        color: Colors.white,
-        fontSize: 16,
-      ),
-    ),
-  );
-
-  final bgShit = bridge.createView(
-    ViewType.view,
-    layout: LayoutConfig(
-        width: LayoutConfig.percent(100),
-        height: LayoutConfig.percent(100),
-        // left: LayoutConfig.points(10),
-        // position: YGPositionType.relative,
-        margin: EdgeInsets.all(10),
-
-        flexDirection: YGFlexDirection.column,
-        justifyContent: YGJustify.center,
-        alignItems: YGAlign.center),
-    style: ViewStyle(
-      backgroundColor: Colors.black,
-    ),
-  );
-
-  // List items
-  final itemsList = bridge.createView(
-    ViewType.listView,
-    layout: LayoutConfig(
-      width: LayoutConfig.percent(100),
-      height: LayoutConfig.percent(100),
       flex: 1,
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      position: YGPositionType.relative, // Explicitly set relative positioning
-      flexDirection: YGFlexDirection.column, // Ensure vertical layout
+      margin: EdgeInsets.only(left: 16),
+      padding: EdgeInsets.all(16),
+      flexDirection: YGFlexDirection.column,
     ),
-    items: List.generate(20, (i) => {'id': i, 'title': 'Item ${i + 5}'}),
-    attachedListViewChild: (index, item) => bridge.createView(
-      ViewType.view,
-      layout: LayoutConfig(
-        height: LayoutConfig.points(100),
-        width: LayoutConfig.percent(100),
-        margin: EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(16),
-        flexDirection: YGFlexDirection.row,
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.spaceBetween,
-      ),
-      style: ViewStyle(
-        textStyle: TextStyle(
-          text: item['title'],
-          fontSize: 24,
-          color: Colors.white,
+    style: ViewStyle(
+      backgroundColor: Colors.white,
+      cornerRadius: 8,
+      shadows: [
+        ShadowStyle(
+          color: Colors.black.withOpacity(0.05),
+          offset: Offset(0, 2),
+          radius: 4,
         ),
-        backgroundColor: Colors.black,
-        cornerRadius: 8,
-        shadows: [
-          ShadowStyle(
-            color: Colors.black.withOpacity(0.05),
-            offset: Offset(0, 2),
-            radius: 4,
-          ),
-        ],
-      ),
+      ],
     ),
   );
 
-  // // FAB
-  // final fab = bridge.createView(
-  //   ViewType.button,
-  //   layout: LayoutConfig(
-  //     position: YGPositionType.absolute,
-  //     width: LayoutConfig.points(56),
-  //     height: LayoutConfig.points(56),
-  //     left: LayoutConfig.points(16),
-  //     bottom: LayoutConfig.points(16),
-  //   ),
-  //   style: ViewStyle(
-  //     backgroundColor: Colors.blue[600],
-  //     cornerRadius: 28,
-  //     textStyle: TextStyle(
-  //       text: "+",
-  //       fontSize: 32,
-  //       color: Colors.white,
-  //     ),
-  //     shadows: [
-  //       ShadowStyle(
-  //         color: Colors.black.withOpacity(0.3),
-  //         offset: Offset(0, 3),
-  //         radius: 5,
-  //       ),
-  //     ],
-  //   ),
-  //   events: {
-  //     NativeEventType.onPress: (event) {
-  //       print("FAB pressed!");
-  //     },
-  //   },
-  // );
+  // Floating action button
+  final fab = bridge.createView(
+    ViewType.button,
+    layout: LayoutConfig(
+      position: YGPositionType.absolute,
+      width: LayoutConfig.points(56),
+      height: LayoutConfig.points(56),
+      right: LayoutConfig.points(16),
+      bottom: LayoutConfig.points(16),
+    ),
+    style: ViewStyle(
+      backgroundColor: Colors.blue[600],
+      cornerRadius: 28,
+      textStyle: TextStyle(
+        text: "+",
+        fontSize: 24,
+        color: Colors.white,
+      ),
+      shadows: [
+        ShadowStyle(
+          color: Colors.black.withOpacity(0.3),
+          offset: Offset(0, 3),
+          radius: 5,
+        ),
+      ],
+    ),
+  );
 }

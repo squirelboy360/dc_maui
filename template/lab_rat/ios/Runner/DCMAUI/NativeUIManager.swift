@@ -30,15 +30,28 @@ class NativeUIManager: NSObject, FlutterPlugin {
             window?.windowScene = windowScene
             
             let rootVC = UIViewController()
-            rootVC.view.backgroundColor = .white
             
+            // Create root view with proper Yoga configuration
             let rootView = UIView(frame: rootVC.view.bounds)
-            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             rootView.backgroundColor = .white
             rootView.yoga.isEnabled = true
             rootView.yoga.flexDirection = .column
             
+            // Important: Set absolute dimensions
+            rootView.yoga.width = YGValue(value: Float(UIScreen.main.bounds.width), unit: .point)
+            rootView.yoga.height = YGValue(value: Float(UIScreen.main.bounds.height), unit: .point)
+            rootView.yoga.alignItems = .stretch // Make children stretch by default
+            
             rootVC.view.addSubview(rootView)
+            rootView.translatesAutoresizingMaskIntoConstraints = false
+            
+            // Add constraints to ensure root view fills screen
+            NSLayoutConstraint.activate([
+                rootView.topAnchor.constraint(equalTo: rootVC.view.topAnchor),
+                rootView.leftAnchor.constraint(equalTo: rootVC.view.leftAnchor),
+                rootView.rightAnchor.constraint(equalTo: rootVC.view.rightAnchor),
+                rootView.bottomAnchor.constraint(equalTo: rootVC.view.bottomAnchor)
+            ])
             
             rootViewId = "root-\(UUID().uuidString)"
             views[rootViewId!] = rootView

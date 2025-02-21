@@ -240,7 +240,79 @@ struct LayoutConfig {
 
 @available(iOS 13.0, *)
 extension NativeUIManager {
-    // Add this helper method at the top of the extension
+    private struct YGNodeKey {
+        static var node = "YGNode"
+    }
+    
+    // Remove duplicate yogaNodes property since it's already defined in NativeUIManager
+    
+    // Node management
+    private func getYogaNode(for view: UIView) -> YGNodeRef? {
+        if let existingNode = objc_getAssociatedObject(view, &YGNodeKey.node) as? YGNodeRef {
+            return existingNode
+        }
+        
+        let node = YGNodeNew()
+        objc_setAssociatedObject(view, &YGNodeKey.node, node, .OBJC_ASSOCIATION_RETAIN)
+        yogaNodes[view.hash.description] = node
+        return node
+    }
+    
+    internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
+        // 1. Get or create yoga node
+        guard let node = getYogaNode(for: view) else { return }
+        view.yoga.isEnabled = true
+        
+        // 2. Configure parent
+        if let parentView = view.superview {
+            guard let parentNode = getYogaNode(for: parentView) else { return }
+            parentView.yoga.isEnabled = true
+            
+            // Parent dimensions for percentage calculations
+            parentView.yoga.width = YGValue(value: Float(parentView.bounds.width), unit: .point)
+            parentView.yoga.height = YGValue(value: Float(parentView.bounds.height), unit: .point)
+            
+            // Attach child to parent node
+            YGNodeInsertChild(parentNode, node, UInt32(parentView.subviews.firstIndex(of: view) ?? 0))
+        }
+
+        // 3. Configure node
+        view.configureLayout { layout in
+            // Position type 
+            layout.position = config.position
+            
+            // Dimensions with percentage handling
+            layout.width = config.width
+            if config.width.unit == .percent {
+                if let parentView = view.superview {
+                    layout.maxWidth = YGValue(value: Float(parentView.bounds.width), unit: .point)
+                }
+            }
+            
+            layout.height = config.height
+            if config.height.unit == .percent {
+                if let parentView = view.superview {
+                    layout.maxHeight = YGValue(value: Float(parentView.bounds.height), unit: .point)  
+                }
+            }
+            
+            // Rest of the layout configuration remains the same
+            // ...existing code...
+        }
+        
+        // 4. Calculate layout from root
+        if let rootView = getRootView(for: view) {
+            rootView.yoga.applyLayout(preservingOrigin: true)
+        }
+        
+        // 5. Persist layout
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        // Debug
+        print("Layout applied to \(view) - Frame: \(view.frame)")
+    }
+    
     private func getRootView(for view: UIView) -> UIView? {
         var current = view
         while let parent = current.superview {
@@ -249,150 +321,15 @@ extension NativeUIManager {
             }
             current = parent
         }
-        return view
-    }
-
-    internal func applyYogaLayout(to view: UIView, config: LayoutConfig) {
-    print("Applying layout to view: \(view)")
-    
-    let parentView = view.superview
-    view.yoga.isEnabled = true
-    parentView?.yoga.isEnabled = true
-    
-    // Configure the layout
-    view.configureLayout { layout in
-        layout.isEnabled = true
-        layout.position = config.position
-        
-        // Set dimensions first
-        if config.width.unit != .undefined {
-            layout.width = config.width
-            print("Setting width: \(config.width.value) \(config.width.unit)")
-        }
-        if config.height.unit != .undefined {
-            layout.height = config.height
-            print("Setting height: \(config.height.value) \(config.height.unit)")
-        }
-        
-        // Handle absolute positioning
-        if config.position == .absolute {
-            layout.position = .absolute
-            layout.display = .flex
-            
-            // Set position values
-            if let left = config.left {
-                layout.left = left
-                print("Set left: \(left.value)")
-            }
-            if let right = config.right {
-                layout.right = right
-                print("Set right: \(right.value)")
-            }
-            if let top = config.top {
-                layout.top = top
-                print("Set top: \(top.value)")
-            }
-            if let bottom = config.bottom {
-                layout.bottom = bottom
-                print("Set bottom: \(bottom.value)")
-            }
-        }
-        
-        // Set other layout properties
-        layout.flexDirection = config.flexDirection
-        layout.justifyContent = config.justifyContent
-        layout.alignItems = config.alignItems
-        layout.alignSelf = config.alignSelf
-        
-        if let flex = config.flex {
-            layout.flex = CGFloat(flex)
-        }
-        if let flexGrow = config.flexGrow {
-            layout.flexGrow = CGFloat(flexGrow)
-        }
-        if let flexShrink = config.flexShrink {
-            layout.flexShrink = CGFloat(flexShrink)
-        }
-        if let flexBasis = config.flexBasis {
-            layout.flexBasis = flexBasis
-        }
-        if let display = config.display {
-            layout.display = display
-        }
-        
-        // Set margins
-        if config.margin != .zero {
-            layout.marginLeft = YGValue(value: Float(config.margin.left), unit: .point)
-            layout.marginTop = YGValue(value: Float(config.margin.top), unit: .point)
-            layout.marginRight = YGValue(value: Float(config.margin.right), unit: .point)
-            layout.marginBottom = YGValue(value: Float(config.margin.bottom), unit: .point)
-        }
-        
-        // Set padding
-        if config.padding != .zero {
-            layout.paddingLeft = YGValue(value: Float(config.padding.left), unit: .point)
-            layout.paddingTop = YGValue(value: Float(config.padding.top), unit: .point)
-            layout.paddingRight = YGValue(value: Float(config.padding.right), unit: .point)
-            layout.paddingBottom = YGValue(value: Float(config.padding.bottom), unit: .point)
-        }
-        
-        // Set min/max dimensions
-        if let minWidth = config.minWidth {
-            layout.minWidth = minWidth
-        }
-        if let minHeight = config.minHeight {
-            layout.minHeight = minHeight
-        }
-        if let maxWidth = config.maxWidth {
-            layout.maxWidth = maxWidth
-        }
-        if let maxHeight = config.maxHeight {
-            layout.maxHeight = maxHeight
-        }
-        
-        // Set border
-        if let border = config.border {
-            border.forEach { edge, value in
-                switch edge {
-                case "left": layout.borderLeftWidth = CGFloat(value)
-                case "right": layout.borderRightWidth = CGFloat(value)
-                case "top": layout.borderTopWidth = CGFloat(value)
-                case "bottom": layout.borderBottomWidth = CGFloat(value)
-                default: break
-                }
-            }
-        }
+        return nil
     }
     
-    // Force layout calculation
-    if let rootView = getRootView(for: view) {
-        rootView.yoga.applyLayout(preservingOrigin: true)
-        
-        if config.position == .absolute {
-            parentView?.bringSubviewToFront(view)
-            view.layer.zPosition = 1000
-            
-            // Get current frame values
-            let currentFrame = view.frame
-            
-            // Calculate new frame
-            let x = CGFloat(view.yoga.left.value)
-            let y = CGFloat(view.yoga.top.value)
-            let width = CGFloat(view.yoga.width.value)
-            let height = CGFloat(view.yoga.height.value)
-            
-            // Only update if we have valid values
-            if !x.isNaN && !y.isNaN && !width.isNaN && !height.isNaN {
-                let newFrame = CGRect(x: x, y: y, width: width, height: height)
-                if newFrame != currentFrame {
-                    view.frame = newFrame
-                    print("Updated absolute frame to: \(newFrame)")
-                }
-            }
+    // Clean up nodes when views are removed
+    internal func cleanupYogaNode(for view: UIView) {
+        if let node = objc_getAssociatedObject(view, &YGNodeKey.node) as? YGNodeRef {
+            YGNodeFree(node)
+            objc_setAssociatedObject(view, &YGNodeKey.node, nil, .OBJC_ASSOCIATION_RETAIN)
+            yogaNodes.removeValue(forKey: view.hash.description)
         }
     }
-    
-    view.setNeedsLayout()
-    view.layoutIfNeeded()
-}
 }

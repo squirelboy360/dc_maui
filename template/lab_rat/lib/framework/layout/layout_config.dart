@@ -18,8 +18,8 @@ class LayoutConfig {
   final double? flexGrow;
   final double? flexShrink;
   final YGValue? flexBasis;
-  final EdgeInsets? margin;
-  final EdgeInsets? padding;
+  final EdgeInsets? margin;    // Use EdgeInsets
+  final EdgeInsets? padding;   // Use EdgeInsets
   final Map<YGEdge, double>? border;
   final YGValue? left;   // Add these
   final YGValue? right;  // four edge
@@ -43,8 +43,8 @@ class LayoutConfig {
     this.flexGrow,
     this.flexShrink,
     this.flexBasis,
-    this.margin,
-    this.padding,
+    this.margin,    // Use EdgeInsets
+    this.padding,   // Use EdgeInsets
     this.border,
     this.left,
     this.right,
