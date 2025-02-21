@@ -1,82 +1,84 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
-typedef EventCallback = void Function(String type, Map<String, dynamic> data);
+typedef EventCallback = void Function(String type, dynamic data);
 
 class Core {
-  static const _channel = MethodChannel('com.dcmaui.framework');
+  static const MethodChannel _channel = MethodChannel('dc_maui');
+  static final Map<String, EventCallback> _eventCallbacks = {};
 
-  // Internal state management
-  static final Map<String, EventCallback> _eventHandlers = {};
-
-  static void initialize() {
+  static Future<void> initialize() async {
     _channel.setMethodCallHandler(_handleMethodCall);
   }
 
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
-    if (call.method == 'onComponentEvent') {
-      final args = Map<String, dynamic>.from(call.arguments);
-      final viewId = args['viewId'] as String;
-      final type = args['type'] as String;
-      final data = Map<String, dynamic>.from(args['data'] ?? {});
-
-      _eventHandlers[viewId]?.call(type, data);
+    switch (call.method) {
+      case 'onEvent':
+        final String viewId = call.arguments['viewId'];
+        final callback = _eventCallbacks[viewId];
+        if (callback != null) {
+          callback(
+            call.arguments['type'] as String,
+            call.arguments['data'],
+          );
+        }
+        return null;
+      default:
+        throw MissingPluginException();
     }
   }
 
   static Future<String?> createView({
     required String viewType,
-    Map<String, dynamic>? properties, // Contains style, layout, AND events
+    required Map<String, dynamic> properties,
     EventCallback? onEvent,
   }) async {
     try {
-      final args = {
+      final String? viewId = await _channel.invokeMethod('createView', {
         'viewType': viewType,
-        if (properties != null) 'properties': {
-          ...properties,
-          if (onEvent != null) 'events': {
-            'onEvent': true
-          }
-        },
-      };
-
-      final String? viewId = await _channel.invokeMethod('createView', args);
-
+        'properties': properties,
+      });
+      
       if (viewId != null && onEvent != null) {
-        _eventHandlers[viewId] = onEvent;
+        _eventCallbacks[viewId] = onEvent;
       }
-
+      
       return viewId;
-    } on PlatformException catch (e) {
-      print('Error creating view: ${e.message}');
+    } catch (e) {
+      debugPrint('Error creating view: $e');
       return null;
     }
   }
 
-  static Future<bool> updateView(
-    String viewId, {
-    Map<String, dynamic>? properties, // Changed: properties includes style and layout
-  }) async {
+  static Future<bool> attachView(String parentId, String childId) async {
     try {
-      final args = {
-        'viewId': viewId,
-        if (properties != null) 'properties': properties,
-      };
-
-      await _channel.invokeMethod('updateView', args);
-      return true;
-    } on PlatformException catch (e) {
-      print('Error updating view: ${e.message}');
+      return await _channel.invokeMethod('attachView', {
+        'parentId': parentId,
+        'childId': childId,
+      }) ?? false;
+    } catch (e) {
+      debugPrint('Error attaching view: $e');
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getRootView() async {
+    try {
+      return await _channel.invokeMethod('getRootView');
+    } catch (e) {
+      debugPrint('Error getting root view: $e');
+      return null;
     }
   }
 
   static Future<bool> deleteView(String viewId) async {
     try {
-      await _channel.invokeMethod('deleteView', {'viewId': viewId});
-      _eventHandlers.remove(viewId);
-      return true;
-    } on PlatformException catch (e) {
-      print('Error deleting view: ${e.message}');
+      _eventCallbacks.remove(viewId);
+      return await _channel.invokeMethod('deleteView', {
+        'viewId': viewId,
+      }) ?? false;
+    } catch (e) {
+      debugPrint('Error deleting view: $e');
       return false;
     }
   }

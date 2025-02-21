@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:dc_test/framework/bridge/types/yoga.dart';
-
+// Yoga Enums
 enum YogaUnit {
   point('point'),
   percent('percent'),
@@ -9,6 +8,66 @@ enum YogaUnit {
 
   final String value;
   const YogaUnit(this.value);
+}
+
+enum YogaEdge {
+  left('left'),
+  top('top'),
+  right('right'),
+  bottom('bottom'),
+  start('start'),
+  end('end'),
+  horizontal('horizontal'),
+  vertical('vertical'),
+  all('all');
+
+  final String value;
+  const YogaEdge(this.value);
+}
+
+enum YogaAlign {
+  auto('auto'),
+  flexStart('flex-start'),
+  center('center'),
+  flexEnd('flex-end'),
+  stretch('stretch'),
+  baseline('baseline'),
+  spaceBetween('space-between'),
+  spaceAround('space-around');
+
+  final String value;
+  const YogaAlign(this.value);
+}
+
+enum YogaJustify {
+  flexStart('flex-start'),
+  center('center'),
+  flexEnd('flex-end'),
+  spaceBetween('space-between'),
+  spaceAround('space-around'),
+  spaceEvenly('space-evenly');
+
+  final String value;
+  const YogaJustify(this.value);
+}
+
+enum YogaFlexDirection {
+  row('row'),
+  rowReverse('row-reverse'),
+  column('column'),
+  columnReverse('column-reverse');
+
+  final String value;
+  const YogaFlexDirection(this.value);
+}
+
+enum YogaWrap {
+  noWrap('nowrap'),
+  wrap('wrap'),
+  wrapReverse('wrap-reverse');
+
+  final String value;
+  const YogaWrap(this.value);
 }
 
 enum YogaPosition {
@@ -36,43 +95,48 @@ enum YogaOverflow {
   const YogaOverflow(this.value);
 }
 
+// Yoga Value and Layout Classes
+class YogaValue {
+  final double value;
+  final YogaUnit unit;
+
+  const YogaValue(this.value, this.unit);
+  
+  Map<String, dynamic> toMap() => {
+    'value': value,
+    'unit': unit.value,
+  };
+
+  static YogaValue point(double value) => YogaValue(value, YogaUnit.point);
+  static YogaValue percent(double value) => YogaValue(value, YogaUnit.percent);
+  static YogaValue get auto => YogaValue(0, YogaUnit.auto);
+  static YogaValue get zero => YogaValue(0, YogaUnit.point);
+}
+
 class YogaLayout {
-  // Display and Overflow
   final YogaDisplay? display;
   final YogaOverflow? overflow;
-  
-  // Position
   final YogaPosition? position;
-  final EdgeValues? positionValues;  // top, right, bottom, left
+  final EdgeValues? positionValues;
   final double? zIndex;
-
-  // Dimensions
   final YogaValue? width;
   final YogaValue? height;
   final YogaValue? minWidth;
   final YogaValue? minHeight;
   final YogaValue? maxWidth;
   final YogaValue? maxHeight;
-  
-  // Margins and Padding
   final EdgeValues? margin;
   final EdgeValues? padding;
-  
-  // Flex properties
   final double? flex;
   final double? flexGrow;
   final double? flexShrink;
   final YogaValue? flexBasis;
   final YogaFlexDirection? flexDirection;
   final YogaWrap? flexWrap;
-  
-  // Alignment
   final YogaAlign? alignSelf;
   final YogaAlign? alignItems;
   final YogaAlign? alignContent;
   final YogaJustify? justifyContent;
-
-  // Aspect Ratio
   final double? aspectRatio;
 
   const YogaLayout({
@@ -117,8 +181,8 @@ class YogaLayout {
       if (minHeight != null) 'minHeight': minHeight!.toMap(),
       if (maxWidth != null) 'maxWidth': maxWidth!.toMap(),
       if (maxHeight != null) 'maxHeight': maxHeight!.toMap(),
-      if (margin != null) 'margin': margin!.toMap(),
-      if (padding != null) 'padding': padding!.toMap(),
+      if (margin != null) ...margin!.toMap('margin'),
+      if (padding != null) ...padding!.toMap('padding'),
       if (flex != null) 'flex': flex,
       if (flexGrow != null) 'flexGrow': flexGrow,
       if (flexShrink != null) 'flexShrink': flexShrink,
@@ -132,20 +196,6 @@ class YogaLayout {
       if (aspectRatio != null) 'aspectRatio': aspectRatio,
     };
   }
-}
-
-class YogaValue {
-  final double value;
-  final YogaUnit unit;
-
-  const YogaValue(this.value, this.unit);
-  
-  Map<String, dynamic> toMap() => {
-    'value': value,
-    'unit': unit.value,
-  };
-
-  static YogaValue get zero => YogaValue(0, YogaUnit.point);
 }
 
 class EdgeValues {
