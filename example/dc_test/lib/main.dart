@@ -1,335 +1,336 @@
-import 'package:dc_test/framework/types/events.dart';
-import 'package:dc_test/framework/types/view/view_types.dart';
-import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
-import 'package:logging/logging.dart';
-import 'package:dc_test/framework/types/layout/yoga_types.dart';
-import 'package:dc_test/framework/layout/layout_config.dart';
-import 'package:dc_test/framework/style/view_style.dart';
-import 'package:dc_test/framework/bridge/base.dart';
+// import 'package:dc_test/framework/types/events.dart';
+// import 'package:dc_test/framework/types/view/view_types.dart';
+// import 'package:flutter/material.dart' hide TextStyle, Border, BorderStyle;
+// import 'package:logging/logging.dart';
+// import 'package:dc_test/framework/types/layout/yoga_types.dart';
+// import 'package:dc_test/framework/layout/layout_config.dart';
+// import 'package:dc_test/framework/style/view_style.dart';
+// import 'package:dc_test/framework/bridge/base.dart';
 
-final _logger = Logger('ModernApp');
-final bridge = NativeUIBridge();
+// final _logger = Logger('ModernApp');
+// final bridge = NativeUIBridge();
 
-void main() {
-  Logger.root.level = Level.ALL;
-  Logger.root.onRecord.listen(
-      (record) => debugPrint('${record.level.name}: ${record.message}'));
-  runApp(const SizedBox());
-  startApp();
-}
+// void main() {
+//   Logger.root.level = Level.ALL;
+//   Logger.root.onRecord.listen(
+//       (record) => debugPrint('${record.level.name}: ${record.message}'));
+//   runApp(const SizedBox());
+//   startApp();
+// }
 
-Future<void> startApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  var counter = 0;
+// Future<void> startApp() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   var counter = 0;
 
-  final rootInfo = await bridge.getRootView();
-  if (rootInfo == null) return;
-  final rootId = rootInfo['viewId'] as String;
+//   final rootInfo = await bridge.getRootView();
+//   if (rootInfo == null) return;
+//   final rootId = rootInfo['viewId'] as String;
 
-  // Main container with gradient background
-  final mainContainer = await bridge.createView(ViewType.view);
-  if (mainContainer == null) return;
-  await bridge.attachView(rootId, mainContainer);
+//   // Main container with gradient background
+//   final mainContainer = await bridge.createView(ViewType.view);
+//   if (mainContainer == null) return;
+//   await bridge.attachView(rootId, mainContainer);
 
-  // Configure main layout
-  await bridge.setLayout(
-    mainContainer,
-    LayoutConfig(
-      position: YGPositionType.relative,
-      display: YGDisplay.flex,
-      flexDirection: YGFlexDirection.column,
-      width: YGValue(100, YGUnit.percent),
-      height: YGValue(100, YGUnit.percent),
-      alignItems: YGAlign.center,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-    ),
-  );
+//   // Configure main layout
+//   await bridge.setLayout(
+//     mainContainer,
+//     LayoutConfig(
+//       position: YGPositionType
+//           .relative, // Important: Must be relative for absolute children
+//       display: YGDisplay.flex,
+//       flexDirection: YGFlexDirection.column,
+//       width: YGValue(100, YGUnit.percent),
+//       height: YGValue(100, YGUnit.percent),
+//       alignItems: YGAlign.center,
+//       padding: const EdgeInsets.symmetric(horizontal: 20),
+//     ),
+//   );
 
-  // Apply gradient background
-  await bridge.updateView(
-      mainContainer,
-      ViewStyle(
-          gradient: GradientStyle(
-        colors: [Color(0xFF1A1A1A), Color(0xFF2E3192)],
-        stops: [0.0, 1.0],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      )).toJson());
+//   // Apply gradient background
+//   await bridge.updateView(
+//       mainContainer,
+//       ViewStyle(
+//           gradient: GradientStyle(
+//         colors: [Color(0xFF1A1A1A), Color(0xFF2E3192)],
+//         stops: [0.0, 1.0],
+//         begin: Alignment.topCenter,
+//         end: Alignment.bottomCenter,
+//       )).toJson());
 
-  // Create header section
-  final headerContainer = await bridge.createView(ViewType.view);
-  if (headerContainer == null) return;
-  await bridge.attachView(mainContainer, headerContainer);
+//   // Create header section
+//   final headerContainer = await bridge.createView(ViewType.view);
+//   if (headerContainer == null) return;
+//   await bridge.attachView(mainContainer, headerContainer);
 
-  await bridge.setLayout(
-      headerContainer,
-      LayoutConfig(
-        flexDirection: YGFlexDirection.column,
-        alignItems: YGAlign.center,
-        margin: const EdgeInsets.only(top: 60, bottom: 40),
-      ));
+//   await bridge.setLayout(
+//       headerContainer,
+//       LayoutConfig(
+//         flexDirection: YGFlexDirection.column,
+//         alignItems: YGAlign.center,
+//         margin: const EdgeInsets.only(top: 60, bottom: 40),
+//       ));
 
-  // Title
-  final titleLabel = await bridge.createView(ViewType.label);
-  if (titleLabel == null) return;
-  await bridge.attachView(headerContainer, titleLabel);
+//   // Title
+//   final titleLabel = await bridge.createView(ViewType.label);
+//   if (titleLabel == null) return;
+//   await bridge.attachView(headerContainer, titleLabel);
 
-  await bridge.updateView(
-      titleLabel,
-      ViewStyle(
-          textStyle: TextStyle(
-        text: 'Modern Counter',
-        color: Colors.white,
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-      )).toJson());
+//   await bridge.updateView(
+//       titleLabel,
+//       ViewStyle(
+//           textStyle: TextStyle(
+//         text: 'Modern Counter',
+//         color: Colors.white,
+//         fontSize: 32,
+//         fontWeight: FontWeight.bold,
+//       )).toJson());
 
-  // Subtitle
-  final subtitleLabel = await bridge.createView(ViewType.label);
-  if (subtitleLabel == null) return;
-  await bridge.attachView(headerContainer, subtitleLabel);
+//   // Subtitle
+//   final subtitleLabel = await bridge.createView(ViewType.label);
+//   if (subtitleLabel == null) return;
+//   await bridge.attachView(headerContainer, subtitleLabel);
 
-  await bridge.updateView(
-      subtitleLabel,
-      ViewStyle(
-          textStyle: TextStyle(
-        text: 'Tap buttons to count',
-        color: Colors.white.withValues(alpha: 0.7),
-        fontSize: 16,
-      )).toJson());
+//   await bridge.updateView(
+//       subtitleLabel,
+//       ViewStyle(
+//           textStyle: TextStyle(
+//         text: 'Tap buttons to count',
+//         color: Colors.white.withValues(alpha: 0.7),
+//         fontSize: 16,
+//       )).toJson());
 
-  // Counter card
-  final card = await bridge.createView(ViewType.view);
-  if (card == null) return;
-  await bridge.attachView(mainContainer, card);
+//   // Counter card
+//   final card = await bridge.createView(ViewType.view);
+//   if (card == null) return;
+//   await bridge.attachView(mainContainer, card);
 
-  await bridge.setLayout(
-      card,
-      LayoutConfig(
-        display: YGDisplay.flex,
-        flexDirection: YGFlexDirection.column,
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        width: YGValue(100, YGUnit.percent),
-        height: YGValue(80, YGUnit.percent),
-        // padding: const EdgeInsets.all(32),
-        // margin: const EdgeInsets.symmetric(vertical: 40),
-      ));
+//   await bridge.setLayout(
+//       card,
+//       LayoutConfig(
+//         display: YGDisplay.flex,
+//         flexDirection: YGFlexDirection.column,
+//         alignItems: YGAlign.center,
+//         justifyContent: YGJustify.center,
+//         width: YGValue(100, YGUnit.percent),
+//         height: YGValue(80, YGUnit.percent),
+//         // padding: const EdgeInsets.all(32),
+//         // margin: const EdgeInsets.symmetric(vertical: 40),
+//       ));
 
-  await bridge.updateView(
-      card,
-      ViewStyle(backgroundColor: Colors.white, cornerRadius: 24, shadows: [
-        ShadowStyle(
-          color:
-              Colors.black.withOpacity(0.3), // Keep using withOpacity for now
-          offset: const Offset(0, 15),
-          radius: 30,
-        )
-      ]).toJson());
+//   await bridge.updateView(
+//       card,
+//       ViewStyle(backgroundColor: Colors.white, cornerRadius: 24, shadows: [
+//         ShadowStyle(
+//           color:
+//               Colors.black.withOpacity(0.3), // Keep using withOpacity for now
+//           offset: const Offset(0, 15),
+//           radius: 30,
+//         )
+//       ]).toJson());
 
-  // Counter display
-  final counterDisplay = await bridge.createView(ViewType.view);
-  if (counterDisplay == null) return;
-  await bridge.attachView(card, counterDisplay);
+//   // Counter display
+//   final counterDisplay = await bridge.createView(ViewType.view);
+//   if (counterDisplay == null) return;
+//   await bridge.attachView(card, counterDisplay);
 
-  await bridge.setLayout(
-      counterDisplay,
-      LayoutConfig(
-        width: YGValue(180, YGUnit.point),
-        height: YGValue(180, YGUnit.point),
-        alignItems: YGAlign.center,
-        justifyContent: YGJustify.center,
-        margin: const EdgeInsets.symmetric(vertical: 24),
-      ));
+//   await bridge.setLayout(
+//       counterDisplay,
+//       LayoutConfig(
+//         width: YGValue(180, YGUnit.point),
+//         height: YGValue(180, YGUnit.point),
+//         alignItems: YGAlign.center,
+//         justifyContent: YGJustify.center,
+//         margin: const EdgeInsets.symmetric(vertical: 24),
+//       ));
 
-  await bridge.updateView(
-      counterDisplay,
-      ViewStyle(
-        backgroundColor: Colors.blueAccent,
-        border: BorderStyle(
-            color: Colors.amber, style: BorderType.solid, width: 20),
-        cornerRadius: 90,
-      ).toJson());
+//   await bridge.updateView(
+//       counterDisplay,
+//       ViewStyle(
+//         backgroundColor: Colors.blueAccent,
+//         border: BorderStyle(
+//             color: Colors.amber, style: BorderType.solid, width: 20),
+//         cornerRadius: 90,
+//       ).toJson());
 
-  // Counter label
-  final counterLabel = await bridge.createView(ViewType.label);
-  if (counterLabel == null) return;
-  await bridge.attachView(counterDisplay, counterLabel);
+//   // Counter label
+//   final counterLabel = await bridge.createView(ViewType.label);
+//   if (counterLabel == null) return;
+//   await bridge.attachView(counterDisplay, counterLabel);
 
-  await bridge.updateView(
-      counterLabel,
-      ViewStyle(
-          textStyle: TextStyle(
-        text: '0',
-        color: Color(0xFF2E3192),
-        fontSize: 72,
-        fontWeight: FontWeight.bold,
-      )).toJson());
+//   await bridge.updateView(
+//       counterLabel,
+//       ViewStyle(
+//           textStyle: TextStyle(
+//         text: '0',
+//         color: Color(0xFF2E3192),
+//         fontSize: 72,
+//         fontWeight: FontWeight.bold,
+//       )).toJson());
 
-  // Buttons container
-  final buttonsContainer = await bridge.createView(ViewType.view);
-  if (buttonsContainer == null) return;
-  await bridge.attachView(
-      mainContainer, buttonsContainer); // Changed from card to mainContainer
+//   // Buttons container
+//   final buttonsContainer = await bridge.createView(ViewType.view);
+//   if (buttonsContainer == null) return;
+//   await bridge.attachView(
+//       mainContainer, buttonsContainer); // Changed from card to mainContainer
 
-  await bridge.setLayout(
-      buttonsContainer,
-      LayoutConfig(
-        position: YGPositionType.absolute,
-        flexDirection: YGFlexDirection.column,
-        justifyContent: YGJustify.flexEnd, // Changed to flexEnd
-        alignItems: YGAlign.flexEnd, // Changed to flexEnd
-        right: YGValue(24, YGUnit.point), // Position from right
-        bottom: YGValue(32, YGUnit.point), // Position from bottom
-        width: YGValue(56, YGUnit.point), // Fixed width
-        gap: 8, // Spacing between buttons
-      ));
+//   await bridge.setLayout(
+//       buttonsContainer,
+//       LayoutConfig(
+//         position: YGPositionType.absolute,
+//         flexDirection: YGFlexDirection.column,
+//         right: YGValue(24, YGUnit.point),
+//         bottom: YGValue(32, YGUnit.point),
+//         width: YGValue(56, YGUnit.point),
+//         gap: 8,
+//         // Remove justifyContent and alignItems since they don't affect absolute positioning
+//       ));
 
-  // Replace the old button creation and event handling with new typed version:
-  // Create buttons with their respective colors and widths
-  final decrementButton = await bridge.createButton(
-    text: '-',
-    style: ViewStyle(
-      backgroundColor: Color(0xFFFF3B30),
-      cornerRadius: 28,
-      textStyle: TextStyle(
-        text: '-',
-        color: Colors.white,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
-      shadows: [
-        ShadowStyle(
-          color: Color(0xFFFF3B30).withOpacity(0.3),
-          offset: const Offset(0, 4),
-          radius: 8,
-        )
-      ],
-    ).toJson(),
-    layout: LayoutConfig(
-      width: YGValue.points(56),
-      height: YGValue.points(56),
-      alignItems: YGAlign.center,
-      justifyContent: YGJustify.center,
-    ),
-    events: {
-      ButtonEventType.onClick: () async {
-        counter--;
-        await bridge.updateView(
-          counterLabel,
-          ViewStyle(
-            textStyle: TextStyle(
-              text: counter.toString(),
-              color: Color(0xFF2E3192),
-              fontSize: 72,
-              fontWeight: FontWeight.bold,
-            ),
-          ).toJson(),
-        );
-      },
-    },
-  );
+//   // Replace the old button creation and event handling with new typed version:
+//   // Create buttons with their respective colors and widths
+//   final decrementButton = await bridge.createButton(
+//     text: '-',
+//     style: ViewStyle(
+//       backgroundColor: Color(0xFFFF3B30),
+//       cornerRadius: 28,
+//       textStyle: TextStyle(
+//         text: '-',
+//         color: Colors.white,
+//         fontSize: 24,
+//         fontWeight: FontWeight.bold,
+//       ),
+//       shadows: [
+//         ShadowStyle(
+//           color: Color(0xFFFF3B30).withOpacity(0.3),
+//           offset: const Offset(0, 4),
+//           radius: 8,
+//         )
+//       ],
+//     ).toJson(),
+//     layout: LayoutConfig(
+//       width: YGValue.points(56),
+//       height: YGValue.points(56),
+//       alignItems: YGAlign.center,
+//       justifyContent: YGJustify.center,
+//     ),
+//     events: {
+//       ButtonEventType.onClick: () async {
+//         counter--;
+//         await bridge.updateView(
+//           counterLabel,
+//           ViewStyle(
+//             textStyle: TextStyle(
+//               text: counter.toString(),
+//               color: Color(0xFF2E3192),
+//               fontSize: 72,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ).toJson(),
+//         );
+//       },
+//     },
+//   );
 
-  final resetButton = await bridge.createButton(
-    text: '↺',
-    style: ViewStyle(
-      backgroundColor: Color(0xFF007AFF),
-      cornerRadius: 28,
-      textStyle: TextStyle(
-        // Important: text should be part of textStyle
-        text: '↺',
-        color: Colors.white,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
-      shadows: [
-        ShadowStyle(
-          color: Color(0xFF007AFF).withOpacity(0.3),
-          offset: const Offset(0, 4),
-          radius: 8,
-        )
-      ],
-    ).toJson(),
-    layout: LayoutConfig(
-      width: YGValue.points(56),
-      height: YGValue.points(56),
-      alignItems: YGAlign.center,
-      justifyContent: YGJustify.center,
-    ),
-    events: {
-      ButtonEventType.onClick: () async {
-        counter = 0;
-        await bridge.updateView(
-          counterLabel,
-          ViewStyle(
-            textStyle: TextStyle(
-              text: '0',
-              color: Color(0xFF2E3192),
-              fontSize: 72,
-              fontWeight: FontWeight.bold,
-            ),
-          ).toJson(),
-        );
-      },
-    },
-  );
+//   final resetButton = await bridge.createButton(
+//     text: '↺',
+//     style: ViewStyle(
+//       backgroundColor: Color(0xFF007AFF),
+//       cornerRadius: 28,
+//       textStyle: TextStyle(
+//         // Important: text should be part of textStyle
+//         text: '↺',
+//         color: Colors.white,
+//         fontSize: 24,
+//         fontWeight: FontWeight.bold,
+//       ),
+//       shadows: [
+//         ShadowStyle(
+//           color: Color(0xFF007AFF).withOpacity(0.3),
+//           offset: const Offset(0, 4),
+//           radius: 8,
+//         )
+//       ],
+//     ).toJson(),
+//     layout: LayoutConfig(
+//       width: YGValue.points(56),
+//       height: YGValue.points(56),
+//       alignItems: YGAlign.center,
+//       justifyContent: YGJustify.center,
+//     ),
+//     events: {
+//       ButtonEventType.onClick: () async {
+//         counter = 0;
+//         await bridge.updateView(
+//           counterLabel,
+//           ViewStyle(
+//             textStyle: TextStyle(
+//               text: '0',
+//               color: Color(0xFF2E3192),
+//               fontSize: 72,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ).toJson(),
+//         );
+//       },
+//     },
+//   );
 
-  final incrementButton = await bridge.createButton(
-    text: '+',
-    style: ViewStyle(
-      backgroundColor: Color(0xFF34C759),
-      cornerRadius: 28,
-      textStyle: TextStyle(
-        // Important: text should be part of textStyle
-        text: '+',
-        color: Colors.white,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
-      shadows: [
-        ShadowStyle(
-          color: Color(0xFF34C759).withOpacity(0.3),
-          offset: const Offset(0, 4),
-          radius: 8,
-        )
-      ],
-    ).toJson(),
-    layout: LayoutConfig(
-      width: YGValue.points(56),
-      height: YGValue.points(56),
-      alignItems: YGAlign.center,
-      justifyContent: YGJustify.center,
-    ),
-    events: {
-      ButtonEventType.onClick: () async {
-        counter++;
-        print("The counter has been clicked $counter times");
-        await bridge.updateView(
-          counterLabel,
-          ViewStyle(
-            textStyle: TextStyle(
-              text: counter.toString(),
-              color: Color(0xFF2E3192),
-              fontSize: 72,
-              fontWeight: FontWeight.bold,
-            ),
-          ).toJson(),
-        );
-      },
-      ButtonEventType.onPressIn: () async {
-        print('Button pressed in!');
-      },
-      ButtonEventType.onPressOut: () async {
-        print('Button pressed out!');
-      },
-      ButtonEventType.onLongPress: () async {
-        print('Button long pressed');
-      }
-    },
-  );
+//   final incrementButton = await bridge.createButton(
+//     text: '+',
+//     style: ViewStyle(
+//       backgroundColor: Color(0xFF34C759),
+//       cornerRadius: 28,
+//       textStyle: TextStyle(
+//         // Important: text should be part of textStyle
+//         text: '+',
+//         color: Colors.white,
+//         fontSize: 24,
+//         fontWeight: FontWeight.bold,
+//       ),
+//       shadows: [
+//         ShadowStyle(
+//           color: Color(0xFF34C759).withOpacity(0.3),
+//           offset: const Offset(0, 4),
+//           radius: 8,
+//         )
+//       ],
+//     ).toJson(),
+//     layout: LayoutConfig(
+//       width: YGValue.points(56),
+//       height: YGValue.points(56),
+//     ),
+//   );
 
-  // Attach buttons (no need for registerEvent anymore)
-  await bridge.attachView(buttonsContainer, incrementButton!);
-  await bridge.attachView(buttonsContainer, resetButton!);
-  await bridge.attachView(buttonsContainer, decrementButton!);
-}
+//   // Register events separately
+//   await bridge.registerEvent(incrementButton!, "onClick", () async {
+//     counter++;
+//     print("Counter clicked: $counter");
+//     await bridge.updateView(
+//       counterLabel,
+//       ViewStyle(
+//         textStyle: TextStyle(
+//           text: counter.toString(),
+//           color: Color(0xFF2E3192),
+//           fontSize: 72,
+//           fontWeight: FontWeight.bold,
+//         ),
+//       ).toJson(),
+//     );
+//   });
+
+//   await bridge.registerEvent(incrementButton, "onPressIn", () {
+//     print('Button pressed in');
+//   });
+
+//   await bridge.registerEvent(incrementButton, "onPressOut", () {
+//     print('Button pressed out');
+//   });
+
+//   await bridge.registerEvent(incrementButton, "onLongPress", () {
+//     print('Button long pressed');
+//   });
+
+//   // Attach buttons (no need for registerEvent anymore)
+//   await bridge.attachView(buttonsContainer, decrementButton!);
+//   await bridge.attachView(buttonsContainer, resetButton!);
+//   await bridge.attachView(buttonsContainer, incrementButton!);
+// }
