@@ -1,5 +1,46 @@
 import UIKit
 
+/**
+ DCScrollView: Native scrollable container
+
+ Expected Input Properties:
+ {
+   "style": {
+     "showsIndicators": Bool,     // Show scroll indicators
+     "bounces": Bool,            // Enable bounce effect
+     "pagingEnabled": Bool      // Enable paging mode
+   },
+   "layout": {
+     // Yoga layout properties for container
+   },
+   "contentOffset": {           // Programmatic scrolling
+     "x": CGFloat,
+     "y": CGFloat
+   }
+ }
+
+ Event Data Emitted:
+ onScroll: {
+   "offset": {
+     "x": CGFloat,             // Horizontal scroll position
+     "y": CGFloat              // Vertical scroll position
+   },
+   "velocity": {
+     "x": CGFloat,             // Scroll velocity
+     "y": CGFloat
+   },
+   "contentSize": {
+     "width": CGFloat,         // Total content width
+     "height": CGFloat         // Total content height
+   },
+   "timestamp": TimeInterval
+ }
+ onScrollEnd: {
+   "offset": {x, y},
+   "timestamp": TimeInterval
+ }
+*/
+
 class DCScrollView: DCView, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let contentContainer = DCView(viewId: "scroll-content")

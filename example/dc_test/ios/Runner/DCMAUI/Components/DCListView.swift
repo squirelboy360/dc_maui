@@ -1,5 +1,46 @@
 import UIKit
 
+/**
+ DCListView: Native list/collection view
+
+ Expected Input Properties:
+ {
+   "style": {
+     "horizontal": Bool,          // Horizontal scrolling
+     "itemSpacing": CGFloat,     // Space between items
+     "showsIndicators": Bool,    // Show scroll indicators
+   },
+   "layout": {
+     // Yoga layout properties for container
+   },
+   "items": [                    // Array of child view configs
+     { view configuration }
+   ]
+ }
+
+ Event Data Emitted:
+ onScroll: {
+   "offset": {
+     "x": CGFloat,              // Scroll position
+     "y": CGFloat
+   },
+   "visibleItems": [Int],       // Indices of visible items
+   "contentSize": {
+     "width": CGFloat,
+     "height": CGFloat
+   },
+   "timestamp": TimeInterval
+ }
+ onEndReached: {
+   "distanceFromEnd": CGFloat,  // Distance to content end
+   "timestamp": TimeInterval
+ }
+ onItemPress: {
+   "index": Int,               // Pressed item index
+   "timestamp": TimeInterval
+ }
+*/
+
 class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UICollectionViewDataSourcePrefetching {
     private let collectionView: UICollectionView
     private let layout = UICollectionViewFlowLayout()

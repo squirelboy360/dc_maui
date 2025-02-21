@@ -1,5 +1,41 @@
 import UIKit
 
+/**
+ DCAnimatedView: Animatable container view
+
+ Expected Input Properties:
+ {
+   "animation": {
+     "type": String,           // "basic", "spring", "keyframe", "chain"
+     "duration": Double,       // Animation duration
+     "delay": Double,         // Start delay
+     "curve": String,         // "linear", "easeIn", "easeOut", "easeInOut"
+     
+     // For spring animations
+     "dampingRatio": CGFloat,
+     "initialVelocity": CGFloat,
+     
+     // For keyframe animations
+     "keyframes": [{
+       "startTime": Double,   // Relative start time (0-1)
+       "duration": Double,    // Relative duration
+       "transform": {
+         "scale": CGFloat,
+         "rotation": CGFloat,
+         "translation": {x, y}
+       },
+       "style": { style properties }
+     }],
+     
+     // For chain animations
+     "chain": [{ animation configs }]
+   },
+   "layout": {
+     // Yoga layout properties
+   }
+ }
+*/
+
 class DCAnimatedView: DCView {
     private var currentAnimation: UIViewPropertyAnimator?
     private var animations: [String: UIViewPropertyAnimator] = [:]

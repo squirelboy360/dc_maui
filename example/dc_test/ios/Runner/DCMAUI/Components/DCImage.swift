@@ -1,3 +1,30 @@
+/**
+ DCImage: Native image view
+
+ Expected Input Properties:
+ {
+   "imageStyle": {
+     "resizeMode": String,       // "cover", "contain", "stretch", "center"
+     "tintColor": UInt32        // Tint color for template images
+   },
+   "layout": {
+     // Yoga layout properties
+   },
+   "source": String            // Image URL
+ }
+
+ Event Data Emitted:
+ onLoad: {
+   "width": CGFloat,           // Natural image width
+   "height": CGFloat,          // Natural image height
+   "timestamp": TimeInterval
+ }
+ onError: {
+   "error": String,           // Error description
+   "timestamp": TimeInterval
+ }
+*/
+
 import UIKit
 
 class DCImage: DCView {
