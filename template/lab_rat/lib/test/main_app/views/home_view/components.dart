@@ -10,22 +10,22 @@ abstract class HomeViewComponents {
       position: YGPositionType.relative,
       flexDirection: YGFlexDirection.column,
     ),
-    style: ViewStyle(backgroundColor: Colors.red[100]),
+    style: ViewStyle(backgroundColor: Colors.amber),
   );
 
   // Fixed size app bar with absolute positioning
   final appBar = bridge.createView(
     ViewType.view,
     layout: LayoutConfig(
-      position: YGPositionType.absolute,
-      width: LayoutConfig.points(200),     // Fixed width
-      height: LayoutConfig.points(80),     // Fixed height
-      left: LayoutConfig.points(16),      // Right padding
-      top: LayoutConfig.points(40),        // Top padding
-      display: YGDisplay.flex,             // Important!
-      flexDirection: YGFlexDirection.row,  // For label alignment
-      alignItems: YGAlign.center,          // Center children vertically
-      justifyContent: YGJustify.center,    // Center children horizontally
+      position: YGPositionType.relative,
+      width: LayoutConfig.percent(100), // Fixed width
+      height: LayoutConfig.points(80), // Fixed height
+      left: LayoutConfig.points(16), // Right padding
+      top: LayoutConfig.points(40), // Top padding
+      display: YGDisplay.flex, // Important!
+      flexDirection: YGFlexDirection.row, // For label alignment
+      alignItems: YGAlign.center, // Center children vertically
+      justifyContent: YGJustify.center, // Center children horizontally
     ),
     style: ViewStyle(
       backgroundColor: Colors.cyan,
@@ -37,10 +37,9 @@ abstract class HomeViewComponents {
   final appBarTitle = bridge.createView(
     ViewType.label,
     layout: LayoutConfig(
-      width: LayoutConfig.percent(100),   // Fill parent width
-      height: LayoutConfig.percent(100),  // Fill parent height
-      alignSelf: YGAlign.center,         // Center in parent
-      margin: EdgeInsets.all(8),         // Add some padding
+     flex: 1,
+      alignSelf: YGAlign.center, // Center in parent
+      margin: EdgeInsets.all(8), // Add some padding
     ),
     style: ViewStyle(
       backgroundColor: Colors.transparent,
@@ -49,6 +48,23 @@ abstract class HomeViewComponents {
         color: Colors.white,
         fontSize: 16,
       ),
+    ),
+  );
+
+  final bgShit = bridge.createView(
+    ViewType.view,
+    layout: LayoutConfig(
+        width: LayoutConfig.percent(100),
+        height: LayoutConfig.percent(100),
+        // left: LayoutConfig.points(10),
+        // position: YGPositionType.relative,
+        margin: EdgeInsets.all(10),
+
+        flexDirection: YGFlexDirection.column,
+        justifyContent: YGJustify.center,
+        alignItems: YGAlign.center),
+    style: ViewStyle(
+      backgroundColor: Colors.black,
     ),
   );
 
