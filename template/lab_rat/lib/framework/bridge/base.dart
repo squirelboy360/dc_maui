@@ -12,6 +12,10 @@ final bridge = UIBridge();
 
 class UIBridge {
   final Core _core = Core();
+  // get app root
+  Future<String> appRoot() async {
+    return (await Core().getRootView())?['viewId'] ?? '';
+  }
 
   Future<String> createView(
     ViewType type, {
@@ -19,7 +23,8 @@ class UIBridge {
     ViewStyle? style,
     LayoutConfig? layout,
     List<dynamic>? items, // Changed from List<ListViewItem> to List<dynamic>
-    Function(int, dynamic)? attachedListViewChild, // Updated to include item data
+    Function(int, dynamic)?
+        attachedListViewChild, // Updated to include item data
     Map<NativeEventType, Function(NativeEventData)>? events,
   }) async {
     // Transform configs to match native expectations
@@ -34,7 +39,8 @@ class UIBridge {
         'items': items, // Just pass the raw items list
       if (attachedListViewChild != null && type == ViewType.listView)
         'useCustomRenderer': true, // Flag for native side
-      if (events != null) 'events': events.map((k, _) => MapEntry(k.name, true)),
+      if (events != null)
+        'events': events.map((k, _) => MapEntry(k.name, true)),
     };
 
     final viewId = await _core.createView(type, args);
@@ -45,7 +51,8 @@ class UIBridge {
         attachedListViewChild != null &&
         items != null) {
       for (var i = 0; i < items.length; i++) {
-        final childView = await attachedListViewChild(i, items[i]); // Pass both index and item data
+        final childView = await attachedListViewChild(
+            i, items[i]); // Pass both index and item data
         await _core.attachView(viewId, childView);
       }
     }
