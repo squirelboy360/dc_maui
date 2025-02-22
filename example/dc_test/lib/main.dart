@@ -24,12 +24,14 @@ Future<void> startApp() async {
 
     final mainContainer = await View(
       style: ViewStyle(
-        backgroundColor: Colors.amber.toARGB32(),
+        backgroundColor: Colors.pink.toARGB32(),
       ),
       layout: YogaLayout(
         flexDirection: YogaFlexDirection.row, // Try changing to row
         padding: EdgeValues(all: YogaValue.point(16)),
         flexWrap: YogaWrap.wrap,
+        alignContent: YogaAlign.center,
+        justifyContent: YogaJustify.center,
         width: YogaValue.percent(100),
         height: YogaValue.percent(100),
       ),
@@ -46,7 +48,7 @@ Future<void> startApp() async {
       0xFFBA68C8,
       0xFF4DB6AC,
       0xFFFFD54F,
-      0xFF7986CB
+      0xFF7986CB,
     ];
 
     for (var color in colors) {
