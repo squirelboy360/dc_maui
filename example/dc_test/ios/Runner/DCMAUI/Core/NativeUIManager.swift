@@ -64,7 +64,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
         instance.methodChannel = channel
         
         // Create native window immediately
-        instance.setupRootView()
+        // Initialize after a brief delay to ensure Flutter is ready
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                  instance.setupRootView()
+              }
     }
     
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -95,6 +98,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         print("arguments: \(args)");
+        print()
         let viewId = "\(type.rawValue)-\(UUID().uuidString)"
         let view = createComponent(ofType: type, withId: viewId, properties: args["properties"] as? [String: Any] ?? [:])
         
@@ -209,7 +213,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
         if let yogaConfig = properties["layout"] as? [String: Any] {
             newView.yoga.applyFlexbox(yogaConfig)
             newView.yoga.applySpacing(yogaConfig)
+            
+            print("parsed layout config: \(yogaConfig)")
         }
+        
+        
         
         newView.handleStateChange(properties)
         
@@ -282,12 +290,15 @@ class NativeUIManager: NSObject, FlutterPlugin {
 
     private func setupRootView() {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            
             // Create a separate window for native UI
             let nativeWindow = UIWindow(frame: windowScene.coordinateSpace.bounds)
             nativeWindow.windowScene = windowScene
             
             // Create root view controller
             let rootVC = UIViewController()
+            
+            rootVC.view.backgroundColor = .blue
             
             // Create and configure root view
             let rootView = DCView(viewId: "root")

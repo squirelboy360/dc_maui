@@ -5,14 +5,10 @@ import 'framework/bridge/core.dart';
 import 'framework/bridge/controls/view.dart';
 import 'framework/bridge/types/yoga_types.dart';
 
-
 final _logger = Logger('GridExample');
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized(); // Move this up
-  Logger.root.level = Level.ALL;
-  Logger.root.onRecord.listen(
-      (record) => debugPrint('${record.level.name}: ${record.message}'));
 
   startApp();
 }
@@ -26,12 +22,9 @@ Future<void> startApp() async {
       return;
     }
 
-    final rootId = rootInfo['viewId'] as String;
-    print(rootId);
-
     final mainContainer = await View(
       style: ViewStyle(
-        backgroundColor: 0xFFFAFAFA,
+        backgroundColor: Colors.pink.toARGB32(),
       ),
       layout: YogaLayout(
         flexDirection: YogaFlexDirection.column,
@@ -45,7 +38,7 @@ Future<void> startApp() async {
       ),
     ).create();
     // attach
-    Core.attachView(rootId, mainContainer ?? '');
+    Core.attachView('root', mainContainer ?? '');
     print("mainContainer: $mainContainer");
 
     final colors = [
@@ -60,7 +53,7 @@ Future<void> startApp() async {
     ];
 
     for (var color in colors) {
-      final gridItem = await  View(
+      final gridItem = await View(
         style: ViewStyle(
           backgroundColor: color,
           cornerRadius: 8,
