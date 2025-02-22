@@ -80,9 +80,6 @@ extension YGLayout {
             self.flexDirection = {
                 switch direction {
                 case "row": return .row
-            self.flexDirection = {
-                switch direction {
-                case "row": return .row
                 case "row-reverse": return .rowReverse
                 case "column": return .column
                 case "column-reverse": return .columnReverse
@@ -92,14 +89,32 @@ extension YGLayout {
         }
         
         if let wrap = config["flexWrap"] as? String {
-            self.flexWrap = {
-                switch wrap {
-                case "wrap": return .wrap
-                case "wrap-reverse": return .wrapReverse
-                default: return .noWrap
-                }
-            }()
+            self.flexWrap = wrap == "wrap" ? .wrap : .noWrap
         }
+        
+        // Display & Overflow
+        if let display = config["display"] as? String {
+            self.display = display == "none" ? .none : .flex
+        }
+        
+        if let overflow = config["overflow"] as? String {
+            switch overflow {
+            case "visible": self.overflow = .visible
+            case "hidden": self.overflow = .hidden
+            case "scroll": self.overflow = .scroll
+            default: break
+            }
+        }
+        
+        // Position
+        if let position = config["position"] as? String {
+            self.position = position == "absolute" ? .absolute : .relative
+        }
+        
+        // Flex properties
+        if let flex = config["flex"] as? Double { self.flex = CGFloat(flex) }
+        if let flexGrow = config["flexGrow"] as? Double { self.flexGrow = CGFloat(flexGrow) }
+        if let flexShrink = config["flexShrink"] as? Double { self.flexShrink = CGFloat(flexShrink) }
         
         // Alignment
         if let justifyContent = config["justifyContent"] as? String {
@@ -128,47 +143,21 @@ extension YGLayout {
     func applySpacing(_ config: [String: Any]) {
         print("Applying spacing config: \(config)")
         
-        // Handle EdgeValues format from Dart
-        func applyEdgeValues(_ values: [String: Any], to property: String) {
-            if let all = values[""] as? [String: Any] {
-                let value = Float(all["value"] as? Double ?? 0)
-                let unit = all["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
-                let yogaValue = YGValue(value: value, unit: unit)
-                
-                switch property {
-                case "margin":
-                    margin = yogaValue
-                case "padding":
-                    padding = yogaValue
-                default: break
-                }
-            } else {
-                // Handle individual edges
-                let edges = ["Left", "Right", "Top", "Bottom"]
-                for edge in edges {
-                    if let edgeValue = values[edge] as? [String: Any] {
-                        let value = Float(edgeValue["value"] as? Double ?? 0)
-                        let unit = edgeValue["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
-                        let yogaValue = YGValue(value: value, unit: unit)
-                        
-                        switch property {
-                        case "margin":
-                            setValue(yogaValue, forKey: "margin\(edge)")
-                        case "padding":
-                            setValue(yogaValue, forKey: "padding\(edge)")
-                        default: break
-                        }
-                    }
-                }
+        // Handle margin and padding without KVC
+        if let marginDict = config["margin"] as? [String: Any] {
+            if let value = marginDict["value"] as? Double,
+               let unit = marginDict["unit"] as? String {
+                let yogaValue = YGValue(Float(value), unit == "percent" ? .percent : .point)
+                self.margin = yogaValue
             }
         }
         
-        if let margin = config["margin"] as? [String: Any] {
-            applyEdgeValues(margin, to: "margin")
-        }
-        
-        if let padding = config["padding"] as? [String: Any] {
-            applyEdgeValues(padding, to: "padding")
+        if let paddingDict = config["padding"] as? [String: Any] {
+            if let value = paddingDict["value"] as? Double,
+               let unit = paddingDict["unit"] as? String {
+                let yogaValue = YGValue(Float(value), unit == "percent" ? .percent : .point)
+                self.padding = yogaValue
+            }
         }
     }
 }
