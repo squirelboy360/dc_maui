@@ -37,49 +37,49 @@ extension YGLayout {
     func applyFlexbox(_ config: [String: Any]) {
         print("Applying flexbox config: \(config)")
         
-        // Dimensions
-        for (key, value) in [
-            "width": width,
-            "height": height,
-            "minWidth": minWidth,
-            "minHeight": minHeight,
-            "maxWidth": maxWidth,
-            "maxHeight": maxHeight,
-            "flexBasis": flexBasis
-        ] {
-            if let valueDict = config[key] as? [String: Any] {
-                let value = Float(valueDict["value"] as? Double ?? 0)
-                let unit = valueDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
-                self.setValue(YGValue(value: value, unit: unit), forKey: key)
-            }
+        // Process width/height directly instead of using KVC
+        if let widthDict = config["width"] as? [String: Any] {
+            let value = Float(widthDict["value"] as? Double ?? 0)
+            let unit = widthDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.width = YGValue(value: value, unit: unit)
         }
         
-        // Display & Overflow
-        if let display = config["display"] as? String {
-            self.display = display == "none" ? .none : .flex
+        if let heightDict = config["height"] as? [String: Any] {
+            let value = Float(heightDict["value"] as? Double ?? 0)
+            let unit = heightDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.height = YGValue(value: value, unit: unit)
         }
         
-        if let overflow = config["overflow"] as? String {
-            switch overflow {
-            case "visible": self.overflow = .visible
-            case "hidden": self.overflow = .hidden
-            case "scroll": self.overflow = .scroll
-            default: break
-            }
+        // Handle min/max dimensions
+        if let minWidthDict = config["minWidth"] as? [String: Any] {
+            let value = Float(minWidthDict["value"] as? Double ?? 0)
+            let unit = minWidthDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.minWidth = YGValue(value: value, unit: unit)
         }
         
-        // Position
-        if let position = config["position"] as? String {
-            self.position = position == "absolute" ? .absolute : .relative
+        if let minHeightDict = config["minHeight"] as? [String: Any] {
+            let value = Float(minHeightDict["value"] as? Double ?? 0)
+            let unit = minHeightDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.minHeight = YGValue(value: value, unit: unit)
         }
         
-        // Flex properties
-        if let flex = config["flex"] as? Double { self.flex = CGFloat(flex) }
-        if let flexGrow = config["flexGrow"] as? Double { self.flexGrow = CGFloat(flexGrow) }
-        if let flexShrink = config["flexShrink"] as? Double { self.flexShrink = CGFloat(flexShrink) }
+        if let maxWidthDict = config["maxWidth"] as? [String: Any] {
+            let value = Float(maxWidthDict["value"] as? Double ?? 0)
+            let unit = maxWidthDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.maxWidth = YGValue(value: value, unit: unit)
+        }
         
-        // Direction & Wrapping
+        if let maxHeightDict = config["maxHeight"] as? [String: Any] {
+            let value = Float(maxHeightDict["value"] as? Double ?? 0)
+            let unit = maxHeightDict["unit"] as? String == "percent" ? YGUnit.percent : YGUnit.point
+            self.maxHeight = YGValue(value: value, unit: unit)
+        }
+        
+        // Rest of the layout properties
         if let direction = config["flexDirection"] as? String {
+            self.flexDirection = {
+                switch direction {
+                case "row": return .row
             self.flexDirection = {
                 switch direction {
                 case "row": return .row
