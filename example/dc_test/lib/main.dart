@@ -24,7 +24,7 @@ Future<void> startApp() async {
 
     final mainContainer = await View(
       style: ViewStyle(
-        backgroundColor: Colors.blue.toARGB32(),
+        backgroundColor: Colors.amber.toARGB32(),
       ),
       layout: YogaLayout(
         flexDirection: YogaFlexDirection.row, // Try changing to row

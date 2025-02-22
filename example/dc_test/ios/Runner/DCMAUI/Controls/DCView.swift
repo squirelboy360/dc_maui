@@ -58,7 +58,7 @@ class DCView: UIView, DCComponent {
         print("Applying style to view: \(viewId)")
         print("Style config: \(style)")
         
-        // Handle layout properties
+        // Handle layout first
         if let layout = style["layout"] as? [String: Any] {
             yoga.isEnabled = true
             yoga.applyFlexbox(layout)
@@ -70,27 +70,21 @@ class DCView: UIView, DCComponent {
             self.backgroundColor = UIColor(rgb: backgroundColor)
         }
         
+        // Force immediate layout
         setNeedsLayout()
         layoutIfNeeded()
-        
-        print("View frame after style: \(frame)")
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
+        print("Layout pass for \(viewId)")
+        print("Before yoga - Frame: \(frame), Bounds: \(bounds)")
         
-        // Force size calculation if not set
-        if bounds.size == .zero {
-            yoga.width = YGValue(value: Float(superview?.bounds.width ?? 0), unit: .point)
-            yoga.height = YGValue(value: Float(superview?.bounds.height ?? 0), unit: .point)
+        // Only apply layout if dimensions are valid
+        if yoga.width.unit != .undefined && yoga.height.unit != .undefined {
+            yoga.applyLayout(preservingOrigin: true)
+            print("After yoga - Frame: \(frame)")
         }
-        
-        yoga.applyLayout(preservingOrigin: true)
-        
-        // Debug
-        print("Layout applied to \(viewId)")
-        print("Frame: \(frame)")
-        print("Yoga layout: enabled=\(yoga.isEnabled), direction=\(yoga.flexDirection)")
     }
     
     func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {

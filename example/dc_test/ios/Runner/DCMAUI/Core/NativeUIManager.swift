@@ -97,35 +97,25 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        print("Creating view with properties: \(properties)")
+        print("Creating view: \(typeString)")
+        print("Properties: \(properties)")
         
         let viewId = "\(type.rawValue)-\(UUID().uuidString)"
         let view = createComponent(ofType: type, withId: viewId, properties: properties)
         
-        // Get layout from properties
-        if let layout = properties["layout"] as? [String: Any] {
-            view.yoga.isEnabled = true
-            view.yoga.flexDirection = .column // Default
-            
-            // Apply layout
-            view.yoga.applyFlexbox(layout)
-            view.yoga.applySpacing(layout)
-            
-            // Set explicit size if provided
-            if let width = layout["width"] as? [String: Any] {
-                let value = Float(width["value"] as? Double ?? 0)
-                let unit = (width["unit"] as? String == "percent") ? YGUnit.percent : YGUnit.point
-                view.yoga.width = YGValue(value: value, unit: unit)
-            }
-            
-            if let height = layout["height"] as? [String: Any] {
-                let value = Float(height["value"] as? Double ?? 0)
-                let unit = (height["unit"] as? String == "percent") ? YGUnit.percent : YGUnit.point
-                view.yoga.height = YGValue(value: value, unit: unit)
-            }
+        // Configure view for layout
+        view.yoga.isEnabled = true
+        if type == .view {
+            // Container views default to column layout
+            view.yoga.flexDirection = .column
         }
         
-        // Apply style
+        // Apply properties
+        if let layout = properties["layout"] as? [String: Any] {
+            view.yoga.applyFlexbox(layout)
+            view.yoga.applySpacing(layout)
+        }
+        
         if let style = properties["style"] as? [String: Any] {
             view.applyStyle(style)
         }
@@ -172,18 +162,20 @@ class NativeUIManager: NSObject, FlutterPlugin {
             return
         }
         
-        print("Attaching view \(childId) to parent \(parentId)")
-        print("Parent frame before: \(parentView.frame)")
-        print("Child frame before: \(childView.frame)")
+        print("Attaching \(childId) to \(parentId)")
+        print("Parent before - Frame: \(parentView.frame)")
+        print("Child before - Frame: \(childView.frame)")
         
         parentView.addSubview(childView)
         childViews[parentId]?.append(childId)
         
-        // Force layout calculation
+        // Force layout update
         parentView.yoga.applyLayout(preservingOrigin: true)
+        parentView.layoutIfNeeded()
         
-        print("Parent frame after: \(parentView.frame)")
-        print("Child frame after: \(childView.frame)")
+        print("After attachment:")
+        print("Parent - Frame: \(parentView.frame)")
+        print("Child - Frame: \(childView.frame)")
         
         result(true)
     }
