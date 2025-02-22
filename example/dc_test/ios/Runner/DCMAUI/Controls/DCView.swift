@@ -65,9 +65,45 @@ class DCView: UIView, DCComponent {
             yoga.applySpacing(layout)
         }
         
-        // Handle visual properties
+        // Handle visual properties directly just like backgroundColor
         if let backgroundColor = style["backgroundColor"] as? UInt32 {
             self.backgroundColor = UIColor(rgb: backgroundColor)
+        }
+        if let cornerRadius = style["cornerRadius"] as? CGFloat {
+            self.layer.cornerRadius = cornerRadius
+        }
+        if let alpha = style["alpha"] as? CGFloat {
+            self.alpha = alpha
+        }
+        if let opacity = style["opacity"] as? Float {
+            self.layer.opacity = opacity
+        }
+        if let shadowColor = style["shadowColor"] as? UInt32 {
+            self.layer.shadowColor = UIColor(rgb: shadowColor).cgColor
+        }
+        if let shadowOpacity = style["shadowOpacity"] as? Float {
+            self.layer.shadowOpacity = shadowOpacity
+        }
+        if let shadowOffset = style["shadowOffset"] as? [String: CGFloat] {
+            self.layer.shadowOffset = CGSize(
+                width: shadowOffset["width"] ?? 0,
+                height: shadowOffset["height"] ?? 0
+            )
+        }
+        if let shadowRadius = style["shadowRadius"] as? CGFloat {
+            self.layer.shadowRadius = shadowRadius
+        }
+        if let borderWidth = style["borderWidth"] as? CGFloat {
+            self.layer.borderWidth = borderWidth
+        }
+        if let borderColor = style["borderColor"] as? UInt32 {
+            self.layer.borderColor = UIColor(rgb: borderColor).cgColor
+        }
+        if let clipsToBounds = style["clipsToBounds"] as? Bool {
+            self.clipsToBounds = clipsToBounds
+        }
+        if let hidden = style["hidden"] as? Bool {
+            self.isHidden = hidden
         }
         
         // Force immediate layout
