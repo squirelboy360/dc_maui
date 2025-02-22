@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'framework/bridge/core.dart';
 import 'framework/bridge/controls/view.dart';
 import 'framework/bridge/types/yoga_types.dart';
-import 'framework/bridge/types/view_types.dart';
+
 
 final _logger = Logger('GridExample');
 

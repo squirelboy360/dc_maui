@@ -91,9 +91,10 @@ class NativeUIManager: NSObject, FlutterPlugin {
               let typeString = args["viewType"] as? String,
               let type = ViewType(rawValue: typeString) else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid view type", details: nil))
+           
             return
         }
-        
+        print("arguments: \(args)");
         let viewId = "\(type.rawValue)-\(UUID().uuidString)"
         let view = createComponent(ofType: type, withId: viewId, properties: args["properties"] as? [String: Any] ?? [:])
         
