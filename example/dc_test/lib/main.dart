@@ -24,16 +24,13 @@ Future<void> startApp() async {
 
     final mainContainer = await View(
       style: ViewStyle(
-        backgroundColor: Colors.pink.toARGB32(),
+        backgroundColor: Colors.blue.toARGB32(),
       ),
       layout: YogaLayout(
-        flexDirection: YogaFlexDirection.column,
-        padding:
-            EdgeValues(all: YogaValue.point(16)), // Use static constructors
+        flexDirection: YogaFlexDirection.row, // Try changing to row
+        padding: EdgeValues(all: YogaValue.point(16)),
         flexWrap: YogaWrap.wrap,
-        justifyContent: YogaJustify.spaceEvenly,
-        alignItems: YogaAlign.center,
-        width: YogaValue.percent(100), // Use static constructors
+        width: YogaValue.percent(100),
         height: YogaValue.percent(100),
       ),
     ).create();

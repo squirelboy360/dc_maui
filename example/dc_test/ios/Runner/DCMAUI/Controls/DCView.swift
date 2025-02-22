@@ -55,10 +55,42 @@ class DCView: UIView, DCComponent {
     }
     
     func applyStyle(_ style: [String: Any]) {
-        // Apply common styles (background, border, etc)
+        print("Applying style to view: \(viewId)")
+        print("Style config: \(style)")
+        
+        // Handle layout properties
+        if let layout = style["layout"] as? [String: Any] {
+            yoga.isEnabled = true
+            yoga.applyFlexbox(layout)
+            yoga.applySpacing(layout)
+        }
+        
+        // Handle visual properties
         if let backgroundColor = style["backgroundColor"] as? UInt32 {
             self.backgroundColor = UIColor(rgb: backgroundColor)
         }
+        
+        setNeedsLayout()
+        layoutIfNeeded()
+        
+        print("View frame after style: \(frame)")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Force size calculation if not set
+        if bounds.size == .zero {
+            yoga.width = YGValue(value: Float(superview?.bounds.width ?? 0), unit: .point)
+            yoga.height = YGValue(value: Float(superview?.bounds.height ?? 0), unit: .point)
+        }
+        
+        yoga.applyLayout(preservingOrigin: true)
+        
+        // Debug
+        print("Layout applied to \(viewId)")
+        print("Frame: \(frame)")
+        print("Yoga layout: enabled=\(yoga.isEnabled), direction=\(yoga.flexDirection)")
     }
     
     func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {

@@ -92,30 +92,42 @@ class NativeUIManager: NSObject, FlutterPlugin {
     private func handleCreateView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let typeString = args["viewType"] as? String,
-              let type = ViewType(rawValue: typeString) else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view type", details: nil))
-           
+              let type = ViewType(rawValue: typeString),
+              let properties = args["properties"] as? [String: Any] else {
             return
         }
-        print("arguments: \(args)");
-        print()
+        
+        print("Creating view with properties: \(properties)")
+        
         let viewId = "\(type.rawValue)-\(UUID().uuidString)"
-        let view = createComponent(ofType: type, withId: viewId, properties: args["properties"] as? [String: Any] ?? [:])
+        let view = createComponent(ofType: type, withId: viewId, properties: properties)
         
-        // Apply initial layout if provided
-        if let layout = args["layout"] as? [String: Any] {
-            view.applyStyle(layout)
+        // Get layout from properties
+        if let layout = properties["layout"] as? [String: Any] {
+            view.yoga.isEnabled = true
+            view.yoga.flexDirection = .column // Default
+            
+            // Apply layout
+            view.yoga.applyFlexbox(layout)
+            view.yoga.applySpacing(layout)
+            
+            // Set explicit size if provided
+            if let width = layout["width"] as? [String: Any] {
+                let value = Float(width["value"] as? Double ?? 0)
+                let unit = (width["unit"] as? String == "percent") ? YGUnit.percent : YGUnit.point
+                view.yoga.width = YGValue(value: value, unit: unit)
+            }
+            
+            if let height = layout["height"] as? [String: Any] {
+                let value = Float(height["value"] as? Double ?? 0)
+                let unit = (height["unit"] as? String == "percent") ? YGUnit.percent : YGUnit.point
+                view.yoga.height = YGValue(value: value, unit: unit)
+            }
         }
         
-        // Apply initial style if provided
-        if let style = args["style"] as? [String: Any] {
+        // Apply style
+        if let style = properties["style"] as? [String: Any] {
             view.applyStyle(style)
-        }
-        
-        // Handle events if provided in properties
-        if let properties = args["properties"] as? [String: Any],
-           let events = properties["events"] as? [String: Any] {
-            view.setupEvents(events, channel: methodChannel)
         }
         
         views[viewId] = view
@@ -154,49 +166,25 @@ class NativeUIManager: NSObject, FlutterPlugin {
         guard let args = call.arguments as? [String: Any],
               let parentId = args["parentId"] as? String,
               let childId = args["childId"] as? String,
-              let parentView = views[parentId] else {
+              let parentView = views[parentId],
+              let childView = views[childId] else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid parent or child ID", details: nil))
             return
         }
         
-        // Check if view is already attached somewhere
-        if let childView = views[childId],
-           childView.superview != nil {
-            // Create a copy if duplicate flag is true, otherwise error
-            if args["duplicate"] as? Bool == true {
-                let newChildId = "\(childId)-copy-\(UUID().uuidString)"
-                guard let copiedView = copyComponent(childView, withNewId: newChildId) else {
-                    result(FlutterError(code: "COPY_FAILED", message: "Failed to copy component", details: nil))
-                    return
-                }
-                
-                views[newChildId] = copiedView
-                childViews[newChildId] = []
-                
-                parentView.addSubview(copiedView)
-                childViews[parentId]?.append(newChildId)
-                
-                // Trigger layout calculation
-                parentView.yoga.applyLayout(preservingOrigin: true)
-                result(newChildId) // Return new ID so dart side can track it
-                return
-            } else {
-                result(FlutterError(code: "ALREADY_ATTACHED", message: "View is already attached. Use duplicate: true to create a copy", details: nil))
-                return
-            }
-        }
-        
-        // Normal attachment for unattached views
-        guard let childView = views[childId] else {
-            result(FlutterError(code: "INVALID_VIEW", message: "Child view not found", details: nil))
-            return
-        }
+        print("Attaching view \(childId) to parent \(parentId)")
+        print("Parent frame before: \(parentView.frame)")
+        print("Child frame before: \(childView.frame)")
         
         parentView.addSubview(childView)
         childViews[parentId]?.append(childId)
         
-        // Trigger layout calculation
+        // Force layout calculation
         parentView.yoga.applyLayout(preservingOrigin: true)
+        
+        print("Parent frame after: \(parentView.frame)")
+        print("Child frame after: \(childView.frame)")
+        
         result(true)
     }
     
@@ -289,34 +277,35 @@ class NativeUIManager: NSObject, FlutterPlugin {
     }
 
     private func setupRootView() {
+        print("Setting up root view")
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            
-            // Create a separate window for native UI
             let nativeWindow = UIWindow(frame: windowScene.coordinateSpace.bounds)
             nativeWindow.windowScene = windowScene
             
-            // Create root view controller
             let rootVC = UIViewController()
+            rootVC.view.backgroundColor = .blue // Debug color
             
-            rootVC.view.backgroundColor = .blue
-            
-            // Create and configure root view
+            // Create root view with explicit frame and yoga config
             let rootView = DCView(viewId: "root")
             rootView.frame = rootVC.view.bounds
-            rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            rootView.backgroundColor = .clear
             rootView.yoga.isEnabled = true
             rootView.yoga.flexDirection = .column
+            rootView.yoga.width = YGValue(value: Float(rootVC.view.bounds.width), unit: .point)
+            rootView.yoga.height = YGValue(value: Float(rootVC.view.bounds.height), unit: .point)
             
-            // Set up view hierarchy
+            print("Root view frame: \(rootView.frame)")
+            
             rootVC.view.addSubview(rootView)
             nativeWindow.rootViewController = rootVC
             nativeWindow.makeKeyAndVisible()
             
-            // Store references
             self.window = nativeWindow
             self.rootViewId = rootView.viewId
             self.views[rootView.viewId] = rootView
             self.childViews[rootView.viewId] = []
+            
+            print("Root view setup complete with ID: \(rootView.viewId)")
         }
     }
 }
