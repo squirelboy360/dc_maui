@@ -1,6 +1,6 @@
-import 'package:dc_test/framework/bridge/types/view_styles.dart';
+import 'package:dc_test/framework/bridge/types/view_types/view_styles.dart';
 
-import '../types/yoga_types.dart';
+import '../types/layout_layouts/yoga_types.dart';
 import '../core.dart';
 
 class View {
