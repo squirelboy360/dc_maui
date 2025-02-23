@@ -135,10 +135,40 @@ abstract class TextViewComposer extends UIComposer {
           width: YogaValue(100, YogaUnit.point),
           height: YogaValue(100, YogaUnit.point),
           margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+          alignItems: YogaAlign.center,      // Add this
+          justifyContent: YogaJustify.center // Add this
         ),
       ).create();
 
+      // Add text showing the color value
+      final colorText = await Text(
+        text: '#${color.toRadixString(16).toUpperCase()}',
+        textStyle: TextStyle(
+          fontSize: 12,
+          color: _isColorDark(color) ? Colors.white.value : Colors.black.value,
+          textAlign: TextAlign.center,
+          fontWeight: FontWeight.bold,
+        ),
+        layout: YogaLayout(
+          alignSelf: YogaAlign.center,
+        ),
+      ).create();
+
+      // Attach text to grid item
+      await Core.attachView(gridItem ?? '', colorText ?? '');
+      // Attach grid item to grid container
       await Core.attachView(gridContainer ?? '', gridItem ?? '');
     }
+  }
+
+  // Helper method to determine if a color is dark
+  bool _isColorDark(int color) {
+    final r = (color >> 16) & 0xFF;
+    final g = (color >> 8) & 0xFF;
+    final b = color & 0xFF;
+    
+    // Calculate relative luminance
+    final luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance < 0.5;
   }
 }
