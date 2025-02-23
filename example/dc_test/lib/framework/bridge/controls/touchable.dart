@@ -3,7 +3,7 @@ import '../types/touchable_types/touchable_styles.dart';
 import '../types/layout_layouts/yoga_types.dart';
 import '../types/view_types/view_styles.dart';
 
-typedef TouchableCallback = void Function(Map<String, dynamic> event);
+typedef TouchableEventCallback = void Function(Map<String, dynamic> event);
 
 class Touchable {
   String? id;
@@ -18,11 +18,13 @@ class Touchable {
   }) : this.touchableStyle = touchableStyle ?? const TouchableStyle();
 
   Future<String?> create({
-    TouchableCallback? onPress,
-    TouchableCallback? onPressIn,
-    TouchableCallback? onPressOut,
-    TouchableCallback? onLongPress,
+    TouchableEventCallback? onPress,
+    TouchableEventCallback? onPressIn,
+    TouchableEventCallback? onPressOut,
+    TouchableEventCallback? onLongPress,
   }) async {
+    print("Creating Touchable with properties: ${touchableStyle.toMap()}");
+    
     id = await Core.createView(
       viewType: 'TouchableOpacity',
       properties: {
@@ -41,19 +43,23 @@ class Touchable {
           },
       },
       onEvent: (event) {
-        final type = event['type'] as String;
+        if (event is! Map<String, dynamic>) return;
+        
+        final type = event['type'] as String?;
+        final data = event['data'] as Map<String, dynamic>? ?? {};
+        
         switch (type) {
           case 'onPress':
-            onPress?.call(event['data'] as Map<String, dynamic>);
+            onPress?.call(data);
             break;
           case 'onPressIn':
-            onPressIn?.call(event['data'] as Map<String, dynamic>);
+            onPressIn?.call(data);
             break;
           case 'onPressOut':
-            onPressOut?.call(event['data'] as Map<String, dynamic>);
+            onPressOut?.call(data);
             break;
           case 'onLongPress':
-            onLongPress?.call(event['data'] as Map<String, dynamic>);
+            onLongPress?.call(data);
             break;
         }
       },
