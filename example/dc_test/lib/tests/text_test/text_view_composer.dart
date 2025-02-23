@@ -79,10 +79,7 @@ abstract class TextViewComposer extends UIComposer {
         textAlign: TextAlign.center,
         fontWeight: FontWeight.bold,
       ),
-      layout: YogaLayout(
-        alignSelf: YogaAlign.center,
-        margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
-      ),
+     
     ).create();
 
     print("Created centered text with ID: $centeredText"); // Add this

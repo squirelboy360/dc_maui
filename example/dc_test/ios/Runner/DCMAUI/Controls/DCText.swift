@@ -86,40 +86,32 @@ class DCText: DCView {
     
     private func setupLabel(withText text: String) {
         label.text = text
-        label.numberOfLines = 0
+        label.numberOfLines = 0  // Allow multiline by default
         label.yoga.isEnabled = true
         addSubview(label)
         
-        // Fix 1: Ensure proper layout configuration
+        // Remove forced layout - let Yoga handle it
         self.yoga.isEnabled = true
-        self.yoga.flexDirection = .row  // Add this
         
-        // Fix 2: Configure label constraints properly
-        label.yoga.position = .relative  // Change from absolute
-        label.yoga.flexGrow = 1         // Add this
-        label.yoga.flexShrink = 1       // Add this
+        // Remove debug coloring
+        // self.backgroundColor = .red.withAlphaComponent(0.3)  // Remove this
+        // label.backgroundColor = .green.withAlphaComponent(0.3)  // Remove this
         
-        // Fix 3: Add debug coloring temporarily
-        self.backgroundColor = .red.withAlphaComponent(0.3)
-        label.backgroundColor = .green.withAlphaComponent(0.3)
-        
-        // Size to fit initially
-        label.sizeToFit()
-        
-        // Set initial dimensions based on content
-        self.yoga.width = YGValue(value: Float(label.frame.width), unit: .point)
-        self.yoga.height = YGValue(value: Float(label.frame.height), unit: .point)
+        // Let layout be controlled by user settings
+        label.yoga.position = .relative
+        label.yoga.flexGrow = 0  // Don't force growth
+        label.yoga.flexShrink = 0  // Don't force shrink
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Fix 4: Add layout debugging
+        // Keep layout debugging but remove forced layout
         print("DCText layout: frame=\(frame), bounds=\(bounds)")
         print("Label layout: frame=\(label.frame), bounds=\(label.bounds)")
         print("Label text: \(label.text ?? "nil")")
         
-        // Fix 5: Ensure layout is applied
+        // Only apply layout if explicitly set
         if frame.size != .zero {
             yoga.applyLayout(preservingOrigin: true)
         }
