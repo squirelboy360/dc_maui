@@ -31,21 +31,18 @@ class Text {
   }
 }
 
-extension TextStyleCopyWith on TextStyle {
+extension TextStyleExtension on TextStyle {
   TextStyle copyWith({
     String? text,
     double? fontSize,
     FontWeight? fontWeight,
     int? color,
-    TextAlignment? textAlignment,
-    double? lineHeight,
+    TextAlign? textAlign,
     double? letterSpacing,
-    bool? adjustsFontSizeToFit,
+    double? lineHeight,
+    bool? adjustsFontSize,
     double? minimumFontSize,
-    double? maximumFontSize,
     int? numberOfLines,
-    TextDecorationLine? decorationLine,
-    int? decorationColor,
     String? fontFamily,
     bool? allowsDefaultTighteningForTruncation,
     Map<String, dynamic>? attributes,
@@ -55,17 +52,15 @@ extension TextStyleCopyWith on TextStyle {
       fontSize: fontSize ?? this.fontSize,
       fontWeight: fontWeight ?? this.fontWeight,
       color: color ?? this.color,
-      textAlignment: textAlignment ?? this.textAlignment,
-      lineHeight: lineHeight ?? this.lineHeight,
+      textAlign: textAlign ?? this.textAlign,
       letterSpacing: letterSpacing ?? this.letterSpacing,
-      adjustsFontSizeToFit: adjustsFontSizeToFit ?? this.adjustsFontSizeToFit,
+      lineHeight: lineHeight ?? this.lineHeight,
+      adjustsFontSize: adjustsFontSize ?? this.adjustsFontSize,
       minimumFontSize: minimumFontSize ?? this.minimumFontSize,
-      maximumFontSize: maximumFontSize ?? this.maximumFontSize,
       numberOfLines: numberOfLines ?? this.numberOfLines,
-      decorationLine: decorationLine ?? this.decorationLine,
-      decorationColor: decorationColor ?? this.decorationColor,
       fontFamily: fontFamily ?? this.fontFamily,
-      allowsDefaultTighteningForTruncation: allowsDefaultTighteningForTruncation ?? this.allowsDefaultTighteningForTruncation,
+      allowsDefaultTighteningForTruncation: 
+        allowsDefaultTighteningForTruncation ?? this.allowsDefaultTighteningForTruncation,
       attributes: attributes ?? this.attributes,
     );
   }
