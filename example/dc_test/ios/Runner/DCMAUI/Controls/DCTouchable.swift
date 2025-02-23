@@ -105,26 +105,38 @@ class DCTouchable: DCView {
     }
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
+        print("Setting up events for touchable: \(viewId)")
+        print("Events config: \(events)")
         self.methodChannel = channel
         
         // Map each event type to its gesture recognizer
-        if events["onPress"] != nil {
+        if (events["onPress"] as? Bool) == true {
+            print("Setting up tap gesture for: \(viewId)")
             let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
             addGestureRecognizer(tap)
         }
         
-        if events["onLongPress"] != nil {
+        if (events["onLongPress"] as? Bool) == true {
+            print("Setting up long press gesture for: \(viewId)")
             let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
             addGestureRecognizer(longPress)
         }
     }
     
-    @objc private func handleTap() {
+    private func sendEvent(_ type: String) {
+        print("Sending event: \(type) for view: \(viewId)")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
-            "type": "onPress",
-            "timestamp": Date().timeIntervalSince1970
+            "type": type,
+            "data": [
+                "timestamp": Date().timeIntervalSince1970
+            ]
         ])
+    }
+    
+    @objc private func handleTap() {
+        print("Tap detected for: \(viewId)")
+        sendEvent("onPress")
     }
     
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -138,31 +150,22 @@ class DCTouchable: DCView {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressIn",
-            "timestamp": Date().timeIntervalSince1970
-        ])
+        print("Touch began for: \(viewId)")
+        sendEvent("onPressIn")
         animate(to: activeOpacity)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesEnded(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressOut",
-            "timestamp": Date().timeIntervalSince1970
-        ])
+        print("Touch ended for: \(viewId)")
+        sendEvent("onPressOut")
         animate(to: defaultOpacity)
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressOut",
-            "timestamp": Date().timeIntervalSince1970
-        ])
+        print("Touch cancelled for: \(viewId)")
+        sendEvent("onPressOut")
         animate(to: defaultOpacity)
     }
     

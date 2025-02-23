@@ -106,10 +106,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
         
         // Configure view for layout
         view.yoga.isEnabled = true
-        if type == .view {
-            // Container views default to column layout
-            view.yoga.flexDirection = .column
-        }
         
         // Apply properties
         if let layout = properties["layout"] as? [String: Any] {
@@ -121,13 +117,11 @@ class NativeUIManager: NSObject, FlutterPlugin {
             view.applyStyle(style)
         }
         
-        if type == .label {
-            print("Creating Label view")
-            print("Full properties: \(properties)")
-            if let textStyle = properties["textStyle"] as? [String: Any] {
-                print("Text style properties: \(textStyle)")
-                print("Text content: \(textStyle["text"] ?? "nil")")
-            }
+        // Setup events if present
+        if let events = properties["events"] as? [String: Any] {
+            print("Setting up events for view: \(viewId)")
+            print("Events config: \(events)")
+            view.setupEvents(events, channel: methodChannel)
         }
         
         views[viewId] = view

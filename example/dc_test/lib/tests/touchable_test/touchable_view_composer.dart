@@ -39,13 +39,13 @@ class TouchableViewComposer extends UIComposer {
         justifyContent: YogaJustify.center,
       ),
       onPress: () {
-        print('Button pressed!');
+        print('Button pressed! Event received on Dart side');
       },
       onPressIn: () {
-        print('Button press started');
+        print('Button press started on Dart side');
       },
       onPressOut: () {
-        print('Button press ended');
+        print('Button press ended on Dart side');
       },
     ).create();
 
@@ -63,7 +63,7 @@ class TouchableViewComposer extends UIComposer {
   @override
   Future<void> bind() async {
     await Core.attachView('root', parent ?? '');
-    // await Core.attachView(parent ?? '', touchableButton ?? '');
-    await Core.attachView(parent ?? '', buttonText ?? '');
+    await Core.attachView(parent ?? '', touchableButton ?? '');
+    await Core.attachView(touchableButton ?? '', buttonText ?? '');
   }
 }

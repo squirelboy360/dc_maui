@@ -54,6 +54,9 @@ class Touchable {
   });
 
   Future<String?> create() async {
+    // Debug log
+    print("Creating touchable with events: ${onPress != null ? 'onPress' : 'no press'}, ${onLongPress != null ? 'onLongPress' : 'no longPress'}");
+    
     final events = <String, bool>{
       if (onPress != null) 'onPress': true,
       if (onLongPress != null) 'onLongPress': true,
@@ -72,15 +75,19 @@ class Touchable {
           'cancelsTouchesInView': style.cancelsTouchesInView,
         },
         'layout': layout.toMap(),
-        if (events.isNotEmpty) 'events': events,
+        'events': events, // Make sure events are at top level
       },
-      onEvent: _handleEvent,
+      onEvent: (type, data) {
+        print("Received event: $type"); // Debug log
+        _handleEvent(type, data);
+      },
     );
     
     return id;
   }
 
   void _handleEvent(String type, dynamic data) {
+    print("Handling event: $type"); // Debug log
     switch (type) {
       case 'onPress':
         onPress?.call();
