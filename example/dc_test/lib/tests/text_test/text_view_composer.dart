@@ -15,6 +15,7 @@ abstract class TextViewComposer extends UIComposer {
   String? textContainer; // Add this
   String? centeredText;
   String? bottomButton;
+  String? bottomButtonText;
 
   final colors = [
     0xFFE57373,
@@ -79,7 +80,6 @@ abstract class TextViewComposer extends UIComposer {
         textAlign: TextAlign.center,
         fontWeight: FontWeight.bold,
       ),
-     
     ).create();
 
     print("Created centered text with ID: $centeredText"); // Add this
@@ -114,6 +114,19 @@ abstract class TextViewComposer extends UIComposer {
       ),
     ).create();
 
+    bottomButtonText = await Text(
+      text: 'Bottom Button',
+      textStyle: TextStyle(
+        fontSize: 12,
+        color: Colors.white.value,
+        textAlign: TextAlign.center,
+        fontWeight: FontWeight.bold,
+      ),
+      layout: YogaLayout(
+        alignSelf: YogaAlign.center,
+      ),
+    ).create();
+
     await createGridItems();
   }
 
@@ -131,13 +144,13 @@ abstract class TextViewComposer extends UIComposer {
           ),
         ),
         layout: YogaLayout(
-          padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
-          width: YogaValue(100, YogaUnit.point),
-          height: YogaValue(100, YogaUnit.point),
-          margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
-          alignItems: YogaAlign.center,      // Add this
-          justifyContent: YogaJustify.center // Add this
-        ),
+            padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+            width: YogaValue(100, YogaUnit.point),
+            height: YogaValue(100, YogaUnit.point),
+            margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+            alignItems: YogaAlign.center, // Add this
+            justifyContent: YogaJustify.center // Add this
+            ),
       ).create();
 
       // Add text showing the color value
@@ -166,7 +179,7 @@ abstract class TextViewComposer extends UIComposer {
     final r = (color >> 16) & 0xFF;
     final g = (color >> 8) & 0xFF;
     final b = color & 0xFF;
-    
+
     // Calculate relative luminance
     final luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance < 0.5;

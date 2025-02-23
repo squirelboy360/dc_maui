@@ -17,5 +17,6 @@ class TextViewBinder extends TextViewComposer {
     
     // Finally the bottom button
     await Core.attachView(mainContainer ?? '', bottomButton ?? '');
+    await Core.attachView(bottomButton ?? '', bottomButtonText ?? ''); 
   }
 }
