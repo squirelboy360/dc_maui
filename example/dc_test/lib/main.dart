@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'view_tests/grid_view_binder.dart';
+import 'tests/view_tests/grid_view_binder.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -8,5 +8,5 @@ void main() {
 
 Future<void> startApp() async {
   final viewBinder = GridViewBinder();
-  await viewBinder.start(); // Use start() instead of execute()
+  await viewBinder.start();
 }

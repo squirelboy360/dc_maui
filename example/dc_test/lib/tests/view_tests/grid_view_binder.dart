@@ -4,7 +4,7 @@ import 'package:dc_test/framework/bridge/controls/view.dart';
 import 'package:dc_test/framework/bridge/types/layout_layouts/yoga_types.dart';
 import 'package:dc_test/framework/bridge/types/view_types/view_styles.dart';
 
-import '../framework/bridge/core.dart';
+import '../../framework/bridge/core.dart';
 import 'grid_view_composer.dart';
 
 class GridViewBinder extends GridViewComposer {

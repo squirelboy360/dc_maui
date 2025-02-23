@@ -1,8 +1,8 @@
-import '../framework/ui_composer.dart';
-import '../framework/bridge/controls/view.dart';
+import '../../framework/ui_composer.dart';
+import '../../framework/bridge/controls/view.dart';
 import 'package:flutter/material.dart' hide View;
-import '../framework/bridge/types/view_types/view_styles.dart';
-import '../framework/bridge/types/layout_layouts/yoga_types.dart';
+import '../../framework/bridge/types/view_types/view_styles.dart';
+import '../../framework/bridge/types/layout_layouts/yoga_types.dart';
 
 class GridViewComposer extends UIComposer {
   String? mainContainer;
