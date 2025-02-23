@@ -126,7 +126,13 @@ class DCText: DCView {
                 label.textColor = UIColor(rgb: color)
             }
             if let alignment = textStyle["textAlignment"] as? String {
-                label.textAlignment = NSTextAlignment(rawValue: alignment) ?? .natural
+                switch alignment {
+                case "left": label.textAlignment = .left
+                case "center": label.textAlignment = .center
+                case "right": label.textAlignment = .right
+                case "justified": label.textAlignment = .justified
+                default: label.textAlignment = .natural
+                }
             }
             
             // Line styling
