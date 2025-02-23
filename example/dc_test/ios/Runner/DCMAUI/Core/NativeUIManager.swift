@@ -94,6 +94,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
               let typeString = args["viewType"] as? String,
               let type = ViewType(rawValue: typeString),
               let properties = args["properties"] as? [String: Any] else {
+            print("Failed to parse create view arguments")
             return
         }
         
@@ -120,6 +121,15 @@ class NativeUIManager: NSObject, FlutterPlugin {
             view.applyStyle(style)
         }
         
+        if type == .label {
+            print("Creating Label view")
+            print("Full properties: \(properties)")
+            if let textStyle = properties["textStyle"] as? [String: Any] {
+                print("Text style properties: \(textStyle)")
+                print("Text content: \(textStyle["text"] ?? "nil")")
+            }
+        }
+        
         views[viewId] = view
         childViews[viewId] = []
         
@@ -131,7 +141,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
         case .view:
             return DCView(viewId: id)
         case .label:
-            return DCText(viewId: id, text: properties["text"] as? String ?? "")
+            // Initialize with empty text first
+            let textView = DCText(viewId: id, text: "")
+            // Apply text style immediately
+            if let textStyle = properties["textStyle"] as? [String: Any] {
+                textView.applyStyle(["textStyle": textStyle])
+            }
+            return textView
         case .button:
             return DCButton(viewId: id)
         case .image:
@@ -168,6 +184,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
         
         parentView.addSubview(childView)
         childViews[parentId]?.append(childId)
+        
+        if let view = childView as? DCText {
+            print("Attaching text view")
+            print("Parent frame: \(parentView.frame)")
+            print("Text frame: \(view.frame)")
+            print("Text content: \(view.getText())")
+        }
         
         // Force layout update
         parentView.yoga.applyLayout(preservingOrigin: true)

@@ -68,13 +68,15 @@ import YogaKit
  */
 class DCText: DCView {
     private let label = UILabel()
-     
-     func getText() -> String {
-         return label.text ?? ""
-     }
+    
+    // Change from func to public func to make it accessible
+    public func getText() -> String {
+        return label.text ?? ""
+    }
     
     init(viewId: String, text: String) {
         super.init(viewId: viewId)
+        print("DCText init with text: \(text)")
         setupLabel(withText: text)
     }
     
@@ -88,12 +90,39 @@ class DCText: DCView {
         label.yoga.isEnabled = true
         addSubview(label)
         
-        // Make label fill parent
-        label.yoga.position = .absolute
-        label.yoga.left = YGValue.zero
-        label.yoga.top = YGValue.zero
-        label.yoga.right = YGValue.zero
-        label.yoga.bottom = YGValue.zero
+        // Fix 1: Ensure proper layout configuration
+        self.yoga.isEnabled = true
+        self.yoga.flexDirection = .row  // Add this
+        
+        // Fix 2: Configure label constraints properly
+        label.yoga.position = .relative  // Change from absolute
+        label.yoga.flexGrow = 1         // Add this
+        label.yoga.flexShrink = 1       // Add this
+        
+        // Fix 3: Add debug coloring temporarily
+        self.backgroundColor = .red.withAlphaComponent(0.3)
+        label.backgroundColor = .green.withAlphaComponent(0.3)
+        
+        // Size to fit initially
+        label.sizeToFit()
+        
+        // Set initial dimensions based on content
+        self.yoga.width = YGValue(value: Float(label.frame.width), unit: .point)
+        self.yoga.height = YGValue(value: Float(label.frame.height), unit: .point)
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Fix 4: Add layout debugging
+        print("DCText layout: frame=\(frame), bounds=\(bounds)")
+        print("Label layout: frame=\(label.frame), bounds=\(label.bounds)")
+        print("Label text: \(label.text ?? "nil")")
+        
+        // Fix 5: Ensure layout is applied
+        if frame.size != .zero {
+            yoga.applyLayout(preservingOrigin: true)
+        }
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
@@ -103,12 +132,18 @@ class DCText: DCView {
     }
     
     override func applyStyle(_ style: [String: Any]) {
+        print("DCText applying style: \(style)")
         super.applyStyle(style)
         
         if let textStyle = style["textStyle"] as? [String: Any] {
+            print("Found textStyle: \(textStyle)")
+            
             // Text content
             if let text = textStyle["text"] as? String {
+                print("Setting text: \(text)")
                 label.text = text
+                // Size to fit after setting text
+                label.sizeToFit()
             }
             
             // Font styling
@@ -134,6 +169,16 @@ class DCText: DCView {
                 default: label.textAlignment = .natural
                 }
             }
+            
+            // After applying all styles, ensure proper sizing
+            label.sizeToFit()
+            // Set intrinsic content size for Yoga
+            self.yoga.width = YGValue(value: Float(label.frame.width), unit: .point)
+            self.yoga.height = YGValue(value: Float(label.frame.height), unit: .point)
+            
+            // Force layout update
+            self.yoga.markDirty()
+            self.setNeedsLayout()
             
             // Line styling
             if let lineHeight = textStyle["lineHeight"] as? CGFloat {
@@ -201,7 +246,13 @@ class DCText: DCView {
                 // Handle custom NSAttributedString attributes
                 // This would need additional processing based on your needs
             }
+        } else {
+            print("No textStyle found in style")
         }
+        
+        // Print final state
+        print("Final label text: \(label.text ?? "nil")")
+        print("Final label frame: \(label.frame)")
     }
 }
 

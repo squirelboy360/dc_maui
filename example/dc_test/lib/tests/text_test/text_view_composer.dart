@@ -12,13 +12,19 @@ abstract class TextViewComposer extends UIComposer {
   String? appbar;
   String? gridContainerColumn;
   String? gridContainer;
-  String? textContainer;  // Add this
+  String? textContainer; // Add this
   String? centeredText;
   String? bottomButton;
 
   final colors = [
-    0xFFE57373, 0xFF81C784, 0xFF64B5F6, 0xFFFFB74D,
-    0xFFBA68C8, 0xFF4DB6AC, 0xFFFFD54F, 0xFFFFD54F,
+    0xFFE57373,
+    0xFF81C784,
+    0xFF64B5F6,
+    0xFFFFB74D,
+    0xFFBA68C8,
+    0xFF4DB6AC,
+    0xFFFFD54F,
+    0xFFFFD54F,
     0xFF7986CB,
   ];
 
@@ -56,11 +62,12 @@ abstract class TextViewComposer extends UIComposer {
     textContainer = await View(
       style: ViewStyle(backgroundColor: Colors.white.withOpacity(0.8).value),
       layout: YogaLayout(
-        width: YogaValue(200, YogaUnit.point),
-        height: YogaValue(50, YogaUnit.point),
+        width: YogaValue(300, YogaUnit.point), // Add explicit width
+        height: YogaValue(100, YogaUnit.point), // Add explicit height
         alignItems: YogaAlign.center,
+
         justifyContent: YogaJustify.center,
-        margin: EdgeValues(bottom: YogaValue(16, YogaUnit.point)),
+        alignContent: YogaAlign.center,
       ),
     ).create();
 
@@ -68,11 +75,17 @@ abstract class TextViewComposer extends UIComposer {
       text: "Hello from Grid!",
       textStyle: TextStyle(
         fontSize: 24,
-        color: Colors.blue.value,
+        color: Colors.pink.value,
         textAlign: TextAlign.center,
         fontWeight: FontWeight.bold,
       ),
+      layout: YogaLayout(
+        alignSelf: YogaAlign.center,
+        margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
+      ),
     ).create();
+
+    print("Created centered text with ID: $centeredText"); // Add this
 
     gridContainer = await View(
       style: ViewStyle(backgroundColor: Colors.red.withOpacity(0.1).value),

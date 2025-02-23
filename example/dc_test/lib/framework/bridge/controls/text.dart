@@ -17,14 +17,18 @@ class Text {
   }) : this.textStyle = (textStyle ?? TextStyle()).copyWith(text: text);
 
   Future<String?> create({EventCallback? onEvent}) async {
+    final properties = {
+      'textStyle': textStyle.toMap(),
+      'style': style.toMap(),
+      'layout': layout.toMap(),
+      if (onEvent != null) 'events': {'onEvent': true},
+    };
+    
+    print("Creating Text with properties: $properties"); // Add this debug log
+
     id = await Core.createView(
       viewType: 'Label',
-      properties: {
-        'textStyle': textStyle.toMap(),
-        'style': style.toMap(),
-        'layout': layout.toMap(),
-        if (onEvent != null) 'events': {'onEvent': true},
-      },
+      properties: properties,
       onEvent: onEvent,
     );
     return id;
@@ -59,8 +63,9 @@ extension TextStyleExtension on TextStyle {
       minimumFontSize: minimumFontSize ?? this.minimumFontSize,
       numberOfLines: numberOfLines ?? this.numberOfLines,
       fontFamily: fontFamily ?? this.fontFamily,
-      allowsDefaultTighteningForTruncation: 
-        allowsDefaultTighteningForTruncation ?? this.allowsDefaultTighteningForTruncation,
+      allowsDefaultTighteningForTruncation:
+          allowsDefaultTighteningForTruncation ??
+              this.allowsDefaultTighteningForTruncation,
       attributes: attributes ?? this.attributes,
     );
   }
