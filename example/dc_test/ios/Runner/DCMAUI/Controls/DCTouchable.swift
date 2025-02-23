@@ -68,88 +68,184 @@ import UIKit
 */
 
 class DCTouchable: DCView {
-    private var activeOpacity: CGFloat = 0.2
-    private var defaultOpacity: CGFloat = 1.0
     private weak var methodChannel: FlutterMethodChannel?
-    private var eventCallbacks: [String: () -> Void] = [:] // Add storage for callbacks
+    private var longPressGesture: UILongPressGestureRecognizer?
+    private var initialTouchLocation: CGPoint = .zero
+    private var pressStartTime: TimeInterval = 0
+    
+    // Configurable properties from TouchableStyle
+    private var activeOpacity: CGFloat = 0.2
+    private var isDisabled: Bool = false
+    private var underlayColor: UIColor?
+    private var pressedScale: CGFloat = 0.98
+    private var animationDuration: TimeInterval = 0.1
+    private var hasHapticFeedback: Bool = true
     
     override func setupDefaults() {
         super.setupDefaults()
-        isUserInteractionEnabled = true
-    }
-    
-    override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
-        self.methodChannel = channel
-        
-        if events["onPress"] != nil {
-            let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-            addGestureRecognizer(tap)
-        }
-        
-        if events["onLongPress"] != nil {
-            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
-            addGestureRecognizer(longPress)
-        }
-    }
-    
-    @objc private func handleTap() {
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPress",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-    }
-    
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        guard gesture.state == .began else { return }
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onLongPress",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressIn",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-        animate(to: activeOpacity)
-    }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesEnded(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressOut",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-        animate(to: defaultOpacity)
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesCancelled(touches, with: event)
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onPressOut",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-        animate(to: defaultOpacity)
-    }
-    
-    private func animate(to opacity: CGFloat) {
-        UIView.animate(withDuration: 0.15, delay: 0, options: .allowUserInteraction) {
-            self.alpha = opacity
-        }
+        setupGestureRecognizers()
+        clipsToBounds = true
     }
     
     override func applyStyle(_ style: [String: Any]) {
         super.applyStyle(style)
         
-        if let activeOpacity = style["activeOpacity"] as? CGFloat {
-            self.activeOpacity = activeOpacity
+        if let touchableStyle = style["touchableStyle"] as? [String: Any] {
+            print("Applying touchable style: \(touchableStyle)")
+            
+            if let activeOpacity = touchableStyle["activeOpacity"] as? CGFloat {
+                self.activeOpacity = activeOpacity
+            }
+            
+            if let disabled = touchableStyle["disabled"] as? Bool {
+                self.isDisabled = disabled
+                self.isUserInteractionEnabled = !disabled
+            }
+            
+            if let underlayColor = touchableStyle["underlayColor"] as? UInt32 {
+                self.underlayColor = UIColor(rgb: underlayColor)
+            }
+            
+            if let pressedScale = touchableStyle["pressedScale"] as? CGFloat {
+                self.pressedScale = pressedScale
+            }
+            
+            if let duration = touchableStyle["pressAnimationDuration"] as? TimeInterval {
+                self.animationDuration = duration / 1000 // Convert from ms to seconds
+            }
+            
+            if let haptic = touchableStyle["hasHapticFeedback"] as? Bool {
+                self.hasHapticFeedback = haptic
+            }
+        }
+    }
+    
+    override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
+        self.methodChannel = channel
+    }
+    
+    private func setupGestureRecognizers() {
+        // Tap gesture
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        addGestureRecognizer(tapGesture)
+        
+        // Long press gesture
+        longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        if let longPress = longPressGesture {
+            addGestureRecognizer(longPress)
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard !isDisabled, let touch = touches.first else { return }
+        
+        initialTouchLocation = touch.location(in: self)
+        pressStartTime = Date().timeIntervalSince1970
+        
+        // Handle press in
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onPressIn",
+            "data": [
+                "timestamp": pressStartTime,
+                "position": [
+                    "x": initialTouchLocation.x,
+                    "y": initialTouchLocation.y
+                ]
+            ]
+        ])
+        
+        // Animate press
+        animatePress(isPressed: true)
+        
+        // Haptic feedback
+        if hasHapticFeedback {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+        }
+        
+        super.touchesBegan(touches, with: event)
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard !isDisabled else { return }
+        handleTouchEnd(touches, cancelled: false)
+        super.touchesEnded(touches, with: event)
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard !isDisabled else { return }
+        handleTouchEnd(touches, cancelled: true)
+        super.touchesCancelled(touches, with: event)
+    }
+    
+    private func handleTouchEnd(_ touches: Set<UITouch>, cancelled: Bool) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+        let endTime = Date().timeIntervalSince1970
+        
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onPressOut",
+            "data": [
+                "duration": endTime - pressStartTime,
+                "position": ["x": location.x, "y": location.y],
+                "cancelled": cancelled,
+                "timestamp": endTime
+            ]
+        ])
+        
+        animatePress(isPressed: false)
+    }
+    
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        guard !isDisabled else { return }
+        
+        let location = gesture.location(in: self)
+        let currentTime = Date().timeIntervalSince1970
+        
+        methodChannel?.invokeMethod("onComponentEvent", arguments: [
+            "viewId": viewId,
+            "type": "onPress",
+            "data": [
+                "duration": currentTime - pressStartTime,
+                "position": ["x": location.x, "y": location.y],
+                "timestamp": currentTime
+            ]
+        ])
+    }
+    
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard !isDisabled else { return }
+        
+        if gesture.state == .began {
+            let location = gesture.location(in: self)
+            let currentTime = Date().timeIntervalSince1970
+            
+            methodChannel?.invokeMethod("onComponentEvent", arguments: [
+                "viewId": viewId,
+                "type": "onLongPress",
+                "data": [
+                    "duration": currentTime - pressStartTime,
+                    "position": ["x": location.x, "y": location.y],
+                    "timestamp": currentTime
+                ]
+            ])
+            
+            if hasHapticFeedback {
+                let generator = UIImpactFeedbackGenerator(style: .heavy)
+                generator.impactOccurred()
+            }
+        }
+    }
+    
+    private func animatePress(isPressed: Bool) {
+        UIView.animate(withDuration: animationDuration, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState]) {
+            self.alpha = isPressed ? self.activeOpacity : 1.0
+            self.transform = isPressed ? CGAffineTransform(scaleX: self.pressedScale, y: self.pressedScale) : .identity
+            if let color = self.underlayColor {
+                self.backgroundColor = isPressed ? color : self.backgroundColor
+            }
         }
     }
 }
