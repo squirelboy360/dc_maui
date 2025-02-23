@@ -106,15 +106,113 @@ class DCText: DCView {
         super.applyStyle(style)
         
         if let textStyle = style["textStyle"] as? [String: Any] {
+            // Text content
+            if let text = textStyle["text"] as? String {
+                label.text = text
+            }
+            
+            // Font styling
+            if let fontSize = textStyle["fontSize"] as? CGFloat {
+                let weight = UIFont.Weight(textStyle["fontWeight"] as? String ?? "regular")
+                if let fontFamily = textStyle["fontFamily"] as? String {
+                    label.font = UIFont(name: fontFamily, size: fontSize) ?? .systemFont(ofSize: fontSize, weight: weight)
+                } else {
+                    label.font = .systemFont(ofSize: fontSize, weight: weight)
+                }
+            }
+            
+            // Color and alignment
             if let color = textStyle["color"] as? UInt32 {
                 label.textColor = UIColor(rgb: color)
             }
-            if let fontSize = textStyle["fontSize"] as? CGFloat {
-                label.font = .systemFont(ofSize: fontSize)
+            if let alignment = textStyle["textAlignment"] as? String {
+                label.textAlignment = NSTextAlignment(rawValue: alignment) ?? .natural
             }
-            if let alignment = textStyle["textAlign"] as? String {
-                label.textAlignment = TextAlignment(rawValue: alignment)?.nsTextAlignment ?? .left
+            
+            // Line styling
+            if let lineHeight = textStyle["lineHeight"] as? CGFloat {
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.lineHeightMultiple = lineHeight
+                label.attributedText = NSAttributedString(
+                    string: label.text ?? "",
+                    attributes: [.paragraphStyle: paragraphStyle]
+                )
             }
+            if let letterSpacing = textStyle["letterSpacing"] as? CGFloat {
+                label.attributedText = NSAttributedString(
+                    string: label.text ?? "",
+                    attributes: [.kern: letterSpacing]
+                )
+            }
+            
+            // Text size adjustment
+            if let adjustsFontSize = textStyle["adjustsFontSizeToFit"] as? Bool {
+                label.adjustsFontSizeToFitWidth = adjustsFontSize
+                if let minSize = textStyle["minimumFontSize"] as? CGFloat {
+                    label.minimumScaleFactor = minSize / (label.font.pointSize)
+                }
+            }
+            
+            // Line limits
+            if let numberOfLines = textStyle["numberOfLines"] as? Int {
+                label.numberOfLines = numberOfLines
+            }
+            
+            // Text decoration
+            if let decorationLine = textStyle["decorationLine"] as? String {
+                var attributes: [NSAttributedString.Key: Any] = [:]
+                switch decorationLine {
+                case "underline":
+                    attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
+                case "strikethrough":
+                    attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+                case "underlineStrikethrough":
+                    attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
+                    attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+                default: break
+                }
+                
+                if let decorationColor = textStyle["decorationColor"] as? UInt32 {
+                    attributes[.underlineColor] = UIColor(rgb: decorationColor)
+                    attributes[.strikethroughColor] = UIColor(rgb: decorationColor)
+                }
+                
+                if !attributes.isEmpty {
+                    label.attributedText = NSAttributedString(
+                        string: label.text ?? "",
+                        attributes: attributes
+                    )
+                }
+            }
+            
+            // Advanced text properties
+            if let allowsTightening = textStyle["allowsDefaultTighteningForTruncation"] as? Bool {
+                label.allowsDefaultTighteningForTruncation = allowsTightening
+            }
+            
+            // Custom attributes
+            if let attributes = textStyle["attributes"] as? [String: Any] {
+                // Handle custom NSAttributedString attributes
+                // This would need additional processing based on your needs
+            }
+        }
+    }
+}
+
+// Helper extension for font weights
+private extension UIFont.Weight {
+    init(_ string: String) {
+        switch string {
+        case "ultraLight": self = .ultraLight
+        case "thin": self = .thin
+        case "light": self = .light
+        case "regular": self = .regular
+        case "medium": self = .medium
+        case "semibold": self = .semibold
+        case "bold": self = .bold
+        case "heavy": self = .heavy
+        case "black": self = .black
+        default: self = .regular
         }
     }
 }
