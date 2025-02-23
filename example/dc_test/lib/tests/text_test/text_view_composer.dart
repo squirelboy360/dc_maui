@@ -6,6 +6,7 @@ import '../../framework/bridge/controls/view.dart';
 import '../../framework/bridge/types/layout_layouts/yoga_types.dart';
 import '../../framework/bridge/types/text_types/text_styles.dart';
 import '../../framework/bridge/types/view_types/view_styles.dart';
+import '../../framework/bridge/controls/touchable.dart';
 
 abstract class TextViewComposer extends UIComposer {
   String? mainContainer;
@@ -98,22 +99,30 @@ abstract class TextViewComposer extends UIComposer {
       ),
     ).create();
 
-    bottomButton = await View(
-      style: ViewStyle(
+    bottomButton = await Touchable(
+      style: TouchableStyle(
+        activeOpacity: 0.6,
         backgroundColor: Colors.blueAccent.value,
         cornerRadius: 20,
       ),
       layout: YogaLayout(
         display: YogaDisplay.flex,
-        flex: 0,
         height: YogaValue(60, YogaUnit.point),
         width: YogaValue(200, YogaUnit.point),
-        // margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
         alignSelf: YogaAlign.center,
         alignContent: YogaAlign.center,
         justifyContent: YogaJustify.center,
         alignItems: YogaAlign.center,
       ),
+      onPress: () {
+        print('Bottom button pressed!');
+      },
+      onPressIn: () {
+        print('Bottom button press started');
+      },
+      onPressOut: () {
+        print('Bottom button press ended');
+      },
     ).create();
 
     bottomButtonText = await Text(

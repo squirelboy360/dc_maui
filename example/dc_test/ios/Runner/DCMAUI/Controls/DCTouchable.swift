@@ -71,16 +71,43 @@ class DCTouchable: DCView {
     private var activeOpacity: CGFloat = 0.2
     private var defaultOpacity: CGFloat = 1.0
     private weak var methodChannel: FlutterMethodChannel?
-    private var eventCallbacks: [String: () -> Void] = [:] // Add storage for callbacks
+    private var delaysContentTouches: Bool = false
+    private var cancelsTouchesInView: Bool = true
     
     override func setupDefaults() {
         super.setupDefaults()
         isUserInteractionEnabled = true
     }
     
+    override func applyStyle(_ style: [String: Any]) {
+        // First apply base view styles
+        super.applyStyle(style)
+        
+        if let touchableStyle = style["touchableStyle"] as? [String: Any] {
+            print("Applying touchable style: \(touchableStyle)")
+            
+            if let activeOpacity = touchableStyle["activeOpacity"] as? CGFloat {
+                self.activeOpacity = activeOpacity
+            }
+            
+            if let enabled = touchableStyle["enabled"] as? Bool {
+                self.isUserInteractionEnabled = enabled
+            }
+            
+            if let delaysContent = touchableStyle["delaysContentTouches"] as? Bool {
+                self.delaysContentTouches = delaysContent
+            }
+            
+            if let cancelsTouch = touchableStyle["cancelsTouchesInView"] as? Bool {
+                self.cancelsTouchesInView = cancelsTouch
+            }
+        }
+    }
+    
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
         self.methodChannel = channel
         
+        // Map each event type to its gesture recognizer
         if events["onPress"] != nil {
             let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
             addGestureRecognizer(tap)
@@ -142,14 +169,6 @@ class DCTouchable: DCView {
     private func animate(to opacity: CGFloat) {
         UIView.animate(withDuration: 0.15, delay: 0, options: .allowUserInteraction) {
             self.alpha = opacity
-        }
-    }
-    
-    override func applyStyle(_ style: [String: Any]) {
-        super.applyStyle(style)
-        
-        if let activeOpacity = style["activeOpacity"] as? CGFloat {
-            self.activeOpacity = activeOpacity
         }
     }
 }
