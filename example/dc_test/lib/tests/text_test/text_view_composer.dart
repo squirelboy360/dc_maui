@@ -82,7 +82,6 @@ abstract class TextViewComposer extends UIComposer {
       ),
     ).create();
 
-    print("Created centered text with ID: $centeredText"); // Add this
 
     gridContainer = await View(
       style: ViewStyle(backgroundColor: Colors.red.withOpacity(0.1).value),
@@ -109,21 +108,21 @@ abstract class TextViewComposer extends UIComposer {
         flex: 0,
         height: YogaValue(60, YogaUnit.point),
         width: YogaValue(200, YogaUnit.point),
-        margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
+        // margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
         alignSelf: YogaAlign.center,
+        alignContent: YogaAlign.center,
+        justifyContent: YogaJustify.center,
+        alignItems: YogaAlign.center,
       ),
     ).create();
 
     bottomButtonText = await Text(
       text: 'Bottom Button',
       textStyle: TextStyle(
-        fontSize: 12,
+        fontSize: 15,
         color: Colors.white.value,
         textAlign: TextAlign.center,
         fontWeight: FontWeight.bold,
-      ),
-      layout: YogaLayout(
-        alignSelf: YogaAlign.center,
       ),
     ).create();
 
