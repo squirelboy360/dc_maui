@@ -7,8 +7,15 @@ class TextViewBinder extends TextViewComposer {
     await Core.attachView('root', mainContainer ?? '');
     await Core.attachView(mainContainer ?? '', appbar ?? '');
     await Core.attachView(mainContainer ?? '', gridContainerColumn ?? '');
+    
+    // Attach text container first
+    await Core.attachView(gridContainerColumn ?? '', textContainer ?? '');
+    await Core.attachView(textContainer ?? '', centeredText ?? '');
+    
+    // Then attach grid
     await Core.attachView(gridContainerColumn ?? '', gridContainer ?? '');
-    await Core.attachView(gridContainer ?? '', centeredText ?? '');
+    
+    // Finally the bottom button
     await Core.attachView(mainContainer ?? '', bottomButton ?? '');
   }
 }

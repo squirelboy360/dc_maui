@@ -12,6 +12,7 @@ abstract class TextViewComposer extends UIComposer {
   String? appbar;
   String? gridContainerColumn;
   String? gridContainer;
+  String? textContainer;  // Add this
   String? centeredText;
   String? bottomButton;
 
@@ -43,12 +44,33 @@ abstract class TextViewComposer extends UIComposer {
       style: ViewStyle(backgroundColor: Colors.black.withOpacity(0.1).value),
       layout: YogaLayout(
         display: YogaDisplay.flex,
+        flex: 1,
         alignContent: YogaAlign.center,
-        height: YogaValue(100, YogaUnit.percent),
-        width: YogaValue(100, YogaUnit.percent),
         justifyContent: YogaJustify.center,
-        alignItems: YogaAlign.spaceBetween,
+        alignItems: YogaAlign.center,
         flexDirection: YogaFlexDirection.column,
+      ),
+    ).create();
+
+    // Add a specific container for text
+    textContainer = await View(
+      style: ViewStyle(backgroundColor: Colors.white.withOpacity(0.8).value),
+      layout: YogaLayout(
+        width: YogaValue(200, YogaUnit.point),
+        height: YogaValue(50, YogaUnit.point),
+        alignItems: YogaAlign.center,
+        justifyContent: YogaJustify.center,
+        margin: EdgeValues(bottom: YogaValue(16, YogaUnit.point)),
+      ),
+    ).create();
+
+    centeredText = await Text(
+      text: "Hello from Grid!",
+      textStyle: TextStyle(
+        fontSize: 24,
+        color: Colors.blue.value,
+        textAlign: TextAlign.center,
+        fontWeight: FontWeight.bold,
       ),
     ).create();
 
@@ -61,22 +83,9 @@ abstract class TextViewComposer extends UIComposer {
         flexDirection: YogaFlexDirection.row,
         flex: 10,
         padding: EdgeValues(all: YogaValue.point(16)),
-        flexWrap: YogaWrap.wrapReverse,
+        flexWrap: YogaWrap.wrap,
         alignContent: YogaAlign.center,
         justifyContent: YogaJustify.center,
-      ),
-    ).create();
-
-    centeredText = await Text(
-      text: "Hello from Grid!",
-      textStyle: TextStyle(
-        fontSize: 24,
-        color: Colors.blue.value,
-        textAlign: TextAlign.center,
-        fontWeight: FontWeight.bold,
-      ),
-      layout: YogaLayout(
-        margin: EdgeValues(all: YogaValue(16, YogaUnit.point)),
       ),
     ).create();
 
