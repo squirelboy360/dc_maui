@@ -2,95 +2,103 @@ import '../core.dart';
 import '../types/layout_layouts/yoga_types.dart';
 import '../types/view_types/view_styles.dart';
 
-// Text input specific types
+// Add these enums to match iOS native side
 enum KeyboardType {
-  default_('default'),
-  number('number'),
-  email('email'),
-  phone('phone'),
-  url('url');
+  default_,
+  number,
+  email,
+  phone,
+  url;
 
-  final String value;
-  const KeyboardType(this.value);
+  String toValue() {
+    return name == 'default_' ? 'default' : name;
+  }
 }
 
 enum ReturnKeyType {
-  done('done'),
-  go('go'),
-  next('next'),
-  search('search'),
-  send('send');
+  default_,
+  done,
+  go,
+  next,
+  search,
+  send;
 
-  final String value;
-  const ReturnKeyType(this.value);
+  String toValue() {
+    return name == 'default_' ? 'default' : name;
+  }
 }
 
 enum ContentType {
-  username('username'),
-  password('password'),
-  email('email'),
-  name('name'),
-  phone('phone'),
-  address('address'),
-  none('none');
+  none,
+  username,
+  password,
+  email,
+  name,
+  phone,
+  address,
+  url,
+  creditCard;
 
-  final String value;
-  const ContentType(this.value);
+  // Fix: Return the enum name as a String
+  String toValue() {
+    return name.toString(); // Explicitly convert enum name to String
+  }
 }
 
 class TextInputStyle {
+  final String? text;
   final String? placeholder;
   final int? textColor;
   final double? fontSize;
   final String? textAlign;
-  final KeyboardType? keyboardType;
-  final ReturnKeyType? returnKeyType;
+  final KeyboardType? keyboardType;  // Updated to use enum
+  final ReturnKeyType? returnKeyType; // Updated to use enum
+  final ContentType? contentType;     // Added content type
   final bool? isSecure;
-  final bool? autocorrection;
-  final ContentType? contentType;
-  final String? toolbarStyle;
+  final bool? multiline;
+  final int? maxLines;
+  final bool? editable;
 
   const TextInputStyle({
+    this.text,
     this.placeholder,
     this.textColor,
     this.fontSize,
     this.textAlign,
     this.keyboardType,
-    this.returnKeyType, 
-    this.isSecure,
-    this.autocorrection,
+    this.returnKeyType,
     this.contentType,
-    this.toolbarStyle,
+    this.isSecure,
+    this.multiline,
+    this.maxLines,
+    this.editable,
   });
 
   Map<String, dynamic> toMap() => {
+    if (text != null) 'text': text,
     if (placeholder != null) 'placeholder': placeholder,
     if (textColor != null) 'textColor': textColor,
     if (fontSize != null) 'fontSize': fontSize,
     if (textAlign != null) 'textAlign': textAlign,
-    if (keyboardType != null) 'keyboardType': keyboardType!.value,
-    if (returnKeyType != null) 'returnKeyType': returnKeyType!.value,
+    if (keyboardType != null) 'keyboardType': keyboardType!.toValue(),
+    if (returnKeyType != null) 'returnKeyType': returnKeyType!.toValue(),
+    if (contentType != null) 'contentType': contentType!.toValue(),
     if (isSecure != null) 'isSecure': isSecure,
-    if (autocorrection != null) 'autocorrection': autocorrection,
-    if (contentType != null) 'contentType': contentType!.value,
-    if (toolbarStyle != null) 'toolbarStyle': toolbarStyle,
+    if (multiline != null) 'multiline': multiline,
+    if (maxLines != null) 'maxLines': maxLines,
+    if (editable != null) 'editable': editable,
   };
 }
-
-typedef TextInputCallback = void Function(String text);
-typedef TextInputFocusCallback = void Function();
-typedef KeyboardChangeCallback = void Function(double height);
 
 class TextInput {
   String? id;
   final TextInputStyle inputStyle;
   final ViewStyle style;
   final YogaLayout layout;
-  final TextInputCallback? onTextChange;
-  final TextInputCallback? onSubmit;
-  final TextInputFocusCallback? onFocus;
-  final TextInputFocusCallback? onBlur;
-  final KeyboardChangeCallback? onKeyboardChange;
+  final void Function(String)? onTextChange;
+  final void Function(String)? onSubmit;
+  final void Function()? onFocus;
+  final void Function()? onBlur;
 
   TextInput({
     this.inputStyle = const TextInputStyle(),
@@ -99,30 +107,25 @@ class TextInput {
     this.onTextChange,
     this.onSubmit,
     this.onFocus,
-    this.onBlur, 
-    this.onKeyboardChange,
+    this.onBlur,
   });
 
   Future<String?> create() async {
-    final events = <String, bool>{
-      if (onTextChange != null) 'onTextChange': true,
-      if (onSubmit != null) 'onSubmit': true,
-      if (onFocus != null) 'onFocus': true,
-      if (onBlur != null) 'onBlur': true,
-      if (onKeyboardChange != null) 'onKeyboardChange': true,
-    };
-
     id = await Core.createView(
       viewType: 'TextInput',
       properties: {
         'style': style.toMap(),
         'inputStyle': inputStyle.toMap(),
         'layout': layout.toMap(),
-        'events': events,
+        'events': {
+          if (onTextChange != null) 'onTextChange': true,
+          if (onSubmit != null) 'onSubmit': true,
+          if (onFocus != null) 'onFocus': true,
+          if (onBlur != null) 'onBlur': true,
+        },
       },
       onEvent: _handleEvent,
     );
-
     return id;
   }
 
@@ -139,9 +142,6 @@ class TextInput {
         break;
       case 'onBlur':
         onBlur?.call();
-        break;
-      case 'onKeyboardChange':
-        onKeyboardChange?.call(data['height'] as double);
         break;
     }
   }

@@ -17,13 +17,13 @@ class TextInputTestComposer extends UIComposer {
     // Root container
     container = await View(
       style: ViewStyle(
-        backgroundColor: Colors.white.value,
+        backgroundColor: Colors.greenAccent.toARGB32(),
       ),
       layout: YogaLayout(
         flex: 1,
         alignItems: YogaAlign.center,
-        justifyContent: YogaJustify.center,
-        padding: EdgeValues(horizontal: YogaValue(20, YogaUnit.point)),
+        justifyContent: YogaJustify.spaceAround,
+        // padding: EdgeValues(horizontal: YogaValue(50, YogaUnit.point)),
       ),
     ).create();
 
@@ -96,7 +96,7 @@ class TextInputTestComposer extends UIComposer {
       ),
       layout: YogaLayout(
         width: YogaValue(300, YogaUnit.point),
-        height: YogaValue(100, YogaUnit.point),
+        height: YogaValue(50, YogaUnit.point),
       ),
       onTextChange: (text) {
         print('Address changed: $text');
