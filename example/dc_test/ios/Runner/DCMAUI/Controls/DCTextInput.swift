@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import UIKit
 import Combine
+import YogaKit // Add this import
 
 /**
  DCTextInput: Native text input component
@@ -74,121 +75,124 @@ import Combine
  }
 */
 
-class DCTextInput: DCView, UITextFieldDelegate {
-    private let textField = UITextField()
+import UIKit
+import YogaKit
+
+class DCTextInput: DCView {
+    // Use UITextField instead of UITextView for better default behavior
+    private var textField: UITextField!
     private weak var methodChannel: FlutterMethodChannel?
-    private var subscriptions = Set<AnyCancellable>()
     
-    // New keyboard features
-    private var keyboardToolbar: UIToolbar?
-    private var keyboardObserver: NSObjectProtocol?
-    private var keyboardHeight: CGFloat = 0
-    
-    override func setupDefaults() {
-        super.setupDefaults()
+    override init(viewId: String) {
+        super.init(viewId: viewId)
         setupTextField()
-        setupKeyboardHandling()
-        setupTextChangePublisher()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not implemented")
     }
     
     private func setupTextField() {
+        textField = UITextField()
         textField.delegate = self
-        textField.borderStyle = .roundedRect
-        textField.yoga.isEnabled = true
+        
+        // Reset all default styles
+        textField.borderStyle = .none
+        textField.backgroundColor = .clear
+        
+        // Add to view hierarchy
         addSubview(textField)
         
-        // Smart features
-        textField.smartDashesType = .yes
-        textField.smartQuotesType = .yes
-        textField.smartInsertDeleteType = .yes
+        // Use frame-based layout (more reliable than constraints for text fields)
+        textField.translatesAutoresizingMaskIntoConstraints = true
+        textField.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         
-        // Better text handling
-        textField.autocorrectionType = .default
-        textField.spellCheckingType = .default
-        textField.textContentType = .none
+        // Size to fit parent
+        textField.frame = bounds
     }
     
-    private func setupKeyboardHandling() {
-        // Add keyboard toolbar
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        
-        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissKeyboard))
-        toolbar.items = [flexSpace, doneButton]
-        
-        textField.inputAccessoryView = toolbar
-        keyboardToolbar = toolbar
-        
-        // Observe keyboard
-        keyboardObserver = NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillChangeFrameNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            self?.handleKeyboardChange(notification)
-        }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Keep text field sized to bounds
+        textField.frame = bounds
     }
     
-    private func setupTextChangePublisher() {
-        NotificationCenter.default
-            .publisher(for: UITextField.textDidChangeNotification, object: textField)
-            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.handleTextChange()
+    override func applyStyle(_ style: [String: Any]) {
+        // Apply container style first
+        super.applyStyle(style)
+        
+        if let inputStyle = style["inputStyle"] as? [String: Any] {
+            if let text = inputStyle["text"] as? String {
+                textField.text = text
             }
-            .store(in: &subscriptions)
-    }
-    
-    @objc private func dismissKeyboard() {
-        textField.resignFirstResponder()
-    }
-    
-    private func handleKeyboardChange(_ notification: Notification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
-        keyboardHeight = keyboardFrame.height
-        
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onKeyboardChange",
-            "data": ["height": keyboardHeight],
-            "timestamp": Date().timeIntervalSince1970
-        ])
+            if let placeholder = inputStyle["placeholder"] as? String {
+                textField.placeholder = placeholder
+            }
+            if let textColor = inputStyle["textColor"] as? UInt32 {
+                textField.textColor = UIColor(rgb: textColor)
+            }
+            if let fontSize = inputStyle["fontSize"] as? CGFloat {
+                textField.font = .systemFont(ofSize: fontSize)
+            }
+            if let textAlign = inputStyle["textAlign"] as? String {
+                textField.textAlignment = textAlign == "right" ? .right :
+                                        textAlign == "center" ? .center : .left
+            }
+            if let keyboardType = inputStyle["keyboardType"] as? String {
+                textField.keyboardType = keyboardType == "number" ? .numberPad :
+                                       keyboardType == "email" ? .emailAddress :
+                                       keyboardType == "phone" ? .phonePad :
+                                       keyboardType == "url" ? .URL : .default
+            }
+            if let returnKeyType = inputStyle["returnKeyType"] as? String {
+                textField.returnKeyType = returnKeyType == "done" ? .done :
+                                        returnKeyType == "go" ? .go :
+                                        returnKeyType == "next" ? .next :
+                                        returnKeyType == "search" ? .search :
+                                        returnKeyType == "send" ? .send : .default
+            }
+            if let isSecure = inputStyle["isSecure"] as? Bool {
+                textField.isSecureTextEntry = isSecure
+            }
+            if let autocorrection = inputStyle["autocorrection"] as? Bool {
+                textField.autocorrectionType = autocorrection ? .yes : .no
+            }
+        }
     }
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
         self.methodChannel = channel
+        
+        // Add text change notification observer
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTextChange),
+            name: UITextField.textDidChangeNotification,
+            object: textField
+        )
     }
     
-    @objc private func textDidChange() {
-        let text = textField.text ?? ""
-        let selectedRange = textField.selectedTextRange
-        
-        let start = selectedRange?.start != nil ? textField.offset(from: textField.beginningOfDocument, to: selectedRange!.start) : 0
-        let end = selectedRange?.end != nil ? textField.offset(from: textField.beginningOfDocument, to: selectedRange!.end) : 0
-        
+    @objc private func handleTextChange() {
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onTextChange",
             "data": [
-                "text": text,
-                "selectionStart": start,
-                "selectionEnd": end,
+                "text": textField.text ?? "",
                 "timestamp": Date().timeIntervalSince1970
             ]
         ])
     }
+}
 
+extension DCTextInput: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onFocus",
-            "data": [
-                "timestamp": Date().timeIntervalSince1970
-            ]
+            "data": ["timestamp": Date().timeIntervalSince1970]
         ])
     }
-
+    
     func textFieldDidEndEditing(_ textField: UITextField) {
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
@@ -200,144 +204,16 @@ class DCTextInput: DCView, UITextFieldDelegate {
         ])
     }
     
-    override func handleStateChange(_ newState: [String: Any]) {
-        if let text = newState["text"] as? String {
-            textField.text = text
-        }
-    }
-    
-    override func applyStyle(_ style: [String: Any]) {
-        super.applyStyle(style)
-        
-        if let inputStyle = style["inputStyle"] as? [String: Any] {
-            if let placeholder = inputStyle["placeholder"] as? String {
-                textField.placeholder = placeholder
-            }
-            if let keyboardType = inputStyle["keyboardType"] as? String {
-                textField.keyboardType = KeyboardType(rawValue: keyboardType)?.uiKeyboardType ?? .default
-            }
-            if let returnKeyType = inputStyle["returnKeyType"] as? String {
-                textField.returnKeyType = ReturnKeyType(rawValue: returnKeyType)?.uiReturnKeyType ?? .default
-            }
-            if let textColor = inputStyle["textColor"] as? UInt32 {
-                textField.textColor = UIColor(rgb: textColor)
-            }
-            if let fontSize = inputStyle["fontSize"] as? CGFloat {
-                textField.font = .systemFont(ofSize: fontSize)
-            }
-            if let alignment = inputStyle["textAlign"] as? String {
-                textField.textAlignment = TextAlignment(rawValue: alignment)?.nsTextAlignment ?? .left
-            }
-            if let isSecure = inputStyle["isSecure"] as? Bool {
-                textField.isSecureTextEntry = isSecure
-            }
-            // New style options
-            if let autocorrection = inputStyle["autocorrection"] as? Bool {
-                textField.autocorrectionType = autocorrection ? .yes : .no
-            }
-            if let contentType = inputStyle["contentType"] as? String {
-                textField.textContentType = TextContentType(rawValue: contentType)?.uiTextContentType
-            }
-            if let toolbarStyle = inputStyle["toolbarStyle"] as? String {
-                keyboardToolbar?.barStyle = ToolbarStyle(rawValue: toolbarStyle)?.uiBarStyle ?? .default
-            }
-        }
-    }
-    
-    // Helper enums for keyboard configuration
-    private enum KeyboardType: String {
-        case `default`, number, email, phone, url
-        
-        var uiKeyboardType: UIKeyboardType {
-            switch self {
-            case .default: return .default
-            case .number: return .numberPad
-            case .email: return .emailAddress
-            case .phone: return .phonePad
-            case .url: return .URL
-            }
-        }
-    }
-    
-    private enum ReturnKeyType: String {
-        case done, go, next, search, send
-        
-        var uiReturnKeyType: UIReturnKeyType {
-            switch self {
-            case .done: return .done
-            case .go: return .go
-            case .next: return .next
-            case .search: return .search
-            case .send: return .send
-            }
-        }
-    }
-    
-    private enum TextAlignment: String {
-        case left, center, right
-        
-        var nsTextAlignment: NSTextAlignment {
-            switch self {
-            case .left: return .left
-            case .center: return .center
-            case .right: return .right
-            }
-        }
-    }
-    
-    // Helper enum for content type
-    private enum TextContentType: String {
-        case username, password, email, name, phone, address, none
-        
-        var uiTextContentType: UITextContentType? {
-            switch self {
-            case .username: return .username
-            case .password: return .password
-            case .email: return .emailAddress
-            case .name: return .name
-            case .phone: return .telephoneNumber
-            case .address: return .fullStreetAddress
-            case .none: return nil
-            }
-        }
-    }
-    
-    private enum ToolbarStyle: String {
-        case `default`, dark
-        
-        var uiBarStyle: UIBarStyle {
-            switch self {
-            case .default: return .default
-            case .dark: return .black
-            }
-        }
-    }
-    
-    // Add the missing method:
-    private func handleTextChange() {
-        let text = textField.text ?? ""
-        let selectedRange = textField.selectedTextRange
-        
-        let start: Int
-        let end: Int
-        
-        if let selectedRange = selectedRange {
-            start = textField.offset(from: textField.beginningOfDocument, to: selectedRange.start)
-            end = textField.offset(from: textField.beginningOfDocument, to: selectedRange.end)
-        } else {
-            start = 0
-            end = 0
-        }
-        
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
-            "type": "onTextChange",
+            "type": "onSubmit",
             "data": [
-                "text": text,
-                "selectionStart": start,
-                "selectionEnd": end,
+                "text": textField.text ?? "",
                 "timestamp": Date().timeIntervalSince1970
             ]
         ])
+        textField.resignFirstResponder()
+        return true
     }
 }

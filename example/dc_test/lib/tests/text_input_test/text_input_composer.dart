@@ -31,14 +31,14 @@ class TextInputTestComposer extends UIComposer {
     emailInput = await TextInput(
       inputStyle: TextInputStyle(
         placeholder: "Enter email",
-        textColor: Colors.black.value,
+        textColor: Colors.pink.value,
         fontSize: 16,
         keyboardType: KeyboardType.email,
         contentType: ContentType.email,
         returnKeyType: ReturnKeyType.next,
       ),
       style: ViewStyle(
-        backgroundColor: Colors.grey[200]!.value,
+        backgroundColor: Colors.blue[200]!.value,
         cornerRadius: 8,
       ),
       layout: YogaLayout(
