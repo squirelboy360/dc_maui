@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import UIKit
 import Combine
-import YogaKit 
 
 /**
  DCTextInput: Native text input component
@@ -75,212 +74,113 @@ import YogaKit
  }
 */
 
-import UIKit
-import YogaKit
-
 class DCTextInput: DCView {
-    private var textField: UITextField?
-    private var textView: UITextView?
+    private let textField: UITextField
     private weak var methodChannel: FlutterMethodChannel?
-    private var isMultiline = false
+    
+    override init(viewId: String) {
+        textField = UITextField()
+        super.init(viewId: viewId)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not implemented")
+    }
     
     override func setupDefaults() {
         super.setupDefaults()
-        backgroundColor = .clear
+        
+        // Configure self (container)
         self.yoga.isEnabled = true
-        self.yoga.flex = 0
-    }
-    
-    private func setupTextInput(_ style: [String: Any]) {
-        textField?.removeFromSuperview()
-        textView?.removeFromSuperview()
+        self.clipsToBounds = true
         
-        if isMultiline {
-            let view = UITextView()
-            view.delegate = self
-            view.backgroundColor = .clear
-            view.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-            view.textContainer.lineFragmentPadding = 0
-            
-            // Use constraints instead of frame
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-            
-            NSLayoutConstraint.activate([
-                view.topAnchor.constraint(equalTo: topAnchor),
-                view.leadingAnchor.constraint(equalTo: leadingAnchor),
-                view.trailingAnchor.constraint(equalTo: trailingAnchor),
-                view.bottomAnchor.constraint(equalTo: bottomAnchor)
-            ])
-            
-            textView = view
-            textField = nil
-            
-        } else {
-            let field = UITextField()
-            field.delegate = self
-            field.backgroundColor = .clear
-            field.borderStyle = .none
-            
-            // Use constraints instead of frame
-            field.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(field)
-            
-            NSLayoutConstraint.activate([
-                field.topAnchor.constraint(equalTo: topAnchor),
-                field.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-                field.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-                field.bottomAnchor.constraint(equalTo: bottomAnchor)
-            ])
-            
-            textField = field
-            textView = nil
-        }
+        // Configure textField
+        textField.delegate = self
+        textField.borderStyle = .none
+        textField.backgroundColor = .clear
         
-        // Force layout update
-        setNeedsLayout()
-        layoutIfNeeded()
+        // Use frame-based layout like RN
+        textField.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(textField)
+        
+        // Important: Set initial frame
+        textField.frame = bounds
+        
+        print("TextInput setupDefaults - bounds: \(bounds), textField frame: \(textField.frame)")
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Important: Update input view frames to match bounds
-        if let field = textField {
-            field.frame = bounds.inset(by: UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8))
-        }
-        if let view = textView {
-            view.frame = bounds
-        }
+        // Update text field frame when container is laid out
+        textField.frame = bounds.inset(by: UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8))
+        
+        print("TextInput layoutSubviews - bounds: \(bounds), textField frame: \(textField.frame)")
     }
     
     override func applyStyle(_ style: [String: Any]) {
-        // First apply container styles
+        print("TextInput applying style: \(style)")
+        
+        // First apply container styles (background, border etc)
         super.applyStyle(style)
         
         if let inputStyle = style["inputStyle"] as? [String: Any] {
-            isMultiline = (inputStyle["multiline"] as? Bool) == true
-            setupTextInput(inputStyle)
-            applyTextStyle(inputStyle)
+            print("Applying input style: \(inputStyle)")
             
-            // Force layout after applying styles
-            setNeedsLayout()
-            layoutIfNeeded()
-        }
-    }
-    
-    private func applyTextStyle(_ style: [String: Any]) {
-        // Apply styles based on input type
-        if isMultiline {
-            guard let textView = textView else { return }
+            // Text properties
+            if let placeholder = inputStyle["placeholder"] as? String {
+                textField.placeholder = placeholder
+            }
+            if let textColor = inputStyle["textColor"] as? UInt32 {
+                textField.textColor = UIColor(rgb: textColor)
+            }
+            if let fontSize = inputStyle["fontSize"] as? CGFloat {
+                textField.font = .systemFont(ofSize: fontSize)
+            }
             
-            if let text = style["text"] as? String {
-                textView.text = text
+            // Input properties
+            if let isSecure = inputStyle["isSecure"] as? Bool {
+                textField.isSecureTextEntry = isSecure
             }
-            if let textColor = style["textColor"] as? UInt32 {
-                textView.textColor = UIColor(rgb: textColor)
+            if let keyboardType = inputStyle["keyboardType"] as? String {
+                textField.keyboardType = keyboardType == "email" ? .emailAddress : .default
             }
-            if let fontSize = style["fontSize"] as? CGFloat {
-                textView.font = UIFont.systemFont(ofSize: fontSize)
-            }
-            if let textAlign = style["textAlign"] as? String {
-                textView.textAlignment = textAlign == "right" ? .right :
-                                       textAlign == "center" ? .center : .left
-            }
-            if let keyboardType = style["keyboardType"] as? String {
-                textView.keyboardType = keyboardType == "number" ? .numberPad :
-                                      keyboardType == "email" ? .emailAddress :
-                                      keyboardType == "phone" ? .phonePad :
-                                      keyboardType == "url" ? .URL : .default
-            }
-            if let returnKey = style["returnKeyType"] as? String {
-                textView.returnKeyType = returnKey == "done" ? .done :
-                                       returnKey == "go" ? .go :
-                                       returnKey == "next" ? .next :
-                                       returnKey == "search" ? .search :
-                                       returnKey == "send" ? .send : .default
-            }
-            if let maxLines = style["maxLines"] as? Int {
-                textView.textContainer.maximumNumberOfLines = maxLines
-            }
-            if let editable = style["editable"] as? Bool {
-                textView.isEditable = editable
-            }
-        } else {
-            guard let field = textField else { return }
-            
-            if let text = style["text"] as? String {
-                field.text = text
-            }
-            if let placeholder = style["placeholder"] as? String {
-                field.placeholder = placeholder
-            }
-            if let textColor = style["textColor"] as? UInt32 {
-                field.textColor = UIColor(rgb: textColor)
-            }
-            if let fontSize = style["fontSize"] as? CGFloat {
-                field.font = UIFont.systemFont(ofSize: fontSize)
-            }
-            if let textAlign = style["textAlign"] as? String {
-                field.textAlignment = textAlign == "right" ? .right :
-                                    textAlign == "center" ? .center : .left
-            }
-            if let keyboardType = style["keyboardType"] as? String {
-                field.keyboardType = keyboardType == "number" ? .numberPad :
-                                   keyboardType == "email" ? .emailAddress :
-                                   keyboardType == "phone" ? .phonePad :
-                                   keyboardType == "url" ? .URL : .default
-            }
-            if let returnKey = style["returnKeyType"] as? String {
-                field.returnKeyType = returnKey == "done" ? .done :
-                                    returnKey == "go" ? .go :
-                                    returnKey == "next" ? .next :
-                                    returnKey == "search" ? .search :
-                                    returnKey == "send" ? .send : .default
-            }
-            if let isSecure = style["isSecure"] as? Bool {
-                field.isSecureTextEntry = isSecure
-            }
-            if let editable = style["editable"] as? Bool {
-                field.isEnabled = editable
+            if let returnKeyType = inputStyle["returnKeyType"] as? String {
+                textField.returnKeyType = returnKeyType == "next" ? .next : .default
             }
         }
     }
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
+        print("Setting up events for text input: \(viewId)")
         self.methodChannel = channel
         
-        // Add listeners only if needed
-        if events["onTextChange"] != nil {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(handleTextChange),
-                name: isMultiline ? UITextView.textDidChangeNotification : UITextField.textDidChangeNotification,
-                object: isMultiline ? textView : textField
-            )
-        }
+        // Add text change observer
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTextChange),
+            name: UITextField.textDidChangeNotification,
+            object: textField
+        )
     }
     
+    // MARK: - Event Handlers
+    
     @objc private func handleTextChange() {
-        let text = isMultiline ? textView?.text : textField?.text
+        guard let text = textField.text else { return }
+        print("Text changed: \(text)")
+        
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onTextChange",
-            "data": ["text": text ?? ""]
+            "data": ["text": text]
         ])
     }
 }
 
-extension DCTextInput: UITextFieldDelegate, UITextViewDelegate {
+extension DCTextInput: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onFocus",
-            "data": [:]
-        ])
-    }
-    
-    func textViewDidBeginEditing(_ textView: UITextView) {
+        print("Text field focused")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onFocus",
@@ -289,18 +189,11 @@ extension DCTextInput: UITextFieldDelegate, UITextViewDelegate {
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
+        print("Text field blurred")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onBlur",
             "data": ["text": textField.text ?? ""]
-        ])
-    }
-    
-    func textViewDidEndEditing(_ textView: UITextView) {
-        methodChannel?.invokeMethod("onComponentEvent", arguments: [
-            "viewId": viewId,
-            "type": "onBlur",
-            "data": ["text": textView.text]
         ])
     }
     
@@ -311,19 +204,6 @@ extension DCTextInput: UITextFieldDelegate, UITextViewDelegate {
             "data": ["text": textField.text ?? ""]
         ])
         textField.resignFirstResponder()
-        return true
-    }
-    
-    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        if text == "\n" {
-            methodChannel?.invokeMethod("onComponentEvent", arguments: [
-                "viewId": viewId,
-                "type": "onSubmit",
-                "data": ["text": textView.text]
-            ])
-            textView.resignFirstResponder()
-            return false
-        }
         return true
     }
 }
