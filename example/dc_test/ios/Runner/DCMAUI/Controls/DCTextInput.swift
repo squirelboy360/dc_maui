@@ -75,12 +75,28 @@ import Combine
 */
 
 class DCTextInput: DCView {
-    private let textField: UITextField
+    // Use lazy initialization for text field
+    private lazy var textField: UITextField = {
+        let field = UITextField()
+        field.delegate = self
+        field.borderStyle = .none
+        field.backgroundColor = .clear
+        field.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        return field
+    }()
+    
     private weak var methodChannel: FlutterMethodChannel?
+    private var textChangeObserver: NSObjectProtocol?
+    private var isRendered = false
+    
+    // Cache commonly accessed properties
+    private var currentText: String = ""
+    private var currentPlaceholder: String = ""
+    private var isSecureEntry = false
     
     override init(viewId: String) {
-        textField = UITextField()
         super.init(viewId: viewId)
+        setupDefaults()
     }
     
     required init?(coder: NSCoder) {
@@ -89,86 +105,105 @@ class DCTextInput: DCView {
     
     override func setupDefaults() {
         super.setupDefaults()
+        backgroundColor = .clear
         
-        // Configure self (container)
-        self.yoga.isEnabled = true
-        self.clipsToBounds = true
+        // Configure text field with additional settings
+        textField.autocorrectionType = .no // Disable autocorrection by default
+        textField.smartDashesType = .no // Disable smart dashes
+        textField.smartQuotesType = .no // Disable smart quotes
+        textField.smartInsertDeleteType = .no // Disable smart insert/delete
         
-        // Configure textField
-        textField.delegate = self
-        textField.borderStyle = .none
-        textField.backgroundColor = .clear
+        // Set default text input traits
+        textField.textContentType = nil // Prevent unwanted system behaviors
         
-        // Use frame-based layout like RN
-        textField.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // Add text field to view
         addSubview(textField)
-        
-        // Important: Set initial frame
-        textField.frame = bounds
-        
-        print("TextInput setupDefaults - bounds: \(bounds), textField frame: \(textField.frame)")
+        textField.frame = bounds.inset(by: UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8))
     }
     
+    override func becomeFirstResponder() -> Bool {
+        // Ensure proper focus handling
+        textField.becomeFirstResponder()
+    }
+    
+    override func resignFirstResponder() -> Bool {
+        // Ensure proper blur handling
+        textField.resignFirstResponder()
+    }
+    
+    // Optimize layout updates
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Update text field frame when container is laid out
-        textField.frame = bounds.inset(by: UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8))
-        
-        print("TextInput layoutSubviews - bounds: \(bounds), textField frame: \(textField.frame)")
-    }
-    
-    override func applyStyle(_ style: [String: Any]) {
-        print("TextInput applying style: \(style)")
-        
-        // First apply container styles (background, border etc)
-        super.applyStyle(style)
-        
-        if let inputStyle = style["inputStyle"] as? [String: Any] {
-            print("Applying input style: \(inputStyle)")
-            
-            // Text properties
-            if let placeholder = inputStyle["placeholder"] as? String {
-                textField.placeholder = placeholder
-            }
-            if let textColor = inputStyle["textColor"] as? UInt32 {
-                textField.textColor = UIColor(rgb: textColor)
-            }
-            if let fontSize = inputStyle["fontSize"] as? CGFloat {
-                textField.font = .systemFont(ofSize: fontSize)
-            }
-            
-            // Input properties
-            if let isSecure = inputStyle["isSecure"] as? Bool {
-                textField.isSecureTextEntry = isSecure
-            }
-            if let keyboardType = inputStyle["keyboardType"] as? String {
-                textField.keyboardType = keyboardType == "email" ? .emailAddress : .default
-            }
-            if let returnKeyType = inputStyle["returnKeyType"] as? String {
-                textField.returnKeyType = returnKeyType == "next" ? .next : .default
-            }
+        if bounds.size.width > 0 && bounds.size.height > 0 {
+            // Use CATransaction to batch layout updates
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            textField.frame = bounds.inset(by: UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8))
+            CATransaction.commit()
         }
     }
     
-    override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
-        print("Setting up events for text input: \(viewId)")
-        self.methodChannel = channel
+    override func applyStyle(_ style: [String: Any]) {
+        super.applyStyle(style)
         
-        // Add text change observer
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleTextChange),
-            name: UITextField.textDidChangeNotification,
-            object: textField
-        )
+        guard let inputStyle = style["inputStyle"] as? [String: Any] else { return }
+        
+        // Batch UI updates
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        
+        // Cache and compare values before updating
+        if let placeholder = inputStyle["placeholder"] as? String,
+           placeholder != currentPlaceholder {
+            currentPlaceholder = placeholder
+            textField.placeholder = placeholder
+        }
+        
+        if let textColor = inputStyle["textColor"] as? UInt32 {
+            textField.textColor = UIColor(rgb: textColor)
+        }
+        
+        if let fontSize = inputStyle["fontSize"] as? CGFloat {
+            textField.font = .systemFont(ofSize: max(1, fontSize))
+        }
+        
+        if let isSecure = inputStyle["isSecure"] as? Bool,
+           isSecure != isSecureEntry {
+            isSecureEntry = isSecure
+            textField.isSecureTextEntry = isSecure
+        }
+        
+        if let keyboardType = inputStyle["keyboardType"] as? String {
+            textField.keyboardType = keyboardType == "email" ? .emailAddress : .default
+        }
+        
+        if let returnKeyType = inputStyle["returnKeyType"] as? String {
+            textField.returnKeyType = returnKeyType == "next" ? .next : .default
+        }
+        
+        CATransaction.commit()
     }
     
-    // MARK: - Event Handlers
+    override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
+        self.methodChannel = channel
+        
+        // Use a single observer and remove old one if exists
+        if let observer = textChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        
+        textChangeObserver = NotificationCenter.default.addObserver(
+            forName: UITextField.textDidChangeNotification,
+            object: textField,
+            queue: .main) { [weak self] _ in
+                self?.handleTextChange()
+            }
+    }
     
     @objc private func handleTextChange() {
-        guard let text = textField.text else { return }
-        print("Text changed: \(text)")
+        guard let text = textField.text, text != currentText else { return }
+        currentText = text
         
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
@@ -176,11 +211,17 @@ class DCTextInput: DCView {
             "data": ["text": text]
         ])
     }
+    
+    // Clean up properly
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        textField.delegate = nil
+    }
 }
 
+// Separate delegate methods for better organization
 extension DCTextInput: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        print("Text field focused")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onFocus",
@@ -189,7 +230,6 @@ extension DCTextInput: UITextFieldDelegate {
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        print("Text field blurred")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onBlur",
