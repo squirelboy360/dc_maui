@@ -15,20 +15,20 @@ class Core {
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
     print("Received method call: ${call.method}");
     print("Arguments: ${call.arguments}");
-    
+
     switch (call.method) {
       case 'onComponentEvent':
         final Map<String, dynamic> args = call.arguments;
         final String viewId = args['viewId'];
         final callback = _eventCallbacks[viewId];
         if (callback != null) {
-            print("Handling event for view: $viewId");
-            callback(
-                args['type'] as String,
-                args['data'],
-            );
+          print("Handling event for view: $viewId");
+          callback(
+            args['type'] as String,
+            args['data'],
+          );
         } else {
-            print("No callback found for view: $viewId");
+          print("No callback found for view: $viewId");
         }
         return null;
       default:
@@ -97,6 +97,3 @@ class Core {
     }
   }
 }
-
-
-// test
