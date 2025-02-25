@@ -51,9 +51,9 @@ class TextInputStyle {
   final int? textColor;
   final double? fontSize;
   final String? textAlign;
-  final KeyboardType? keyboardType;  // Updated to use enum
+  final KeyboardType? keyboardType; // Updated to use enum
   final ReturnKeyType? returnKeyType; // Updated to use enum
-  final ContentType? contentType;     // Added content type
+  final ContentType? contentType; // Added content type
   final bool? isSecure;
   final bool? multiline;
   final int? maxLines;
@@ -75,19 +75,19 @@ class TextInputStyle {
   });
 
   Map<String, dynamic> toMap() => {
-    if (text != null) 'text': text,
-    if (placeholder != null) 'placeholder': placeholder,
-    if (textColor != null) 'textColor': textColor,
-    if (fontSize != null) 'fontSize': fontSize,
-    if (textAlign != null) 'textAlign': textAlign,
-    if (keyboardType != null) 'keyboardType': keyboardType!.toValue(),
-    if (returnKeyType != null) 'returnKeyType': returnKeyType!.toValue(),
-    if (contentType != null) 'contentType': contentType!.toValue(),
-    if (isSecure != null) 'isSecure': isSecure,
-    if (multiline != null) 'multiline': multiline,
-    if (maxLines != null) 'maxLines': maxLines,
-    if (editable != null) 'editable': editable,
-  };
+        if (text != null) 'text': text,
+        if (placeholder != null) 'placeholder': placeholder,
+        if (textColor != null) 'textColor': textColor,
+        if (fontSize != null) 'fontSize': fontSize,
+        if (textAlign != null) 'textAlign': textAlign,
+        if (keyboardType != null) 'keyboardType': keyboardType!.toValue(),
+        if (returnKeyType != null) 'returnKeyType': returnKeyType!.toValue(),
+        if (contentType != null) 'contentType': contentType!.toValue(),
+        if (isSecure != null) 'isSecure': isSecure,
+        if (multiline != null) 'multiline': multiline,
+        if (maxLines != null) 'maxLines': maxLines,
+        if (editable != null) 'editable': editable,
+      };
 }
 
 class TextInput {
@@ -114,8 +114,7 @@ class TextInput {
     id = await Core.createView(
       viewType: 'TextInput',
       properties: {
-        'style': style.toMap(),
-        'inputStyle': inputStyle.toMap(),
+        'style': {...style.toMap(), 'inputStyle': inputStyle.toMap()},
         'layout': layout.toMap(),
         'events': {
           if (onTextChange != null) 'onTextChange': true,
