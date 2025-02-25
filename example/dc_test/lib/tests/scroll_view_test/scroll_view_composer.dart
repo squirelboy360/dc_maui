@@ -6,11 +6,10 @@ import 'package:flutter/material.dart' hide View, ScrollView;
 import '../../framework/bridge/types/view_types/view_styles.dart';
 import '../../framework/bridge/types/layout_layouts/yoga_types.dart';
 
-class ListViewComposer extends UIComposer {
+class ScrollViewComposer extends UIComposer {
   String? mainContainer;
   String? appbar;
   String? gridContainerColumn;
-  String? gridContainer;
   String? bottomButton;
   String? scrollView;
 
@@ -121,31 +120,7 @@ class ListViewComposer extends UIComposer {
     ).create();
 
     scrollView = await ScrollView(
-      style: ScrollViewStyle(
-        backgroundColor: Colors.white.value,
-        cornerRadius: 8,
-        showsIndicators: true,
-        bounces: true,
-        direction: ScrollDirection.vertical,
-      ),
-      layout: YogaLayout(
-        flex: 1,
-        height: YogaValue(100, YogaUnit.percent),
-        width: YogaValue(100, YogaUnit.percent),
-      ),
-      onScroll: (metrics) {
-        print('Scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
-        print('Velocity: (${metrics.velocityX}, ${metrics.velocityY})');
-        print('Content size: ${metrics.contentSize}');
-        print('Viewport size: ${metrics.viewportSize}');
-      },
-      onScrollEnd: () {
-        print('Scroll ended');
-      },
-    ).create();
-
-    gridContainer = await View(
-      style: ViewStyle(backgroundColor: Colors.red.toARGB32()),
+      style: ScrollViewStyle(backgroundColor: Colors.red.toARGB32()),
       layout: YogaLayout(
         display: YogaDisplay.flex,
         width: YogaValue(100, YogaUnit.percent),
@@ -157,6 +132,15 @@ class ListViewComposer extends UIComposer {
         alignContent: YogaAlign.center,
         justifyContent: YogaJustify.center,
       ),
+      onScroll: (metrics) {
+        print('Scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
+        print('Velocity: (${metrics.velocityX}, ${metrics.velocityY})');
+        print('Content size: ${metrics.contentSize}');
+        print('Viewport size: ${metrics.viewportSize}');
+      },
+      onScrollEnd: () {
+        print('Scroll ended');
+      },
     ).create();
 
     bottomButton = await View(

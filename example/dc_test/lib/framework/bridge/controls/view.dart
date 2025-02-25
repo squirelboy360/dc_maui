@@ -10,7 +10,7 @@ class View {
 
   View({
     this.style = const ViewStyle(),
-    this.layout = const YogaLayout(), // Default constructor
+    this.layout = const YogaLayout(),
   });
 
   Future<String?> create({EventCallback? onEvent}) async {

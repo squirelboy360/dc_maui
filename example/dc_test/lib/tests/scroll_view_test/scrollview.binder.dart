@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:dc_test/framework/bridge/controls/view.dart';
 import 'package:dc_test/framework/bridge/types/layout_layouts/yoga_types.dart';
 import 'package:dc_test/framework/bridge/types/view_types/view_styles.dart';
-import 'package:dc_test/tests/list_view_test/list_view_composer.dart';
+import 'package:dc_test/tests/scroll_view_test/scroll_view_composer.dart';
 
 import '../../framework/bridge/core.dart';
 
-class ListViewBinder extends ListViewComposer {
+class ScrollViewBinder extends ScrollViewComposer {
   @override
   Future<void> bind() async {
     await Core.attachView('root', mainContainer ?? '');
@@ -16,8 +16,7 @@ class ListViewBinder extends ListViewComposer {
         gridContainerColumn ?? 'gridContainerColumn is null');
     // grid column
 
-    await Core.attachView(gridContainerColumn ?? '', gridContainer ?? '');
-    await Core.attachView(gridContainer ?? '', scrollView ?? 'nothing ');
+    await Core.attachView(gridContainerColumn ?? '', scrollView ?? '');
 
     await createGridItems();
 
@@ -51,7 +50,7 @@ class ListViewBinder extends ListViewComposer {
           print('Grid item event: $type, data: $data');
         },
       );
-      await Core.attachView(gridContainer ?? '', gridItem ?? '');
+      await Core.attachView(scrollView ?? '', gridItem ?? '');
     }
   }
 }

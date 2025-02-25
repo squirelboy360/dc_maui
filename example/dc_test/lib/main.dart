@@ -1,4 +1,4 @@
-import 'package:dc_test/tests/list_view_test/lisview.binder.dart';
+import 'package:dc_test/tests/scroll_view_test/scrollview.binder.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -11,7 +11,7 @@ Future<void> startApp() async {
   // final viewBinder = TextViewBinder();
   // final touchable = TouchableViewComposer();
   //final test = TextInputTestComposer();
-  final test = ListViewBinder();
+  final test = ScrollViewBinder();
 
   await test.start();
 }

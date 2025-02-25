@@ -173,6 +173,7 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     override func addSubview(_ view: UIView) {
         if view != scrollView {
             contentContainer.addSubview(view)
+            contentContainer.yoga.applyLayout(preservingOrigin: true)
         } else {
             super.addSubview(view)
         }
