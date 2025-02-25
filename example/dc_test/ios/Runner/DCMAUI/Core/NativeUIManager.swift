@@ -292,7 +292,7 @@ class NativeUIManager: NSObject, FlutterPlugin {
             nativeWindow.windowScene = windowScene
             
             let rootVC = UIViewController()
-            rootVC.view.backgroundColor = .blue // Debug color
+            rootVC.view.backgroundColor = .blue.withAlphaComponent(0.2) // Debug color
             
             // Create root view with explicit frame and yoga config
             let rootView = DCView(viewId: "root")

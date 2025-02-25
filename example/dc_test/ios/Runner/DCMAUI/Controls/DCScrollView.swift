@@ -1,4 +1,3 @@
-
 /*
  BSD 3-Clause License
 
@@ -75,29 +74,41 @@ import UIKit
 class DCScrollView: DCView, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let contentContainer = DCView(viewId: "scroll-content")
-    private weak var methodChannel: FlutterMethodChannel? // Add this property
+    private weak var methodChannel: FlutterMethodChannel?
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
-        self.methodChannel = channel // Store the channel
+        self.methodChannel = channel
         scrollView.delegate = self
     }
     
     override func setupDefaults() {
         super.setupDefaults()
         
+        // Configure scrollView
         scrollView.yoga.isEnabled = true
         scrollView.delegate = self
         addSubview(scrollView)
         
+        // Configure content container
         contentContainer.yoga.isEnabled = true
+        contentContainer.backgroundColor = .clear // Ensure transparent background
         scrollView.addSubview(contentContainer)
         
-        // Setup scroll view constraints
-        scrollView.yoga.position = .absolute
-        scrollView.yoga.left = .zero
-        scrollView.yoga.top = .zero
-        scrollView.yoga.right = .zero
-        scrollView.yoga.bottom = .zero
+        // Default layout setup
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: topAnchor),
+            scrollView.leftAnchor.constraint(equalTo: leftAnchor),
+            scrollView.rightAnchor.constraint(equalTo: rightAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            contentContainer.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentContainer.leftAnchor.constraint(equalTo: scrollView.leftAnchor),
+            contentContainer.rightAnchor.constraint(equalTo: scrollView.rightAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            // Allow content to determine width/height
+            contentContainer.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+        ])
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
@@ -112,17 +123,58 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     override func applyStyle(_ style: [String: Any]) {
         super.applyStyle(style)
         
-        if let showsIndicators = style["showsIndicators"] as? Bool {
-            scrollView.showsVerticalScrollIndicator = showsIndicators
-            scrollView.showsHorizontalScrollIndicator = showsIndicators
+        // Direct consumption of scrollStyle properties
+        if let scrollStyle = style["scrollStyle"] as? [String: Any] {
+            print("Applying scroll style: \(scrollStyle)")
+            
+            if let showsIndicators = scrollStyle["showsIndicators"] as? Bool {
+                scrollView.showsVerticalScrollIndicator = showsIndicators
+                scrollView.showsHorizontalScrollIndicator = showsIndicators
+            }
+            
+            if let bounces = scrollStyle["bounces"] as? Bool {
+                scrollView.bounces = bounces
+            }
+            
+            if let pagingEnabled = scrollStyle["pagingEnabled"] as? Bool {
+                scrollView.isPagingEnabled = pagingEnabled
+            }
+            
+            if let direction = scrollStyle["direction"] as? String {
+                switch direction {
+                case "horizontal":
+                    scrollView.alwaysBounceHorizontal = true
+                    scrollView.alwaysBounceVertical = false
+                case "vertical":
+                    scrollView.alwaysBounceHorizontal = false
+                    scrollView.alwaysBounceVertical = true
+                case "both":
+                    scrollView.alwaysBounceHorizontal = true
+                    scrollView.alwaysBounceVertical = true
+                default:
+                    break
+                }
+            }
+            
+            if let scrollEnabled = scrollStyle["scrollEnabled"] as? Bool {
+                scrollView.isScrollEnabled = scrollEnabled
+            }
+            
+            if let initialX = scrollStyle["initialScrollX"] as? Double {
+                scrollView.contentOffset.x = CGFloat(initialX)
+            }
+            
+            if let initialY = scrollStyle["initialScrollY"] as? Double {
+                scrollView.contentOffset.y = CGFloat(initialY)
+            }
         }
-        
-        if let bounces = style["bounces"] as? Bool {
-            scrollView.bounces = bounces
-        }
-        
-        if let pagingEnabled = style["pagingEnabled"] as? Bool {
-            scrollView.isPagingEnabled = pagingEnabled
+    }
+
+    override func addSubview(_ view: UIView) {
+        if view != scrollView {
+            contentContainer.addSubview(view)
+        } else {
+            super.addSubview(view)
         }
     }
     
@@ -132,6 +184,7 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        print("Scroll position: \(scrollView.contentOffset)")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onScroll",
@@ -148,12 +201,17 @@ class DCScrollView: DCView, UIScrollViewDelegate {
                     "width": scrollView.contentSize.width,
                     "height": scrollView.contentSize.height
                 ],
+                "viewportSize": [
+                    "width": scrollView.bounds.width,
+                    "height": scrollView.bounds.height
+                ],
                 "timestamp": Date().timeIntervalSince1970
             ]
         ])
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        print("Scroll ended at: \(scrollView.contentOffset)")
         methodChannel?.invokeMethod("onComponentEvent", arguments: [
             "viewId": viewId,
             "type": "onScrollEnd",
