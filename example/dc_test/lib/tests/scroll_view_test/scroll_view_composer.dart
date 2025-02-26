@@ -12,19 +12,9 @@ class ScrollViewComposer extends UIComposer {
   String? gridContainerColumn;
   String? bottomButton;
   String? scrollView;
+  List<String> gridItemIds = [];
 
   final colors = [
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
     0xFF64B5F6,
     0xFFFFB74D,
     0xFFBA68C8,
@@ -119,8 +109,46 @@ class ScrollViewComposer extends UIComposer {
       ),
     ).create();
 
+    // Create grid items first and collect their IDs
+    List<String> gridItemIds = [];
+
+    for (var color in colors.take(10)) {
+      // Limit to 10 items for testing
+      final gridItem = await View(
+        style: ViewStyle(
+          backgroundColor: color,
+          cornerRadius: 8,
+          shadow: ViewShadow(
+            color: Color.fromARGB(255, 28, 213, 65),
+            opacity: 0.2,
+            offset: Offset(0, 4),
+            radius: 8,
+          ),
+        ),
+        layout: YogaLayout(
+          padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+          width: YogaValue(90, YogaUnit.percent),
+          alignSelf: YogaAlign.center,
+          height: YogaValue(100, YogaUnit.point),
+          margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
+        ),
+      ).create();
+
+      if (gridItem != null) {
+        gridItemIds.add(gridItem);
+        print("Created grid item: $gridItem");
+      }
+    }
+
+    print("Created ${gridItemIds.length} grid items");
+
+    // Create ScrollView with the children
     scrollView = await ScrollView(
-      style: ScrollViewStyle(backgroundColor: Colors.red.toARGB32()),
+      style: ScrollViewStyle(
+        backgroundColor: Colors.red.toARGB32(),
+        showsIndicators: true,
+        bounces: true,
+      ),
       layout: YogaLayout(
         display: YogaDisplay.flex,
         width: YogaValue(100, YogaUnit.percent),
@@ -128,20 +156,20 @@ class ScrollViewComposer extends UIComposer {
         flexDirection: YogaFlexDirection.column,
         flex: 10,
         padding: EdgeValues(all: YogaValue.point(16)),
-        flexWrap: YogaWrap.noWrap,
         alignContent: YogaAlign.center,
-        justifyContent: YogaJustify.center,
+        justifyContent: YogaJustify.flexStart,
       ),
       onScroll: (metrics) {
         print('Scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
-        print('Velocity: (${metrics.velocityX}, ${metrics.velocityY})');
-        print('Content size: ${metrics.contentSize}');
-        print('Viewport size: ${metrics.viewportSize}');
       },
       onScrollEnd: () {
         print('Scroll ended');
       },
+      children: gridItemIds,
     ).create();
+
+    print(
+        "Created ScrollView: $scrollView with ${gridItemIds.length} children");
 
     bottomButton = await View(
       style: ViewStyle(
@@ -161,6 +189,6 @@ class ScrollViewComposer extends UIComposer {
 
   @override
   Future<void> bind() async {
-    // This will be overridden by GridViewBinder
+    // This will be overridden by the binder
   }
 }

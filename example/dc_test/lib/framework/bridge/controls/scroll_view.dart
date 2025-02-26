@@ -51,9 +51,12 @@ class ScrollViewStyle extends ViewStyle {
         if (scrollEnabled != null) 'scrollEnabled': scrollEnabled,
         if (initialScrollX != null) 'initialScrollX': initialScrollX,
         if (initialScrollY != null) 'initialScrollY': initialScrollY,
-        if (alwaysBounceVertical != null) 'alwaysBounceVertical': alwaysBounceVertical,
-        if (alwaysBounceHorizontal != null) 'alwaysBounceHorizontal': alwaysBounceHorizontal,
-        if (keyboardDismissMode != null) 'keyboardDismissMode': keyboardDismissMode,
+        if (alwaysBounceVertical != null)
+          'alwaysBounceVertical': alwaysBounceVertical,
+        if (alwaysBounceHorizontal != null)
+          'alwaysBounceHorizontal': alwaysBounceHorizontal,
+        if (keyboardDismissMode != null)
+          'keyboardDismissMode': keyboardDismissMode,
       }
     };
   }
@@ -65,19 +68,21 @@ class ScrollView {
   final YogaLayout layout;
   final void Function(ScrollMetrics)? onScroll;
   final VoidCallback? onScrollEnd;
+  final List<String> children; // Changed from dynamic to String
 
   ScrollView({
     this.style = const ScrollViewStyle(),
     this.layout = const YogaLayout(),
     this.onScroll,
     this.onScrollEnd,
+    this.children = const [],
   });
 
   Future<String?> create() async {
     id = await Core.createView(
       viewType: 'ScrollView',
       properties: {
-        'style': style.toMap(), // ScrollStyle is now nested inside style
+        'style': style.toMap(),
         'layout': layout.toMap(),
         'events': {
           if (onScroll != null) 'onScroll': true,
@@ -85,6 +90,7 @@ class ScrollView {
         },
       },
       onEvent: _handleEvent,
+      children: children.isNotEmpty ? children : null, // Pass children directly
     );
     return id;
   }
@@ -132,8 +138,10 @@ class ScrollMetrics {
       offsetY: offset['y'] as double,
       velocityX: velocity['x'] as double,
       velocityY: velocity['y'] as double,
-      contentSize: Size(content['width'] as double, content['height'] as double),
-      viewportSize: Size(viewport['width'] as double, viewport['height'] as double),
+      contentSize:
+          Size(content['width'] as double, content['height'] as double),
+      viewportSize:
+          Size(viewport['width'] as double, viewport['height'] as double),
     );
   }
 }

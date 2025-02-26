@@ -94,21 +94,20 @@ class DCScrollView: DCView, UIScrollViewDelegate {
         contentContainer.backgroundColor = .clear // Ensure transparent background
         scrollView.addSubview(contentContainer)
         
-        // Default layout setup
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: topAnchor),
-            scrollView.leftAnchor.constraint(equalTo: leftAnchor),
-            scrollView.rightAnchor.constraint(equalTo: rightAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            
-            contentContainer.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentContainer.leftAnchor.constraint(equalTo: scrollView.leftAnchor),
-            contentContainer.rightAnchor.constraint(equalTo: scrollView.rightAnchor),
-            contentContainer.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            // Allow content to determine width/height
-            contentContainer.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
-        ])
+        // Don't use Auto Layout constraints, use frame-based layout instead
+        // which works better with Yoga
+        scrollView.frame = bounds
+        scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Configure content container with flexible width to match scrollView
+        contentContainer.yoga.flexDirection = .column
+        contentContainer.yoga.alignItems = .stretch
+        
+        // Debug layout borders
+        scrollView.layer.borderColor = UIColor.blue.cgColor
+        scrollView.layer.borderWidth = 1
+        contentContainer.layer.borderColor = UIColor.green.cgColor
+        contentContainer.layer.borderWidth = 1
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
@@ -168,17 +167,69 @@ class DCScrollView: DCView, UIScrollViewDelegate {
                 scrollView.contentOffset.y = CGFloat(initialY)
             }
         }
+        
+        // Update layout after applying style
+        setNeedsLayout()
     }
 
+    // Only need to check that children are being added correctly
+    // Let's add debug logs to verify this
     override func addSubview(_ view: UIView) {
         if view != scrollView {
+            print("DCScrollView: Adding child view to content container: \(view)")
             contentContainer.addSubview(view)
+            
+            // Force layout when a child is added
+            view.yoga.applyLayout(preservingOrigin: true)
             contentContainer.yoga.applyLayout(preservingOrigin: true)
+            
+            // Update scroll content size
+            updateContentSize()
+            
+            // Debug output
+            print("Child added - Frame: \(view.frame), Yoga enabled: \(view.yoga.isEnabled)")
         } else {
             super.addSubview(view)
         }
     }
     
+    // Override to ensure yoga layout is applied properly
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Update scrollView frame to match our bounds
+        scrollView.frame = bounds
+        
+        // Set contentContainer width to match scrollView width
+        contentContainer.frame.size.width = scrollView.bounds.width
+        
+        // Apply yoga layout to content container and its children
+        contentContainer.yoga.applyLayout(preservingOrigin: true)
+        
+        // Update content size after layout
+        updateContentSize()
+    }
+
+    private func updateContentSize() {
+        // Calculate total height of all subviews
+        let totalHeight = contentContainer.subviews.reduce(0) { (result, subview) in
+            return result + subview.frame.maxY
+        }
+        
+        // Get maximum width (usually should match scrollView width)
+        let maxWidth = contentContainer.subviews.max { $0.frame.width < $1.frame.width }?.frame.width ?? scrollView.bounds.width
+        
+        // Set content container height and width
+        contentContainer.frame.size.height = max(totalHeight, scrollView.bounds.height)
+        contentContainer.frame.size.width = max(maxWidth, scrollView.bounds.width)
+        
+        // Update scrollView content size
+        scrollView.contentSize = contentContainer.frame.size
+        
+        print("ScrollView content size updated: \(scrollView.contentSize)")
+        print("Content container frame: \(contentContainer.frame)")
+    }
+
     func setContent(_ view: DCView) {
         contentContainer.subviews.forEach { $0.removeFromSuperview() }
         contentContainer.addSubview(view)

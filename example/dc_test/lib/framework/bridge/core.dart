@@ -40,11 +40,19 @@ class Core {
     required String viewType,
     required Map<String, dynamic> properties,
     EventCallback? onEvent,
+    List<String>? children,
   }) async {
     try {
+      final Map<String, dynamic> props = {...properties};
+
+      // Add children IDs to properties if provided
+      if (children != null && children.isNotEmpty) {
+        props['children'] = children;
+      }
+
       final String? viewId = await _channel.invokeMethod('createView', {
         'viewType': viewType,
-        'properties': properties,
+        'properties': props,
       });
 
       if (viewId != null && onEvent != null) {

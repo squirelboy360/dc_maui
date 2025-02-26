@@ -165,6 +165,12 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
         collectionView.reloadData()
     }
     
+    // Add method to handle batch-created children
+    func addBatchChildren(_ childViews: [DCView]) {
+        self.items = childViews
+        collectionView.reloadData()
+    }
+
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
         self.methodChannel = channel
         
