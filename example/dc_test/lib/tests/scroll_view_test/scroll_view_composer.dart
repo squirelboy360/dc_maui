@@ -11,71 +11,20 @@ class ScrollViewComposer extends UIComposer {
   String? appbar;
   String? gridContainerColumn;
   String? bottomButton;
-  String? scrollView;
-  List<String> gridItemIds = [];
-
-  final colors = [
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
-    0xFFE57373,
-    0xFF81C784,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF4DB6AC,
-    0xFFFFD54F,
-    0xFFFFD54F,
-    0xFF7986CB,
+  String? horizontalScrollView;
+  String? verticalScrollView;
+  final List<int> colors = [
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF81C784, // Green
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red
+    0xFFF06292, // Pink
+    0xFFA1887F, // Brown
+    0xFF90A4AE, // Blue Grey
   ];
 
   @override
@@ -92,99 +41,153 @@ class ScrollViewComposer extends UIComposer {
       style: ViewStyle(backgroundColor: Colors.amber.toARGB32()),
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(100, YogaUnit.point),
+        height: YogaValue(80, YogaUnit.point), // Make smaller
       ),
     ).create();
 
+    // Create container for both scroll views
     gridContainerColumn = await View(
-      style: ViewStyle(backgroundColor: Colors.black.toARGB32()),
+      style: ViewStyle(backgroundColor: Colors.black.withOpacity(0.1).toARGB32()),
       layout: YogaLayout(
         display: YogaDisplay.flex,
         alignContent: YogaAlign.center,
         height: YogaValue(100, YogaUnit.percent),
         width: YogaValue(100, YogaUnit.percent),
-        justifyContent: YogaJustify.center,
-        alignItems: YogaAlign.spaceBetween,
+        justifyContent: YogaJustify.flexStart,
+        alignItems: YogaAlign.center,
         flexDirection: YogaFlexDirection.column,
+        padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
       ),
     ).create();
 
-    // Create grid items first and collect their IDs
-    List<String> gridItemIds = [];
+    // Create items for horizontal scroll
+    final horizontalItems = await createScrollItems(
+        itemCount: colors.length,
+        width: 150,
+        height: 100,
+        radius: 8,
+        margin: 8);
 
-    for (var color in colors.take(10)) {
-      // Limit to 10 items for testing
-      final gridItem = await View(
-        style: ViewStyle(
-          backgroundColor: color,
-          cornerRadius: 8,
-          shadow: ViewShadow(
-            color: Color.fromARGB(255, 28, 213, 65),
-            opacity: 0.2,
-            offset: Offset(0, 4),
-            radius: 8,
-          ),
-        ),
-        layout: YogaLayout(
-          padding: EdgeValues(all: YogaValue(8, YogaUnit.point)),
-          width: YogaValue(90, YogaUnit.percent),
-          alignSelf: YogaAlign.center,
-          height: YogaValue(100, YogaUnit.point),
-          margin: EdgeValues(all: YogaValue(8, YogaUnit.point)),
-        ),
-      ).create();
+    print("Created ${horizontalItems.length} horizontal scroll items");
 
-      if (gridItem != null) {
-        gridItemIds.add(gridItem);
-        print("Created grid item: $gridItem");
-      }
-    }
-
-    print("Created ${gridItemIds.length} grid items");
-
-    // Create ScrollView with the children
-    scrollView = await ScrollView(
+    // Create horizontal ScrollView
+    horizontalScrollView = await ScrollView(
       style: ScrollViewStyle(
-        backgroundColor: Colors.red.toARGB32(),
+        backgroundColor: Colors.blue.withOpacity(0.1).toARGB32(),
         showsIndicators: true,
         bounces: true,
+        direction: ScrollDirection.horizontal,
       ),
       layout: YogaLayout(
         display: YogaDisplay.flex,
         width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(100, YogaUnit.percent),
-        flexDirection: YogaFlexDirection.column,
-        flex: 10,
-        padding: EdgeValues(all: YogaValue.point(16)),
+        height: YogaValue(
+            150, YogaUnit.point), // Fixed height for horizontal scroll
+        flexDirection: YogaFlexDirection.row, // Row for horizontal layout
+        padding: EdgeValues(all: YogaValue(12, YogaUnit.point)),
+        alignContent: YogaAlign.center,
+        justifyContent: YogaJustify.flexStart,
+        margin: EdgeValues(bottom: YogaValue(20, YogaUnit.point)),
+      ),
+      onScroll: (metrics) {
+        print(
+            'Horizontal scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
+      },
+      onScrollEnd: () {
+        print('Horizontal scroll ended');
+      },
+      children: horizontalItems,
+    ).create();
+
+    // Create items for vertical scroll
+    final verticalItems = await createScrollItems(
+        itemCount: colors.length,
+        width: 300,
+        height: 80,
+        radius: 12,
+        margin: 10);
+
+    print("Created ${verticalItems.length} vertical scroll items");
+
+    // Create vertical ScrollView
+    verticalScrollView = await ScrollView(
+      style: ScrollViewStyle(
+        backgroundColor: Colors.green.withOpacity(0.1).toARGB32(),
+        showsIndicators: true,
+        bounces: true,
+        direction: ScrollDirection.vertical, // Explicitly set vertical
+      ),
+      layout: YogaLayout(
+        display: YogaDisplay.flex,
+        width: YogaValue(100, YogaUnit.percent),
+        flex: 1, // Take remaining space
+        flexDirection: YogaFlexDirection.column, // Column for vertical layout
+        padding: EdgeValues(all: YogaValue(12, YogaUnit.point)),
         alignContent: YogaAlign.center,
         justifyContent: YogaJustify.flexStart,
       ),
       onScroll: (metrics) {
-        print('Scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
+        print(
+            'Vertical scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
       },
       onScrollEnd: () {
-        print('Scroll ended');
+        print('Vertical scroll ended');
       },
-      children: gridItemIds,
+      children: verticalItems,
     ).create();
-
-    print(
-        "Created ScrollView: $scrollView with ${gridItemIds.length} children");
 
     bottomButton = await View(
       style: ViewStyle(
-          backgroundColor: Colors.blueAccent.toARGB32(), cornerRadius: 20),
+        backgroundColor: Colors.blueAccent.toARGB32(),
+        cornerRadius: 20,
+      ),
       layout: YogaLayout(
-          display: YogaDisplay.flex,
-          flex: 2.5,
-          margin: EdgeValues(all: YogaValue(5, YogaUnit.point)),
-          alignSelf: YogaAlign.center,
-          height: YogaValue(60, YogaUnit.point),
-          width: YogaValue(200, YogaUnit.point),
-          alignContent: YogaAlign.center,
-          justifyContent: YogaJustify.center,
-          alignItems: YogaAlign.center),
+        display: YogaDisplay.flex,
+        height: YogaValue(60, YogaUnit.point),
+        width: YogaValue(200, YogaUnit.point),
+        alignContent: YogaAlign.center,
+        justifyContent: YogaJustify.center,
+        alignItems: YogaAlign.center,
+        margin: EdgeValues(top: YogaValue(20, YogaUnit.point)),
+      ),
     ).create();
+  }
+
+  // Helper method to create scroll items
+  Future<List<String>> createScrollItems({
+    required int itemCount,
+    required double width,
+    required double height,
+    double radius = 8.0,
+    double margin = 8.0,
+  }) async {
+    List<String> itemIds = [];
+
+    for (var i = 0; i < itemCount; i++) {
+      final item = await View(
+        style: ViewStyle(
+          backgroundColor: colors[i % colors.length],
+          cornerRadius: radius,
+          shadow: ViewShadow(
+            color: Color.fromARGB(255, 0, 0, 0),
+            opacity: 0.2,
+            offset: Offset(0, 3),
+            radius: 5,
+          ),
+        ),
+        layout: YogaLayout(
+          width: YogaValue(width, YogaUnit.point),
+          height: YogaValue(height, YogaUnit.point),
+          margin: EdgeValues(all: YogaValue(margin, YogaUnit.point)),
+        ),
+      ).create();
+
+      if (item != null) {
+        itemIds.add(item);
+      }
+    }
+
+    return itemIds;
   }
 
   @override

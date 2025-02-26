@@ -11,14 +11,15 @@ class ScrollViewBinder extends ScrollViewComposer {
   @override
   Future<void> bind() async {
     await Core.attachView('root', mainContainer ?? '');
-    await Core.attachView(mainContainer ?? '', appbar ?? 'appbar is null');
-    await Core.attachView(mainContainer ?? '',
-        gridContainerColumn ?? 'gridContainerColumn is null');
 
-    // Attach the ScrollView to its parent - but not the children to the ScrollView
-    // The children are already included in the ScrollView creation
-    await Core.attachView(gridContainerColumn ?? '', scrollView ?? '');
+    // Attach the components to the main container
+    await Core.attachView(mainContainer ?? '', appbar ?? '');
+    await Core.attachView(mainContainer ?? '', gridContainerColumn ?? '');
 
+    // Attach both ScrollViews to the grid container
+    await Core.attachView(
+        gridContainerColumn ?? '', horizontalScrollView ?? '');
+    await Core.attachView(gridContainerColumn ?? '', verticalScrollView ?? '');
     await Core.attachView(gridContainerColumn ?? '', bottomButton ?? '');
   }
 }

@@ -142,14 +142,13 @@ class NativeUIManager: NSObject, FlutterPlugin {
                             let newId = "\(childId)-duplicate-\(UUID().uuidString)"
                             if let duplicateView = copyComponent(childView, withNewId: newId) {
                                 views[newId] = duplicateView
-                                duplicateView.frame = CGRect(x: 0, y: 0, width: 200, height: 100) // Set initial frame
+                                // Don't force frame size, let yoga handle it
                                 scrollView.addSubview(duplicateView)
                                 childViews[viewId]?.append(newId)
                                 print("Added duplicate \(newId) to ScrollView")
                             }
                         } else {
-                            // Set initial frame before adding to ensure visibility
-                            childView.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
+                            // Don't force frame size, let yoga handle it
                             scrollView.addSubview(childView)
                             childViews[viewId]?.append(childId)
                             print("Added child \(childId) to ScrollView")

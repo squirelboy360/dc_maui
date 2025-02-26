@@ -28,7 +28,7 @@ class ScrollViewStyle extends ViewStyle {
     this.showsIndicators = true,
     this.bounces = true,
     this.pagingEnabled = false,
-    this.direction = ScrollDirection.vertical,
+    this.direction = ScrollDirection.vertical, // Default is vertical
     this.scrollEnabled = true,
     this.initialScrollX,
     this.initialScrollY,
