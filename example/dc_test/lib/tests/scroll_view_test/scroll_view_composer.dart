@@ -41,13 +41,14 @@ class ScrollViewComposer extends UIComposer {
       style: ViewStyle(backgroundColor: Colors.amber.toARGB32()),
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(80, YogaUnit.point), // Make smaller
+        height: YogaValue(100, YogaUnit.point), // Make smaller
       ),
     ).create();
 
     // Create container for both scroll views
     gridContainerColumn = await View(
-      style: ViewStyle(backgroundColor: Colors.black.withOpacity(0.1).toARGB32()),
+      style:
+          ViewStyle(backgroundColor: Colors.black.withOpacity(0.1).toARGB32()),
       layout: YogaLayout(
         display: YogaDisplay.flex,
         alignContent: YogaAlign.center,
@@ -99,11 +100,13 @@ class ScrollViewComposer extends UIComposer {
       children: horizontalItems,
     ).create();
 
-    // Create items for vertical scroll
+    // When creating items for vertical scroll, ensure they have width: 100%
     final verticalItems = await createScrollItems(
         itemCount: colors.length,
-        width: 300,
+        width: 95, // Change to percent unit for width
+        widthUnit: YogaUnit.percent, // Use percent for width
         height: 80,
+        heightUnit: YogaUnit.point, // Keep point for height
         radius: 12,
         margin: 10);
 
@@ -120,9 +123,15 @@ class ScrollViewComposer extends UIComposer {
       layout: YogaLayout(
         display: YogaDisplay.flex,
         width: YogaValue(100, YogaUnit.percent),
-        flex: 1, // Take remaining space
+        flex: 1,
+        margin: EdgeValues(
+            top: YogaValue(12, YogaUnit.point),
+            bottom: YogaValue(20, YogaUnit.point)),
+
         flexDirection: YogaFlexDirection.column, // Column for vertical layout
-        padding: EdgeValues(all: YogaValue(12, YogaUnit.point)),
+        padding: EdgeValues(
+            top: YogaValue(12, YogaUnit.point),
+            bottom: YogaValue(20, YogaUnit.point)),
         alignContent: YogaAlign.center,
         justifyContent: YogaJustify.flexStart,
       ),
@@ -153,11 +162,13 @@ class ScrollViewComposer extends UIComposer {
     ).create();
   }
 
-  // Helper method to create scroll items
+  // Update createScrollItems to handle width and height units
   Future<List<String>> createScrollItems({
     required int itemCount,
     required double width,
     required double height,
+    YogaUnit widthUnit = YogaUnit.point,
+    YogaUnit heightUnit = YogaUnit.point,
     double radius = 8.0,
     double margin = 8.0,
   }) async {
@@ -176,8 +187,8 @@ class ScrollViewComposer extends UIComposer {
           ),
         ),
         layout: YogaLayout(
-          width: YogaValue(width, YogaUnit.point),
-          height: YogaValue(height, YogaUnit.point),
+          width: YogaValue(width, widthUnit), // Use the provided width unit
+          height: YogaValue(height, heightUnit), // Use the provided height unit
           margin: EdgeValues(all: YogaValue(margin, YogaUnit.point)),
         ),
       ).create();
