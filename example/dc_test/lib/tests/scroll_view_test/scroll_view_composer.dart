@@ -78,6 +78,9 @@ class ScrollViewComposer extends UIComposer {
     appBarTitle = await Text(
       layout: YogaLayout(
         alignSelf: YogaAlign.center,
+        margin: EdgeValues(
+          left: YogaValue(16, YogaUnit.point),
+        ),
       ),
       text: "Scroll View Demo",
       textStyle: TextStyle(
@@ -142,20 +145,22 @@ class ScrollViewComposer extends UIComposer {
       ),
     ).create();
 
-    // Create items for horizontal scroll
+    // Create items for horizontal scroll - smaller width to show multiple items
     final horizontalItems = await createScrollItems(
         itemCount: colors.length,
-        width: 160,
-        height: 120,
+        width: 160, // Smaller width to show multiple items
+        widthUnit: YogaUnit.point,
+        height: 110,
         radius: 10,
         margin: 8);
 
-    // Create horizontal ScrollView with improved styling
+    // Create horizontal ScrollView without paging
     horizontalScrollView = await ScrollView(
       style: ScrollViewStyle(
         backgroundColor: Colors.white.toARGB32(),
-        showsIndicators: false, // Hide indicators for cleaner look
+        showsIndicators: true, // Show indicators for better UX
         bounces: true,
+        pagingEnabled: false, // Disable paging to allow free scrolling
         direction: ScrollDirection.horizontal,
       ),
       layout: YogaLayout(
@@ -164,8 +169,8 @@ class ScrollViewComposer extends UIComposer {
         height: YogaValue(150, YogaUnit.point),
         flexDirection: YogaFlexDirection.row,
         padding: EdgeValues(
-          left: YogaValue(8, YogaUnit.point),
-          right: YogaValue(8, YogaUnit.point),
+          left: YogaValue(16, YogaUnit.point),
+          right: YogaValue(16, YogaUnit.point),
           top: YogaValue(8, YogaUnit.point),
           bottom: YogaValue(8, YogaUnit.point),
         ),
@@ -174,6 +179,9 @@ class ScrollViewComposer extends UIComposer {
       onScroll: (metrics) {
         print(
             'Horizontal scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
+      },
+      onScrollEnd: () {
+        print('Horizontal scroll ended');
       },
       children: horizontalItems,
     ).create();
