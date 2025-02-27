@@ -68,7 +68,7 @@ class ScrollView {
   final YogaLayout layout;
   final void Function(ScrollMetrics)? onScroll;
   final VoidCallback? onScrollEnd;
-  final List<String> children; // Changed from dynamic to String
+  final List<String> children;
 
   ScrollView({
     this.style = const ScrollViewStyle(),
@@ -79,6 +79,10 @@ class ScrollView {
   });
 
   Future<String?> create() async {
+    // Log the creation of ScrollView with number of children
+    print("Creating ScrollView with ${children.length} children");
+    
+    // First create the ScrollView without children
     id = await Core.createView(
       viewType: 'ScrollView',
       properties: {
@@ -88,10 +92,23 @@ class ScrollView {
           if (onScroll != null) 'onScroll': true,
           if (onScrollEnd != null) 'onScrollEnd': true,
         },
+        // Pass children IDs in the properties
+        if (children.isNotEmpty) 'childrenIds': children,
       },
       onEvent: _handleEvent,
-      children: children.isNotEmpty ? children : null, // Pass children directly
+      // Don't pass children here - we'll attach them manually after creation
     );
+    
+    // If ScrollView was created successfully, attach children manually
+    if (id != null && children.isNotEmpty) {
+      print("ScrollView created with ID: $id, attaching ${children.length} children");
+      for (int i = 0; i < children.length; i++) {
+        final childId = children[i];
+        print("Attaching child $i: $childId to ScrollView: $id");
+        await Core.attachView(id!, childId);
+      }
+    }
+    
     return id;
   }
 

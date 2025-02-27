@@ -127,62 +127,36 @@ class NativeUIManager: NSObject, FlutterPlugin {
         views[viewId] = view
         childViews[viewId] = []
         
-        // Handle children if provided (for ScrollView, ListView, etc.)
-        if let childrenIds = properties["children"] as? [String] {
-            print("Processing \(childrenIds.count) children for \(viewId)")
-            
-            // For ScrollView, handle children differently
-            if type == .scrollView, let scrollView = view as? DCScrollView {
-                print("Adding children to ScrollView: \(viewId)")
+        // For ScrollView, store childrenIds in state and process them after creation
+        if let childrenIds = properties["childrenIds"] as? [String], type == .scrollView {
+            if let scrollView = view as? DCScrollView {
+                // Store the childrenIds in the ScrollView's state
+                var newState = properties
+                newState["childrenIds"] = childrenIds
+                view.handleStateChange(newState)
                 
-                for childId in childrenIds {
-                    if let childView = views[childId] {
-                        if childView.superview != nil {
-                            print("Child \(childId) already has a parent, creating duplicate")
-                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
-                            if let duplicateView = copyComponent(childView, withNewId: newId) {
-                                views[newId] = duplicateView
-                                // Don't force frame size, let yoga handle it
-                                scrollView.addSubview(duplicateView)
-                                childViews[viewId]?.append(newId)
-                                print("Added duplicate \(newId) to ScrollView")
-                            }
-                        } else {
-                            // Don't force frame size, let yoga handle it
-                            scrollView.addSubview(childView)
-                            childViews[viewId]?.append(childId)
-                            print("Added child \(childId) to ScrollView")
+                // Process pending children using our reference to the views dictionary
+                scrollView.processPendingChildren(viewRegistry: views)
+            }
+        }
+        
+        // Handle other children normally for non-ScrollView components
+        if let children = properties["children"] as? [String], type != .scrollView {
+            for childId in children {
+                if let childView = views[childId] {
+                    if childView.superview != nil {
+                        // Child already has a parent, create duplicate
+                        let newId = "\(childId)-duplicate-\(UUID().uuidString)"
+                        if let duplicateView = copyComponent(childView, withNewId: newId) {
+                            views[newId] = duplicateView
+                            view.addSubview(duplicateView)
+                            childViews[viewId]?.append(newId)
                         }
                     } else {
-                        print("Child \(childId) not found in views dictionary")
+                        view.addSubview(childView)
+                        childViews[viewId]?.append(childId)
                     }
                 }
-                
-                // Force layout after adding all children
-                scrollView.setNeedsLayout()
-                scrollView.layoutIfNeeded()
-            } else {
-                // Handle other view types normally
-                for childId in childrenIds {
-                    if let childView = views[childId] {
-                        // If child is already attached to another parent, create a duplicate
-                        if childView.superview != nil {
-                            print("Child \(childId) already has a parent, creating duplicate")
-                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
-                            if let duplicateView = copyComponent(childView, withNewId: newId) {
-                                views[newId] = duplicateView
-                                view.addSubview(duplicateView)
-                                childViews[viewId]?.append(newId)
-                            }
-                        } else {
-                            // Child isn't attached yet, proceed normally
-                            view.addSubview(childView)
-                            childViews[viewId]?.append(childId)
-                        }
-                    }
-                }
-                // Force layout update after adding all children
-                view.yoga.applyLayout(preservingOrigin: true)
             }
         }
         

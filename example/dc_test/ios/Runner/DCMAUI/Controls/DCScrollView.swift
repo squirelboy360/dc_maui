@@ -76,6 +76,8 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let contentContainer = DCView(viewId: "scroll-content")
     private weak var methodChannel: FlutterMethodChannel?
+    private var isHorizontal = false
+    private var pendingChildrenIds: [String]? = nil
     
     override func setupEvents(_ events: [String: Any], channel: FlutterMethodChannel?) {
         self.methodChannel = channel
@@ -85,10 +87,12 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     override func setupDefaults() {
         super.setupDefaults()
         
+        print("Setting up DCScrollView: \(viewId)")
+        
         // Configure scrollView
         scrollView.yoga.isEnabled = true
         scrollView.delegate = self
-        addSubview(scrollView)
+        super.addSubview(scrollView)
         
         // Configure content container - this will hold all the children
         contentContainer.yoga.isEnabled = true
@@ -110,12 +114,45 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
         if let offset = newState["contentOffset"] as? [String: CGFloat] {
             scrollView.contentOffset = CGPoint(
                 x: offset["x"] ?? 0,
                 y: offset["y"] ?? 0
             )
         }
+        
+        // Store children IDs for later processing by the NativeUIManager
+        if let childrenIds = newState["childrenIds"] as? [String] {
+            print("DCScrollView \(viewId): Storing \(childrenIds.count) children IDs for later processing")
+            pendingChildrenIds = childrenIds
+        }
+    }
+    
+    // This will be called by NativeUIManager after the view is created
+    func processPendingChildren(viewRegistry: [String: DCView]) {
+        guard let childrenIds = pendingChildrenIds, !childrenIds.isEmpty else {
+            return
+        }
+        
+        print("Processing \(childrenIds.count) pending children for ScrollView \(viewId)")
+        
+        for (index, childId) in childrenIds.enumerated() {
+            if let childView = viewRegistry[childId] {
+                print("Adding child \(index): \(childId) to ScrollView \(viewId)")
+                addSubview(childView) // This will call our overridden addSubview method
+            } else {
+                print("Child view \(childId) not found in registry")
+            }
+        }
+        
+        // Clear pending children
+        pendingChildrenIds = nil
+        
+        // Force layout
+        setNeedsLayout()
+        layoutIfNeeded()
     }
     
     override func applyStyle(_ style: [String: Any]) {
@@ -143,19 +180,25 @@ class DCScrollView: DCView, UIScrollViewDelegate {
             if let direction = scrollStyle["direction"] as? String {
                 switch direction {
                 case "horizontal":
+                    isHorizontal = true
                     contentContainer.yoga.flexDirection = .row
                     scrollView.alwaysBounceHorizontal = true
                     scrollView.alwaysBounceVertical = false
+                    print("DCScrollView: Set to HORIZONTAL direction")
                     
                 case "vertical":
+                    isHorizontal = false
                     contentContainer.yoga.flexDirection = .column
                     scrollView.alwaysBounceHorizontal = false
                     scrollView.alwaysBounceVertical = true
+                    print("DCScrollView: Set to VERTICAL direction")
                     
                 case "both":
+                    isHorizontal = false
                     contentContainer.yoga.flexDirection = .column
                     scrollView.alwaysBounceHorizontal = true
                     scrollView.alwaysBounceVertical = true
+                    print("DCScrollView: Set to BOTH directions")
                     
                 default:
                     break
@@ -184,6 +227,9 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     // Ensure all children are added to the content container
     override func addSubview(_ view: UIView) {
         if view != scrollView {
+            if let dcView = view as? DCView {
+                print("Adding child view \(dcView.viewId) to content container")
+            }
             contentContainer.addSubview(view)
             setNeedsLayout()
         } else {
@@ -195,11 +241,11 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     override func layoutSubviews() {
         super.layoutSubviews()
         
+        print("DCScrollView layoutSubviews: \(viewId), isHorizontal: \(isHorizontal)")
+        print("Number of children: \(contentContainer.subviews.count)")
+        
         // Make scrollView fill our bounds
         scrollView.frame = bounds
-        
-        // Set content container width/height based on direction for proper scrolling
-        let isHorizontal = contentContainer.yoga.flexDirection == .row
         
         // Configure contentContainer dimensions based on scroll direction
         if isHorizontal {
@@ -208,12 +254,27 @@ class DCScrollView: DCView, UIScrollViewDelegate {
             // - Width: Auto calculated based on content
             contentContainer.yoga.height = YGValue(value: Float(scrollView.bounds.height), unit: .point)
             contentContainer.yoga.width = YGValue(value: 0, unit: .auto)
+            
+            // Ensure content container's flexDirection is row
+            contentContainer.yoga.flexDirection = .row
+            
+            // Child view debugging
+            for (i, view) in contentContainer.subviews.enumerated() {
+                if let dcView = view as? DCView {
+                    print("Child \(i): \(dcView.viewId), frame before layout: \(view.frame)")
+                } else {
+                    print("Child \(i): Unknown type, frame before layout: \(view.frame)")
+                }
+            }
         } else {
             // For vertical scrolling:
             // - Width: Fixed to match scrollView
             // - Height: Auto calculated based on content
             contentContainer.yoga.width = YGValue(value: Float(scrollView.bounds.width), unit: .point)
             contentContainer.yoga.height = YGValue(value: 0, unit: .auto)
+            
+            // Ensure content container's flexDirection is column
+            contentContainer.yoga.flexDirection = .column
         }
         
         // Apply Yoga layout to position all children
@@ -221,45 +282,45 @@ class DCScrollView: DCView, UIScrollViewDelegate {
         
         // Use improved content size calculation that ensures all items are visible
         calculateAndSetContentSizeWithFullVisibility()
+        
+        // Log each child's position after layout
+        for (i, view) in contentContainer.subviews.enumerated() {
+            if let dcView = view as? DCView {
+                print("Child \(i): \(dcView.viewId), frame after layout: \(view.frame)")
+            } else {
+                print("Child \(i): Unknown type, frame after layout: \(view.frame)")
+            }
+        }
     }
     
     // Improved content size calculation to ensure full visibility of all items
     private func calculateAndSetContentSizeWithFullVisibility() {
-        // Start with the basic content container size after layout
-        let baseContentSize = contentContainer.frame.size
+        var maxWidth: CGFloat = 0
+        var maxHeight: CGFloat = 0
         
-        // Add extra space to ensure last item is fully visible - usually this is needed
-        // because there might be calculations that don't account for margins, padding, etc.
-        let extraBottomSpace: CGFloat = 50  // Add ample padding at the bottom to ensure visibility
-        let extraRightSpace: CGFloat = 50   // Same for horizontal scrolling
-        
-        let isHorizontal = contentContainer.yoga.flexDirection == .row
-        var contentSize = baseContentSize
-        
-        // Calculate bottom padding or right padding depending on scroll direction
-        if isHorizontal {
-            contentSize.width += extraRightSpace
-        } else {
-            contentSize.height += extraBottomSpace
+        // Calculate the total content size based on all children's frames
+        for view in contentContainer.subviews {
+            let rightEdge = view.frame.origin.x + view.frame.size.width
+            let bottomEdge = view.frame.origin.y + view.frame.size.height
+            
+            maxWidth = max(maxWidth, rightEdge)
+            maxHeight = max(maxHeight, bottomEdge)
         }
         
-        // Set the calculated content size to the scroll view
+        // Add padding to ensure full visibility
+        let extraPadding: CGFloat = 20
+        
+        // Set the content size
+        let contentSize = CGSize(
+            width: isHorizontal ? maxWidth + extraPadding : scrollView.bounds.width,
+            height: isHorizontal ? scrollView.bounds.height : maxHeight + extraPadding
+        )
+        
+        // Apply the calculated content size
         scrollView.contentSize = contentSize
         
-        // Debug output
-        print("ScrollView final contentSize: \(scrollView.contentSize)")
-        print("  - Base contentSize: \(baseContentSize)")
-        print("  - Added padding: \(isHorizontal ? extraRightSpace : extraBottomSpace) to \(isHorizontal ? "right" : "bottom")")
-        
-        // Debug items positions
-        for (index, view) in contentContainer.subviews.enumerated() {
-            print("  - Item \(index) frame: \(view.frame)")
-        }
-    }
-    
-    func setContent(_ view: DCView) {
-        contentContainer.subviews.forEach { $0.removeFromSuperview() }
-        contentContainer.addSubview(view)
+        print("ScrollView \(viewId) contentSize set to: \(contentSize)")
+        print("Direction: \(isHorizontal ? "horizontal" : "vertical")")
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

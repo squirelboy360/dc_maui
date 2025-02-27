@@ -145,20 +145,67 @@ class ScrollViewComposer extends UIComposer {
       ),
     ).create();
 
-    // Create items for horizontal scroll - smaller width to show multiple items
-    final horizontalItems = await createScrollItems(
-        itemCount: colors.length,
-        width: 160, // Smaller width to show multiple items
-        widthUnit: YogaUnit.point,
-        height: 110,
-        radius: 10,
-        margin: 8);
+    // Create items individually and then add them to the scrollview
+    List<String> horizontalItems = [];
 
-    // Create horizontal ScrollView without paging
+    // Debug - print the colors array
+    print("Creating items for ${colors.length} colors: ${colors}");
+
+    for (int i = 0; i < 5; i++) {
+      // Create just 5 items for testing
+      // Create container view for the item
+      final item = await View(
+        style: ViewStyle(
+          backgroundColor: colors[i % colors.length],
+          cornerRadius: 10,
+          shadow: ViewShadow(
+            color: Colors.black,
+            opacity: 0.15,
+            offset: Offset(0, 2),
+            radius: 4,
+          ),
+        ),
+        layout: YogaLayout(
+          alignSelf: YogaAlign.center,
+          width: YogaValue(160, YogaUnit.point),
+          height: YogaValue(110, YogaUnit.point),
+          margin: EdgeValues(
+            left: YogaValue(10, YogaUnit.point),
+            right: YogaValue(10, YogaUnit.point),
+            top: YogaValue(5, YogaUnit.point),
+            bottom: YogaValue(5, YogaUnit.point),
+          ),
+          justifyContent: YogaJustify.center,
+          alignItems: YogaAlign.center,
+        ),
+      ).create();
+
+      // Add a label to each item
+      final itemLabel = await Text(
+        text: "Item ${i + 1}",
+        textStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white.toARGB32(),
+          textAlign: TextAlign.center,
+        ),
+      ).create();
+
+      if (item != null && itemLabel != null) {
+        // Attach the label to the item
+        await Core.attachView(item, itemLabel);
+        horizontalItems.add(item);
+        print("Created horizontal item ${i + 1}");
+      }
+    }
+
+    print("Total horizontal items created: ${horizontalItems.length}");
+
+    // Create horizontal ScrollView WITHOUT any children initially
     horizontalScrollView = await ScrollView(
       style: ScrollViewStyle(
         backgroundColor: Colors.white.toARGB32(),
-        showsIndicators: true, // Show indicators for better UX
+        showsIndicators: true,
         bounces: true,
         pagingEnabled: false, // Disable paging to allow free scrolling
         direction: ScrollDirection.horizontal,
@@ -178,13 +225,20 @@ class ScrollViewComposer extends UIComposer {
       ),
       onScroll: (metrics) {
         print(
-            'Horizontal scrolling - Offset: (${metrics.offsetX}, ${metrics.offsetY})');
+            'Horizontal scrolling - Content size: ${metrics.contentSize.width} x ${metrics.contentSize.height}');
+        print(
+            'Viewport size: ${metrics.viewportSize.width} x ${metrics.viewportSize.height}');
       },
-      onScrollEnd: () {
-        print('Horizontal scroll ended');
-      },
-      children: horizontalItems,
+      // Don't pass children here
     ).create();
+
+    // Then attach each item to the ScrollView manually
+    if (horizontalScrollView != null) {
+      for (int i = 0; i < horizontalItems.length; i++) {
+        await Core.attachView(horizontalScrollView!, horizontalItems[i]);
+        print("Attached horizontal item ${i+1} to ScrollView");
+      }
+    }
 
     // Create items for vertical scroll with improved styling
     final verticalItems = await createScrollItems(
@@ -311,6 +365,7 @@ class ScrollViewComposer extends UIComposer {
       if (item != null && itemLabel != null) {
         await Core.attachView(item, itemLabel);
         itemIds.add(item);
+        print("Created vertical item ${i + 1}");
       }
     }
 
