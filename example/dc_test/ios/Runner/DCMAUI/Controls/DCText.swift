@@ -111,7 +111,10 @@ class DCText: DCView {
         print("Label layout: frame=\(label.frame), bounds=\(label.bounds)")
         print("Label text: \(label.text ?? "nil")")
         
-        // Only apply layout if explicitly set
+        // Apply layout to the label to match the view's bounds
+        label.frame = bounds
+        
+        // Only apply Yoga layout if explicitly set
         if frame.size != .zero {
             yoga.applyLayout(preservingOrigin: true)
         }
@@ -134,8 +137,6 @@ class DCText: DCView {
             if let text = textStyle["text"] as? String {
                 print("Setting text: \(text)")
                 label.text = text
-                // Size to fit after setting text
-                label.sizeToFit()
             }
             
             // Font styling
@@ -162,14 +163,11 @@ class DCText: DCView {
                 }
             }
             
-            // After applying all styles, ensure proper sizing
-            label.sizeToFit()
-            // Set intrinsic content size for Yoga
-            self.yoga.width = YGValue(value: Float(label.frame.width), unit: .point)
-            self.yoga.height = YGValue(value: Float(label.frame.height), unit: .point)
+            // Make sure the label fills the view bounds
+            label.frame = bounds
             
-            // Force layout update
-            self.yoga.markDirty()
+            // Important: Update layout after text changes
+            // This ensures proper text measurement
             self.setNeedsLayout()
             
             // Line styling
