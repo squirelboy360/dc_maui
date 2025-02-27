@@ -12,35 +12,31 @@ import '../../framework/bridge/types/text_types/text_styles.dart';
 class ScrollViewComposer extends UIComposer {
   String? mainContainer;
   String? appbar;
-  String? appBarTitle;
-  String? appBarIcon;
-  String? appBarTouchable;
-  String? gridContainerColumn;
+  String? appbarTitle;
+  String? mainScrollView;
+  String? storiesContainer;
+  String? storiesHeader;
+  String? horizontalScrollView;
   String? bottomButton;
   String? bottomButtonText;
-  String? scrollView;
-  String? horizontalScrollView;
 
-  List<String> gridItemIds = [];
-  List<String> horizontalItemIds = [];
+  List<String> mainScrollItems = [];
+  List<String> storyItems = [];
 
-  final int itemCount = 20; // Number of vertical items
-  final int horizontalItemCount = 7; // Number of horizontal items
+  final int mainItemCount = 10;
+  final int horizontalItemCount = 7;
 
   final colors = [
-    // Original colors
     0xFF64B5F6, // Blue
     0xFFFFB74D, // Orange
     0xFFBA68C8, // Purple
     0xFF4DB6AC, // Teal
     0xFFFFD54F, // Yellow
     0xFF7986CB, // Indigo
-
-    // Additional unique colors (shortened for brevity)
     0xFFE57373, // Red 300
     0xFF9CCC65, // Light Green 400
     0xFF4CAF50, // Green 500
-    0xFFF44336, // Red 500
+    0xFFF44336, // Red 500,
   ];
 
   @override
@@ -49,7 +45,6 @@ class ScrollViewComposer extends UIComposer {
     mainContainer = await View(
       style: ViewStyle(backgroundColor: Colors.white.value),
       layout: YogaLayout(
-        flex: 1,
         flexDirection: YogaFlexDirection.column,
         width: YogaValue(100, YogaUnit.percent),
         height: YogaValue(100, YogaUnit.percent),
@@ -58,7 +53,9 @@ class ScrollViewComposer extends UIComposer {
 
     // App bar
     appbar = await View(
-      style: ViewStyle(backgroundColor: Colors.amber.value),
+      style: ViewStyle(
+        backgroundColor: Color(0xFF3F51B5).value,
+      ),
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
         height: YogaValue(60, YogaUnit.point),
@@ -69,76 +66,96 @@ class ScrollViewComposer extends UIComposer {
     ).create();
 
     // App bar title
-    appBarTitle = await Text(
+    appbarTitle = await Text(
       text: "Instagram-style Feed",
       textStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
         color: Colors.white.value,
+        textAlign: TextAlign.center,
       ),
     ).create();
 
-    // Container for the main vertical scroll view
-    gridContainerColumn = await View(
-      style: ViewStyle(backgroundColor: Colors.black.withOpacity(0.05).value),
+    // Main vertical scroll view
+    mainScrollView = await ScrollView(
+      style: ScrollViewStyle(
+        backgroundColor: Color(0xFFF0F0F0).value,
+        showsIndicators: true,
+        bounces: true,
+        direction: ScrollDirection.vertical,
+      ),
       layout: YogaLayout(
-        display: YogaDisplay.flex,
         flex: 1,
         width: YogaValue(100, YogaUnit.percent),
-        justifyContent: YogaJustify.flexStart,
-        alignItems: YogaAlign.center,
-        flexDirection: YogaFlexDirection.column,
       ),
     ).create();
 
-    // Create horizontal scroll view for stories (to be inserted as first item)
+    // Stories container
+    storiesContainer = await View(
+      style: ViewStyle(
+        backgroundColor: Colors.white.value,
+      ),
+      layout: YogaLayout(
+        width: YogaValue(100, YogaUnit.percent),
+        flexDirection: YogaFlexDirection.column,
+        margin: EdgeValues(bottom: YogaValue(10, YogaUnit.point)),
+      ),
+    ).create();
+
+    // Stories header
+    storiesHeader = await Text(
+      text: "Stories",
+      textStyle: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87.value,
+        textAlign: TextAlign.left,
+      ),
+      layout: YogaLayout(
+        margin: EdgeValues(
+          left: YogaValue(16, YogaUnit.point),
+          top: YogaValue(12, YogaUnit.point),
+          bottom: YogaValue(8, YogaUnit.point),
+        ),
+      ),
+    ).create();
+
+    // Horizontal scroll view for stories
     horizontalScrollView = await ScrollView(
       style: ScrollViewStyle(
-        backgroundColor: Colors.white.value,
-        showsIndicators: false,
+        backgroundColor: Colors.transparent.value,
+        showsIndicators: true,
         bounces: true,
         direction: ScrollDirection.horizontal,
       ),
       layout: YogaLayout(
-        display: YogaDisplay.flex,
         width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(110, YogaUnit.point),
-        flexDirection: YogaFlexDirection.row,
-        padding: EdgeValues(
-          vertical: YogaValue(10, YogaUnit.point),
-        ),
+        height: YogaValue(120, YogaUnit.point),
       ),
-      onScroll: (metrics) {
-        print('Stories scrolling - X offset: ${metrics.offsetX}');
-      },
     ).create();
 
-    // Create story items for the horizontal scroll view
+    // Create story items
     for (int i = 0; i < horizontalItemCount; i++) {
-      // Create container for story
+      // Story container
       final storyContainer = await View(
-        style: ViewStyle(
-          backgroundColor: Colors.transparent.value,
-        ),
+        style: ViewStyle(backgroundColor: Colors.transparent.value),
         layout: YogaLayout(
-          width: YogaValue(80, YogaUnit.point),
-          margin: EdgeValues(bottom: YogaValue(8, YogaUnit.point)),
+          width: YogaValue(90, YogaUnit.point),
           alignItems: YogaAlign.center,
-          flexDirection: YogaFlexDirection.column,
+          margin: EdgeValues(
+            left: i == 0
+                ? YogaValue(16, YogaUnit.point)
+                : YogaValue(12, YogaUnit.point),
+            right: YogaValue(0, YogaUnit.point),
+          ),
         ),
       ).create();
 
-      // Create circle avatar for story
+      // Story avatar - circle
       final storyAvatar = await View(
         style: ViewStyle(
           backgroundColor: Color(colors[i % colors.length]).value,
-          cornerRadius: 35, // Make it a circle
-          shadow: ViewShadow(
-            color: Colors.black,
-            opacity: 0.1,
-            offset: Offset(0, 2),
-            radius: 3,
-          ),
+          cornerRadius: 35, // Makes it circular
         ),
         layout: YogaLayout(
           width: YogaValue(70, YogaUnit.point),
@@ -147,106 +164,58 @@ class ScrollViewComposer extends UIComposer {
         ),
       ).create();
 
-      // Create label for story
+      // Story label
       final storyLabel = await Text(
         text: "Story ${i + 1}",
         textStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87.value,
+          fontSize: 14,
+          color: Colors.black.value,
+          textAlign: TextAlign.center, // Center align the text
+        ),
+        layout: YogaLayout(
+          width: YogaValue(70, YogaUnit.point),
         ),
       ).create();
 
+      // Attach components
       if (storyContainer != null && storyAvatar != null && storyLabel != null) {
         await Core.attachView(storyContainer, storyAvatar);
         await Core.attachView(storyContainer, storyLabel);
-        horizontalItemIds.add(storyContainer);
+        storyItems.add(storyContainer);
       }
     }
 
-    // Attach stories to horizontal scroll view
-    if (horizontalScrollView != null) {
-      for (String item in horizontalItemIds) {
-        await Core.attachView(horizontalScrollView!, item);
-      }
-    }
-
-    // Create main grid items for vertical scrolling (feed posts)
-    for (int i = 0; i < itemCount; i++) {
-      // Skip creating the first item since we'll insert our horizontal scrollview there
+    // Create feed posts
+    for (int i = 0; i < mainItemCount; i++) {
       if (i == 0) {
-        // Create a container for the horizontal scroll section
-        final storiesContainer = await View(
-          style: ViewStyle(
-            backgroundColor: Colors.white.value,
-            shadow: ViewShadow(
-              color: Colors.black,
-              opacity: 0.05,
-              offset: Offset(0, 2),
-              radius: 3,
-            ),
-          ),
-          layout: YogaLayout(
-            width: YogaValue(100, YogaUnit.percent),
-            margin: EdgeValues(bottom: YogaValue(8, YogaUnit.point)),
-          ),
-        ).create();
-
-        // Create a header for stories section
-        final storiesHeader = await Text(
-          text: "Stories",
-          layout: YogaLayout(
-            margin: EdgeValues(
-              left: YogaValue(10, YogaUnit.point),
-              top: YogaValue(10, YogaUnit.point),
-              bottom: YogaValue(5, YogaUnit.point),
-            ),
-          ),
-          textStyle: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87.value,
-          ),
-        ).create();
-
-        if (storiesContainer != null &&
-            storiesHeader != null &&
-            horizontalScrollView != null) {
-          await Core.attachView(storiesContainer, storiesHeader);
-          await Core.attachView(storiesContainer, horizontalScrollView!);
-          gridItemIds.add(storiesContainer);
-        }
+        mainScrollItems.add(storiesContainer!);
         continue;
       }
 
-      // Create regular feed post items
-      final gridItem = await View(
+      // Post container
+      final postContainer = await View(
         style: ViewStyle(
           backgroundColor: Colors.white.value,
-          shadow: ViewShadow(
-            color: Colors.black,
-            opacity: 0.05,
-            offset: Offset(0, 2),
-            radius: 3,
-          ),
         ),
         layout: YogaLayout(
-          padding: EdgeValues(vertical: YogaValue(10, YogaUnit.point)),
           width: YogaValue(100, YogaUnit.percent),
-          margin: EdgeValues(bottom: YogaValue(8, YogaUnit.point)),
-          flexDirection: YogaFlexDirection.column,
+          margin: EdgeValues(bottom: YogaValue(10, YogaUnit.point)),
         ),
       ).create();
 
-      // Create username header for post
-      final userHeader = await View(
-        style: ViewStyle(backgroundColor: Colors.transparent.value),
+      // Post header container
+      final postHeader = await View(
+        style: ViewStyle(
+          backgroundColor: Colors.transparent.value,
+        ),
         layout: YogaLayout(
+          width: YogaValue(100, YogaUnit.percent),
+          height: YogaValue(60, YogaUnit.point),
           flexDirection: YogaFlexDirection.row,
           alignItems: YogaAlign.center,
           padding: EdgeValues(
-            horizontal: YogaValue(10, YogaUnit.point),
-            bottom: YogaValue(8, YogaUnit.point),
+            left: YogaValue(16, YogaUnit.point),
+            right: YogaValue(16, YogaUnit.point),
           ),
         ),
       ).create();
@@ -254,27 +223,31 @@ class ScrollViewComposer extends UIComposer {
       // User avatar
       final userAvatar = await View(
         style: ViewStyle(
-          backgroundColor: Color(colors[(i + 2) % colors.length]).value,
-          cornerRadius: 15,
+          backgroundColor: Color(colors[(i + 3) % colors.length]).value,
+          cornerRadius: 20, // Makes it circular
         ),
         layout: YogaLayout(
-          width: YogaValue(30, YogaUnit.point),
-          height: YogaValue(30, YogaUnit.point),
-          margin: EdgeValues(bottom: YogaValue(8, YogaUnit.point)),
+          width: YogaValue(40, YogaUnit.point),
+          height: YogaValue(40, YogaUnit.point),
+          margin: EdgeValues(right: YogaValue(12, YogaUnit.point)),
         ),
       ).create();
 
       // Username
-      final username = await Text(
-        text: "user_${i + 1}",
+      final userName = await Text(
+        text: "user_${i}",
         textStyle: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
           color: Colors.black.value,
+          textAlign: TextAlign.left,
+        ),
+        layout: YogaLayout(
+          flex: 1,
         ),
       ).create();
 
-      // Post content (image)
+      // Post image
       final postImage = await View(
         style: ViewStyle(
           backgroundColor: Color(colors[i % colors.length]).value,
@@ -286,79 +259,75 @@ class ScrollViewComposer extends UIComposer {
       ).create();
 
       // Post caption
-      final caption = await Text(
-        text: "This is post caption #${i + 1}",
-        layout: YogaLayout(
-          padding: EdgeValues(
-            horizontal: YogaValue(10, YogaUnit.point),
-            top: YogaValue(10, YogaUnit.point),
-          ),
-        ),
+      final postCaption = await Text(
+        text:
+            "This is post ${i} caption with some text to demonstrate wrapping.",
         textStyle: TextStyle(
           fontSize: 14,
           color: Colors.black87.value,
+          textAlign: TextAlign.left,
+        ),
+        layout: YogaLayout(
+          padding: EdgeValues(
+            left: YogaValue(16, YogaUnit.point),
+            right: YogaValue(16, YogaUnit.point),
+            top: YogaValue(12, YogaUnit.point),
+            bottom: YogaValue(16, YogaUnit.point),
+          ),
         ),
       ).create();
 
-      // Assemble post components
-      if (userHeader != null && userAvatar != null && username != null) {
-        await Core.attachView(userHeader, userAvatar);
-        await Core.attachView(userHeader, username);
-      }
+      // Assemble post
+      if (postContainer != null && postHeader != null) {
+        await Core.attachView(postContainer, postHeader);
 
-      if (gridItem != null &&
-          userHeader != null &&
-          postImage != null &&
-          caption != null) {
-        await Core.attachView(gridItem, userHeader);
-        await Core.attachView(gridItem, postImage);
-        await Core.attachView(gridItem, caption);
-        gridItemIds.add(gridItem);
+        if (userAvatar != null) {
+          await Core.attachView(postHeader, userAvatar);
+        }
+
+        if (userName != null) {
+          await Core.attachView(postHeader, userName);
+        }
+
+        if (postImage != null) {
+          await Core.attachView(postContainer, postImage);
+        }
+
+        if (postCaption != null) {
+          await Core.attachView(postContainer, postCaption);
+        }
+
+        mainScrollItems.add(postContainer);
       }
     }
 
-    // Create main ScrollView for vertical scrolling
-    scrollView = await ScrollView(
-      style: ScrollViewStyle(
-        backgroundColor: Colors.transparent.value,
-        showsIndicators: true,
-        bounces: true,
-        direction: ScrollDirection.vertical,
-      ),
-      layout: YogaLayout(
-        display: YogaDisplay.flex,
-        width: YogaValue(100, YogaUnit.percent),
-        flex: 1,
-        flexDirection: YogaFlexDirection.column,
-      ),
-      onScroll: (metrics) {
-        print('Feed scrolling - Y offset: ${metrics.offsetY}');
-        print('Content size: ${metrics.contentSize.height}');
-      },
-      onScrollEnd: () {
-        print('Feed scroll ended');
-      },
-    ).create();
-
     // Bottom button
     bottomButton = await View(
-      style: ViewStyle(backgroundColor: Colors.amber.value, cornerRadius: 20),
+      style: ViewStyle(
+        backgroundColor: Color(0xFF3F51B5).value,
+        cornerRadius: 24,
+      ),
       layout: YogaLayout(
-        height: YogaValue(50, YogaUnit.point),
-        width: YogaValue(200, YogaUnit.point),
         alignSelf: YogaAlign.center,
-        margin: EdgeValues(vertical: YogaValue(10, YogaUnit.point)),
+        width: YogaValue(160, YogaUnit.point),
+        height: YogaValue(50, YogaUnit.point),
         justifyContent: YogaJustify.center,
         alignItems: YogaAlign.center,
+        margin: EdgeValues(
+          top: YogaValue(16, YogaUnit.point),
+          bottom: YogaValue(16, YogaUnit.point),
+        ),
       ),
     ).create();
 
+    // Button text
     bottomButtonText = await Text(
       text: "Load More",
       textStyle: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
         color: Colors.white.value,
+        textAlign: TextAlign.center,
       ),
     ).create();
   }
@@ -366,44 +335,33 @@ class ScrollViewComposer extends UIComposer {
   @override
   Future<void> bind() async {
     try {
-      // Attach main container to root
-      await Core.attachView('root', mainContainer ?? '');
+      // Root structure
+      await Core.attachView('root', mainContainer!);
+      await Core.attachView(mainContainer!, appbar!);
+      await Core.attachView(appbar!, appbarTitle!);
+      await Core.attachView(mainContainer!, mainScrollView!);
 
-      // Attach app bar and title
-      if (appbar != null && mainContainer != null) {
-        await Core.attachView(mainContainer!, appbar!);
-        if (appBarTitle != null) {
-          await Core.attachView(appbar!, appBarTitle!);
-        }
+      // Connect stories components
+      await Core.attachView(storiesContainer!, storiesHeader!);
+      await Core.attachView(storiesContainer!, horizontalScrollView!);
+
+      // Attach all stories to horizontal scroll view
+      print("Attaching ${storyItems.length} stories to horizontal scroll");
+      for (String item in storyItems) {
+        await Core.attachView(horizontalScrollView!, item);
       }
 
-      // Attach grid container to main container
-      if (gridContainerColumn != null && mainContainer != null) {
-        await Core.attachView(mainContainer!, gridContainerColumn!);
-
-        // Attach scrollview to grid container
-        if (scrollView != null) {
-          await Core.attachView(gridContainerColumn!, scrollView!);
-
-          // Attach all grid items to the scrollview
-          for (String item in gridItemIds) {
-            await Core.attachView(scrollView!, item);
-          }
-        }
+      // Attach all feed items to main scroll view
+      print("Attaching ${mainScrollItems.length} feed items to main scroll");
+      for (String item in mainScrollItems) {
+        await Core.attachView(mainScrollView!, item);
       }
 
-      // Attach bottom button
-      if (bottomButton != null && mainContainer != null) {
-        await Core.attachView(mainContainer!, bottomButton!);
-        if (bottomButtonText != null) {
-          await Core.attachView(bottomButton!, bottomButtonText!);
-        }
-      }
+      // Attach button
+      await Core.attachView(mainContainer!, bottomButton!);
+      await Core.attachView(bottomButton!, bottomButtonText!);
 
       print('All views bound successfully');
-      print('Created ${gridItemIds.length} feed items');
-      print(
-          'Created ${horizontalItemIds.length} story items in horizontal scroll');
     } catch (e) {
       print('Error binding views: $e');
     }
