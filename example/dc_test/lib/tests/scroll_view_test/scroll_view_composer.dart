@@ -25,12 +25,6 @@ class ScrollViewComposer extends UIComposer {
 
   List<String> mainScrollItems = [];
   List<String> storyItems = [];
-  List<String> allPosts = []; // Store all posts for filtering
-
-  // Variables for pagination
-  final int initialPostsToShow = 10;
-  int currentlyShownPosts = 0;
-  final int loadMoreCount = 10;
 
   final int mainItemCount = 50;
   final int horizontalItemCount = 50;
@@ -45,8 +39,77 @@ class ScrollViewComposer extends UIComposer {
     0xFFE57373, // Red 300
     0xFF9CCC65, // Light Green 400
     0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,8=878
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
     0xFFF44336, // Red 500,
-    // rest of colors array...
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
   ];
 
   @override
@@ -88,11 +151,10 @@ class ScrollViewComposer extends UIComposer {
       ),
     ).create();
 
-    // Search bar with text change handling
     searchbar = await TextInput(
       inputStyle: TextInputStyle(
         placeholder: "Search",
-        contentType: ContentType.url, // Use existing ContentType
+        contentType: ContentType.url,
         textColor: Colors.white.value,
       ),
       style: ViewStyle(
@@ -108,7 +170,6 @@ class ScrollViewComposer extends UIComposer {
           bottom: YogaValue(16, YogaUnit.point),
         ),
       ),
-      onTextChange: handleSearchInput,
     ).create();
 
     // Main vertical scroll view
@@ -133,7 +194,7 @@ class ScrollViewComposer extends UIComposer {
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
         flexDirection: YogaFlexDirection.column,
-        margin: EdgeValues(bottom: YogaValue(20, YogaUnit.point)),
+        margin: EdgeValues(bottom: YogaValue(500, YogaUnit.point)),
       ),
     ).create();
 
@@ -220,23 +281,119 @@ class ScrollViewComposer extends UIComposer {
       }
     }
 
-    // Create all feed posts (but only attach initial batch)
+    // Create feed posts
     for (int i = 0; i < mainItemCount; i++) {
       if (i == 0) {
         mainScrollItems.add(storiesContainer!);
         continue;
       }
 
-      // Create post container
-      final postContainer = await createPostItem(i);
-      if (postContainer != null) {
-        allPosts.add(postContainer);
+      // Post container
+      final postContainer = await View(
+        style: ViewStyle(
+          backgroundColor: Colors.white.value,
+        ),
+        layout: YogaLayout(
+          width: YogaValue(100, YogaUnit.percent),
+          margin: EdgeValues(bottom: YogaValue(10, YogaUnit.point)),
+        ),
+      ).create();
 
-        // Only add initial posts to the visible items
-        if (i <= initialPostsToShow) {
-          mainScrollItems.add(postContainer);
-          currentlyShownPosts++;
+      // Post header container
+      final postHeader = await View(
+        style: ViewStyle(
+          backgroundColor: Colors.transparent.value,
+        ),
+        layout: YogaLayout(
+          width: YogaValue(100, YogaUnit.percent),
+          height: YogaValue(60, YogaUnit.point),
+          flexDirection: YogaFlexDirection.row,
+          alignItems: YogaAlign.center,
+          padding: EdgeValues(
+            left: YogaValue(16, YogaUnit.point),
+            right: YogaValue(16, YogaUnit.point),
+          ),
+        ),
+      ).create();
+
+      // User avatar
+      final userAvatar = await View(
+        style: ViewStyle(
+          backgroundColor: Color(colors[(i + 3) % colors.length]).value,
+          cornerRadius: 20, // Makes it circular
+        ),
+        layout: YogaLayout(
+          width: YogaValue(40, YogaUnit.point),
+          height: YogaValue(40, YogaUnit.point),
+          margin: EdgeValues(right: YogaValue(12, YogaUnit.point)),
+        ),
+      ).create();
+
+      // Username
+      final userName = await Text(
+        text: "user_${i}",
+        textStyle: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black.value,
+          textAlign: TextAlign.left,
+        ),
+        layout: YogaLayout(
+          flex: 1,
+        ),
+      ).create();
+
+      // Post image
+      final postImage = await View(
+        style: ViewStyle(
+          backgroundColor: Color(colors[i % colors.length]).value,
+        ),
+        layout: YogaLayout(
+          width: YogaValue(100, YogaUnit.percent),
+          height: YogaValue(300, YogaUnit.point),
+        ),
+      ).create();
+
+      // Post caption
+      final postCaption = await Text(
+        text:
+            "This is post ${i} caption with some text to demonstrate wrapping.",
+        textStyle: TextStyle(
+          fontSize: 14,
+          color: Colors.black87.value,
+          textAlign: TextAlign.left,
+        ),
+        layout: YogaLayout(
+          padding: EdgeValues(
+            left: YogaValue(16, YogaUnit.point),
+            right: YogaValue(16, YogaUnit.point),
+            top: YogaValue(12, YogaUnit.point),
+            bottom: YogaValue(16, YogaUnit.point),
+          ),
+        ),
+      ).create();
+
+      // Assemble post
+      if (postContainer != null && postHeader != null) {
+        await Core.attachView(postContainer, postHeader);
+
+        if (userAvatar != null) {
+          await Core.attachView(postHeader, userAvatar);
         }
+
+        if (userName != null) {
+          await Core.attachView(postHeader, userName);
+        }
+
+        if (postImage != null) {
+          await Core.attachView(postContainer, postImage);
+        }
+
+        if (postCaption != null) {
+          await Core.attachView(postContainer, postCaption);
+        }
+
+        mainScrollItems.add(postContainer);
       }
     }
 
@@ -248,7 +405,7 @@ class ScrollViewComposer extends UIComposer {
       ),
       layout: YogaLayout(
         alignSelf: YogaAlign.center,
-        width: YogaValue(180, YogaUnit.point),
+        width: YogaValue(160, YogaUnit.point),
         height: YogaValue(50, YogaUnit.point),
         justifyContent: YogaJustify.center,
         alignItems: YogaAlign.center,
@@ -257,13 +414,11 @@ class ScrollViewComposer extends UIComposer {
           bottom: YogaValue(16, YogaUnit.point),
         ),
       ),
-      onPress: handleLoadMorePress,
     ).create();
 
-    // Button text - show remaining count
-    int remainingPosts = allPosts.length - currentlyShownPosts;
+    // Button text
     bottomButtonText = await Text(
-      text: "Load More ($remainingPosts)",
+      text: "Load More",
       textStyle: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
@@ -271,274 +426,6 @@ class ScrollViewComposer extends UIComposer {
         textAlign: TextAlign.center,
       ),
     ).create();
-  }
-
-  // Create a post item
-  Future<String?> createPostItem(int i) async {
-    // Post container
-    final postContainer = await View(
-      style: ViewStyle(
-        backgroundColor: Colors.white.value,
-      ),
-      layout: YogaLayout(
-        width: YogaValue(100, YogaUnit.percent),
-        margin: EdgeValues(bottom: YogaValue(10, YogaUnit.point)),
-      ),
-    ).create();
-
-    // Post header container
-    final postHeader = await View(
-      style: ViewStyle(
-        backgroundColor: Colors.transparent.value,
-      ),
-      layout: YogaLayout(
-        width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(60, YogaUnit.point),
-        flexDirection: YogaFlexDirection.row,
-        alignItems: YogaAlign.center,
-        padding: EdgeValues(
-          left: YogaValue(16, YogaUnit.point),
-          right: YogaValue(16, YogaUnit.point),
-        ),
-      ),
-    ).create();
-
-    // User avatar
-    final userAvatar = await View(
-      style: ViewStyle(
-        backgroundColor: Color(colors[(i + 3) % colors.length]).value,
-        cornerRadius: 20, // Makes it circular
-      ),
-      layout: YogaLayout(
-        width: YogaValue(40, YogaUnit.point),
-        height: YogaValue(40, YogaUnit.point),
-        margin: EdgeValues(right: YogaValue(12, YogaUnit.point)),
-      ),
-    ).create();
-
-    // Username
-    final userName = await Text(
-      text: "user_${i}",
-      textStyle: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.black.value,
-        textAlign: TextAlign.left,
-      ),
-      layout: YogaLayout(
-        flex: 1,
-      ),
-    ).create();
-
-    // Post image
-    final postImage = await View(
-      style: ViewStyle(
-        backgroundColor: Color(colors[i % colors.length]).value,
-      ),
-      layout: YogaLayout(
-        width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(300, YogaUnit.point),
-      ),
-    ).create();
-
-    // Post caption
-    final postCaption = await Text(
-      text: "This is post ${i} caption with some text to demonstrate wrapping.",
-      textStyle: TextStyle(
-        fontSize: 14,
-        color: Colors.black87.value,
-        textAlign: TextAlign.left,
-      ),
-      layout: YogaLayout(
-        padding: EdgeValues(
-          left: YogaValue(16, YogaUnit.point),
-          right: YogaValue(16, YogaUnit.point),
-          top: YogaValue(12, YogaUnit.point),
-          bottom: YogaValue(16, YogaUnit.point),
-        ),
-      ),
-    ).create();
-
-    // Assemble post
-    if (postContainer != null && postHeader != null) {
-      await Core.attachView(postContainer, postHeader);
-
-      if (userAvatar != null) {
-        await Core.attachView(postHeader, userAvatar);
-      }
-
-      if (userName != null) {
-        await Core.attachView(postHeader, userName);
-      }
-
-      if (postImage != null) {
-        await Core.attachView(postContainer, postImage);
-      }
-
-      if (postCaption != null) {
-        await Core.attachView(postContainer, postCaption);
-      }
-
-      return postContainer;
-    }
-
-    return null;
-  }
-
-  // Handle search input
-  void handleSearchInput(String text) async {
-    // Clear current posts from scroll view (except stories)
-    List<String> itemsToRemove = [...mainScrollItems];
-    if (itemsToRemove.isNotEmpty) {
-      itemsToRemove.removeAt(0); // Keep stories section
-
-      for (var item in itemsToRemove) {
-        mainScrollItems.remove(item);
-      }
-    }
-
-    mainScrollItems = [storiesContainer!]; // Reset to just stories
-
-    // Filter posts based on search text
-    List<String> filteredPosts = [];
-    if (text.isEmpty) {
-      // Show first batch if search is empty
-      filteredPosts = allPosts.take(initialPostsToShow).toList();
-      currentlyShownPosts = initialPostsToShow;
-    } else {
-      // Simple filtering - we'd need a more complex solution to check internal text
-      // For now, just show fewer posts to simulate filtering
-      int filteredCount = (allPosts.length * 0.3).round();
-      filteredPosts = allPosts.take(filteredCount).toList();
-      currentlyShownPosts = filteredCount;
-    }
-
-    // Re-attach filtered posts to scroll view
-    for (var post in filteredPosts) {
-      mainScrollItems.add(post);
-    }
-
-    // Since we can't access internal components, let's rebuild the UI
-    await rebuildScrollView();
-
-    // Update button text
-    int remainingPosts = allPosts.length - currentlyShownPosts;
-    if (bottomButtonText != null) {
-      // Create new text with updated count
-      final newButtonText = await Text(
-        text: "Load More ($remainingPosts)",
-        textStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white.value,
-          textAlign: TextAlign.center,
-        ),
-      ).create();
-
-      if (newButtonText != null) {
-        // Replace old button text with new one
-        await Core.attachView(bottomButton!, newButtonText);
-        bottomButtonText = newButtonText;
-      }
-    }
-  }
-
-  // Handle load more button press
-  void handleLoadMorePress() async {
-    // Calculate new batch
-    int nextBatch = currentlyShownPosts + loadMoreCount;
-    if (nextBatch > allPosts.length) {
-      nextBatch = allPosts.length;
-    }
-
-    // Get additional items
-    List<String> additionalPosts = [];
-    for (int i = currentlyShownPosts; i < nextBatch; i++) {
-      additionalPosts.add(allPosts[i]);
-    }
-
-    // Add to main scroll view
-    for (var post in additionalPosts) {
-      mainScrollItems.add(post);
-      await Core.attachView(mainScrollView!, post);
-    }
-
-    // Update count
-    currentlyShownPosts = nextBatch;
-
-    // Update button text
-    int remainingPosts = allPosts.length - currentlyShownPosts;
-    if (bottomButtonText != null) {
-      // Create new text with updated count
-      final newButtonText = await Text(
-        text: remainingPosts > 0
-            ? "Load More ($remainingPosts)"
-            : "All Posts Loaded",
-        textStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white.value,
-          textAlign: TextAlign.center,
-        ),
-      ).create();
-
-      if (newButtonText != null) {
-        // Replace old button text with new one
-        await Core.attachView(bottomButton!, newButtonText);
-        bottomButtonText = newButtonText;
-      }
-    }
-
-    // Hide button if all loaded
-    if (remainingPosts <= 0) {
-      // No direct way to hide button, so let's adjust opacity
-      bottomButton = await Touchable(
-        style: TouchableStyle(
-          backgroundColor: Color(0xFF3F51B5).value,
-          cornerRadius: 24,
-          alpha: 0.5, // Make semi-transparent
-        ),
-        layout: YogaLayout(
-          alignSelf: YogaAlign.center,
-          width: YogaValue(180, YogaUnit.point),
-          height: YogaValue(50, YogaUnit.point),
-          justifyContent: YogaJustify.center,
-          alignItems: YogaAlign.center,
-          margin: EdgeValues(
-            top: YogaValue(16, YogaUnit.point),
-            bottom: YogaValue(16, YogaUnit.point),
-          ),
-        ),
-      ).create();
-    }
-  }
-
-  // Helper to rebuild scroll view with current items
-  Future<void> rebuildScrollView() async {
-    // First clear existing scroll view's children
-    await Core.deleteView(mainScrollView!);
-
-    // Recreate the scroll view
-    mainScrollView = await ScrollView(
-      style: ScrollViewStyle(
-        backgroundColor: Color(0xFFF0F0F0).value,
-        showsIndicators: true,
-        bounces: true,
-        direction: ScrollDirection.vertical,
-      ),
-      layout: YogaLayout(
-        flex: 1,
-        width: YogaValue(100, YogaUnit.percent),
-      ),
-    ).create();
-
-    // Reattach scroll view to container
-    await Core.attachView(mainContainer!, mainScrollView!);
-
-    // Re-attach all items to scroll view
-    for (var item in mainScrollItems) {
-      await Core.attachView(mainScrollView!, item);
-    }
   }
 
   @override
