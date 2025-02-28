@@ -85,9 +85,19 @@ class DCImage: DCView {
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
         if let urlString = newState["source"] as? String,
            let url = URL(string: urlString) {
             loadImage(from: url)
+        }
+        
+        if let contentMode = newState["resizeMode"] as? String {
+            imageView.contentMode = ImageResizeMode(rawValue: contentMode)?.uiContentMode ?? .scaleAspectFit
+        }
+        
+        if let tintColor = newState["tintColor"] as? UInt32 {
+            imageView.tintColor = UIColor(rgb: tintColor)
         }
     }
     
@@ -135,6 +145,36 @@ class DCImage: DCView {
                 }
             }
         }.resume()
+    }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        // Capture the image source URL if it exists
+        if let image = imageView.image {
+            // We can't easily get back the original URL, but we can note if an image exists
+            state["hasImage"] = true
+            state["imageSize"] = [
+                "width": image.size.width,
+                "height": image.size.height
+            ]
+        }
+        
+        // Map ContentMode back to resizeMode string
+        switch imageView.contentMode {
+        case .scaleAspectFill:
+            state["resizeMode"] = "cover"
+        case .scaleAspectFit:
+            state["resizeMode"] = "contain"
+        case .scaleToFill:
+            state["resizeMode"] = "stretch"
+        case .center:
+            state["resizeMode"] = "center"
+        default:
+            break
+        }
+        
+        return state
     }
 }
 

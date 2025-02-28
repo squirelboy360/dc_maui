@@ -113,4 +113,42 @@ class DCSafeAreaView: DCView {
             updateSafeAreaInsets()
         }
     }
+    
+    override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
+        if let edges = newState["edges"] as? [String: Bool] {
+            var insets = UIEdgeInsets.zero
+            
+            if edges["top"] == true {
+                insets.top = safeAreaInsets.top
+            }
+            if edges["left"] == true {
+                insets.left = safeAreaInsets.left
+            }
+            if edges["bottom"] == true {
+                insets.bottom = safeAreaInsets.bottom
+            }
+            if edges["right"] == true {
+                insets.right = safeAreaInsets.right
+            }
+            
+            self.edges = insets
+            updateSafeAreaInsets()
+        }
+    }
+
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        // Capture which edges are being respected
+        state["edges"] = [
+            "top": edges.top > 0,
+            "left": edges.left > 0,
+            "bottom": edges.bottom > 0,
+            "right": edges.right > 0
+        ]
+        
+        return state
+    }
 }

@@ -123,11 +123,39 @@ class DCScrollView: DCView, UIScrollViewDelegate {
             )
         }
         
+        if let showsIndicators = newState["showsIndicators"] as? Bool {
+            scrollView.showsVerticalScrollIndicator = showsIndicators
+            scrollView.showsHorizontalScrollIndicator = showsIndicators
+        }
+        
+        if let scrollEnabled = newState["scrollEnabled"] as? Bool {
+            scrollView.isScrollEnabled = scrollEnabled
+        }
+        
+        if let bounces = newState["bounces"] as? Bool {
+            scrollView.bounces = bounces
+        }
+        
         // Store children IDs for later processing by the NativeUIManager
         if let childrenIds = newState["childrenIds"] as? [String] {
             print("DCScrollView \(viewId): Storing \(childrenIds.count) children IDs for later processing")
             pendingChildrenIds = childrenIds
         }
+    }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        state["contentOffset"] = [
+            "x": scrollView.contentOffset.x,
+            "y": scrollView.contentOffset.y
+        ]
+        
+        state["showsIndicators"] = scrollView.showsVerticalScrollIndicator
+        state["scrollEnabled"] = scrollView.isScrollEnabled
+        state["bounces"] = scrollView.bounces
+        
+        return state
     }
     
     // This will be called by NativeUIManager after the view is created

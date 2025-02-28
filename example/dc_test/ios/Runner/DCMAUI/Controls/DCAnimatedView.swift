@@ -173,4 +173,18 @@ class DCAnimatedView: DCView {
         
         self.transform = transformations
     }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        // Store animation state
+        if currentAnimation != nil {
+            state["isAnimating"] = true
+            state["animationProgress"] = currentAnimation?.fractionComplete
+        } else {
+            state["isAnimating"] = false
+        }
+        
+        return state
+    }
 }

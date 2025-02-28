@@ -212,6 +212,58 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         indexPaths.forEach { prefetchIndexPaths.remove($0) }
     }
+    
+    override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
+        if let showsIndicators = newState["showsIndicators"] as? Bool {
+            collectionView.showsVerticalScrollIndicator = showsIndicators
+            collectionView.showsHorizontalScrollIndicator = showsIndicators
+        }
+        
+        if let scrollEnabled = newState["scrollEnabled"] as? Bool {
+            collectionView.isScrollEnabled = scrollEnabled
+        }
+        
+        if let prefetch = newState["prefetchingEnabled"] as? Bool {
+            prefetchingEnabled = prefetch
+            if #available(iOS 15.0, *) {
+                collectionView.isPrefetchingEnabled = prefetch
+            }
+        }
+        
+        if let childViewsState = newState["childViews"] as? [[String: Any]],
+           let viewRegistry = newState["viewRegistry"] as? [String: DCView] {
+            // This would handle bulk updates of child views
+            var newViews: [DCView] = []
+            for childState in childViewsState {
+                if let viewId = childState["viewId"] as? String,
+                   let view = viewRegistry[viewId] {
+                    newViews.append(view)
+                }
+            }
+            
+            if !newViews.isEmpty {
+                items = newViews
+                collectionView.reloadData()
+            }
+        }
+    }
+
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        state["visibleItems"] = collectionView.indexPathsForVisibleItems.map { $0.item }
+        state["showsIndicators"] = collectionView.showsVerticalScrollIndicator
+        state["scrollEnabled"] = collectionView.isScrollEnabled
+        state["prefetchingEnabled"] = prefetchingEnabled
+        state["contentOffset"] = [
+            "x": collectionView.contentOffset.x,
+            "y": collectionView.contentOffset.y
+        ]
+        
+        return state
+    }
 }
 
 extension DCListView {
