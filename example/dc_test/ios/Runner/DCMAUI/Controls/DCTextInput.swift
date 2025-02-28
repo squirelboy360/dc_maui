@@ -32,48 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import UIKit
 import Combine
 
-/**
- DCTextInput: Native text input component
-
- Expected Input Properties:
- {
-   "inputStyle": {
-     "placeholder": String,          // Placeholder text
-     "textColor": UInt32,           // Text color as ARGB
-     "fontSize": CGFloat,           // Font size in points
-     "textAlign": String,           // "left", "center", "right"
-     "keyboardType": String,        // "default", "number", "email", "phone", "url"
-     "returnKeyType": String,       // "done", "go", "next", "search", "send"
-     "isSecure": Bool,             // Password input mode
-     "autocorrection": Bool,       // Enable/disable autocorrection
-     "contentType": String,        // "username", "password", "email", etc.
-     "toolbarStyle": String       // "default", "dark"
-   },
-   "layout": {
-     // Yoga layout properties
-   }
- }
-
- Event Data Emitted:
- onTextChange: {
-   "text": String,               // Current text value
-   "selectionStart": Int,        // Cursor selection start
-   "selectionEnd": Int,         // Cursor selection end
-   "timestamp": TimeInterval
- }
- onFocus: {
-   "timestamp": TimeInterval
- }
- onBlur: {
-   "text": String,              // Final text value
-   "timestamp": TimeInterval
- }
- onKeyboardChange: {
-   "height": CGFloat,           // Keyboard height
-   "timestamp": TimeInterval
- }
-*/
-
 class DCTextInput: DCView {
     // Use lazy initialization for text field
     private lazy var textField: UITextField = {

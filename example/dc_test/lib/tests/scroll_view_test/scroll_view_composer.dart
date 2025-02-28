@@ -1,4 +1,6 @@
 import 'package:dc_test/framework/bridge/controls/scroll_view.dart';
+import 'package:dc_test/framework/bridge/controls/text_input.dart';
+import 'package:dc_test/framework/bridge/controls/touchable.dart';
 import 'package:dc_test/framework/bridge/core.dart';
 import 'package:dc_test/framework/bridge/controls/text.dart';
 
@@ -14,6 +16,7 @@ class ScrollViewComposer extends UIComposer {
   String? appbar;
   String? appbarTitle;
   String? mainScrollView;
+  String? searchbar;
   String? storiesContainer;
   String? storiesHeader;
   String? horizontalScrollView;
@@ -23,10 +26,80 @@ class ScrollViewComposer extends UIComposer {
   List<String> mainScrollItems = [];
   List<String> storyItems = [];
 
-  final int mainItemCount = 10;
-  final int horizontalItemCount = 7;
+  final int mainItemCount = 50;
+  final int horizontalItemCount = 50;
 
   final colors = [
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
+    0xFF64B5F6, // Blue
+    0xFFFFB74D, // Orange
+    0xFFBA68C8, // Purple
+    0xFF4DB6AC, // Teal
+    0xFFFFD54F, // Yellow
+    0xFF7986CB, // Indigo
+    0xFFE57373, // Red 300
+    0xFF9CCC65, // Light Green 400
+    0xFF4CAF50, // Green 500
+    0xFFF44336, // Red 500,
     0xFF64B5F6, // Blue
     0xFFFFB74D, // Orange
     0xFFBA68C8, // Purple
@@ -58,9 +131,9 @@ class ScrollViewComposer extends UIComposer {
       ),
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
-        height: YogaValue(60, YogaUnit.point),
-        flexDirection: YogaFlexDirection.row,
-        justifyContent: YogaJustify.center,
+        height: YogaValue(150, YogaUnit.point),
+        flexDirection: YogaFlexDirection.column,
+        justifyContent: YogaJustify.flexEnd,
         alignItems: YogaAlign.center,
       ),
     ).create();
@@ -68,11 +141,34 @@ class ScrollViewComposer extends UIComposer {
     // App bar title
     appbarTitle = await Text(
       text: "Instagram-style Feed",
+      layout:
+          YogaLayout(margin: EdgeValues(bottom: YogaValue(16, YogaUnit.point))),
       textStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
         color: Colors.white.value,
         textAlign: TextAlign.center,
+      ),
+    ).create();
+
+    searchbar = await TextInput(
+      inputStyle: TextInputStyle(
+        placeholder: "Search",
+        contentType: ContentType.url,
+        textColor: Colors.white.value,
+      ),
+      style: ViewStyle(
+        backgroundColor: Colors.grey.withAlpha(50).value,
+        cornerRadius: 24,
+      ),
+      layout: YogaLayout(
+        alignSelf: YogaAlign.flexEnd,
+        width: YogaValue(80, YogaUnit.percent),
+        height: YogaValue(40, YogaUnit.point),
+        margin: EdgeValues(
+          top: YogaValue(16, YogaUnit.point),
+          bottom: YogaValue(16, YogaUnit.point),
+        ),
       ),
     ).create();
 
@@ -98,7 +194,7 @@ class ScrollViewComposer extends UIComposer {
       layout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
         flexDirection: YogaFlexDirection.column,
-        margin: EdgeValues(bottom: YogaValue(10, YogaUnit.point)),
+        margin: EdgeValues(bottom: YogaValue(500, YogaUnit.point)),
       ),
     ).create();
 
@@ -302,8 +398,8 @@ class ScrollViewComposer extends UIComposer {
     }
 
     // Bottom button
-    bottomButton = await View(
-      style: ViewStyle(
+    bottomButton = await Touchable(
+      style: TouchableStyle(
         backgroundColor: Color(0xFF3F51B5).value,
         cornerRadius: 24,
       ),
@@ -339,6 +435,8 @@ class ScrollViewComposer extends UIComposer {
       await Core.attachView('root', mainContainer!);
       await Core.attachView(mainContainer!, appbar!);
       await Core.attachView(appbar!, appbarTitle!);
+      await Core.attachView(appbar!, searchbar!);
+
       await Core.attachView(mainContainer!, mainScrollView!);
 
       // Connect stories components

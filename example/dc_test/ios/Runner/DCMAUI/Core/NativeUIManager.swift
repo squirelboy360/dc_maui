@@ -36,7 +36,6 @@ import YogaKit
 enum ViewType: String {
     case view = "View"
     case label = "Label"
-    case button = "Button"
     case image = "Image"
     case scrollView = "ScrollView"
     case textInput = "TextInput"
@@ -202,8 +201,6 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 textView.applyStyle(["textStyle": textStyle])
             }
             return textView
-        case .button:
-            return DCButton(viewId: id)
         case .image:
             return DCImage(viewId: id)
         case .scrollView:
