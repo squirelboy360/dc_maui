@@ -1,0 +1,434 @@
+/*
+ BSD 3-Clause License
+
+Copyright (c) 2025, Tahiru Agbanwa
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+import UIKit
+import Flutter
+import YogaKit
+
+@available(iOS 13.0, *)
+class NativeUIOperationsHandler {
+    // Reference to the manager that holds state
+    private weak var manager: NativeUIManager?
+    
+    // State storage for views and global state
+    private var viewStates: [String: [String: Any]] = [:]
+    private var globalStates: [String: Any] = [:]
+    private var stateConsumers: [String: [String]] = [:]  // Maps state keys to consuming view IDs
+    
+    init(manager: NativeUIManager) {
+        self.manager = manager
+    }
+    
+    // MARK: - CRUD Operations
+    
+    // CREATE operation
+    func handleCreateView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let typeString = args["viewType"] as? String,
+              let type = ViewType(rawValue: typeString),
+              let properties = args["properties"] as? [String: Any],
+              let manager = manager else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Failed to parse create view arguments", details: nil))
+            return
+        }
+        
+        print("Creating view: \(typeString)")
+        print("Properties: \(properties)")
+        
+        let viewId = "\(type.rawValue)-\(UUID().uuidString)"
+        let view = createComponent(ofType: type, withId: viewId, properties: properties)
+        
+        // Configure view for layout
+        view.yoga.isEnabled = true
+        
+        // Initialize state if provided
+        if let initialState = properties["initialState"] as? [String: Any] {
+            viewStates[viewId] = initialState
+            view.handleStateChange(initialState)
+        }
+        
+        // Apply properties
+        if let layout = properties["layout"] as? [String: Any] {
+            view.yoga.applyFlexbox(layout)
+            view.yoga.applySpacing(layout)
+        }
+        
+        if let style = properties["style"] as? [String: Any] {
+            view.applyStyle(style)
+        }
+        
+        // Setup events if present
+        if let events = properties["events"] as? [String: Any] {
+            print("Setting up events for view: \(viewId)")
+            print("Events config: \(events)")
+            view.setupEvents(events, channel: manager.getMethodChannel())
+        }
+        
+        manager.views[viewId] = view
+        manager.childViews[viewId] = []
+        
+        // Handle children if provided (for ScrollView, ListView, etc.)
+        if let childrenIds = properties["children"] as? [String] {
+            print("Processing \(childrenIds.count) children for \(viewId)")
+            
+            // For ScrollView, handle children differently
+            if type == .scrollView, let scrollView = view as? DCScrollView {
+                print("Adding children to ScrollView: \(viewId)")
+                
+                for childId in childrenIds {
+                    if let childView = manager.views[childId] {
+                        if childView.superview != nil {
+                            print("Child \(childId) already has a parent, creating duplicate")
+                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
+                            if let duplicateView = copyComponent(childView, withNewId: newId) {
+                                manager.views[newId] = duplicateView
+                                duplicateView.frame = CGRect(x: 0, y: 0, width: 200, height: 100) // Set initial frame
+                                scrollView.addSubview(duplicateView)
+                                manager.childViews[viewId]?.append(newId)
+                                print("Added duplicate \(newId) to ScrollView")
+                            }
+                        } else {
+                            // Set initial frame before adding to ensure visibility
+                            childView.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
+                            scrollView.addSubview(childView)
+                            manager.childViews[viewId]?.append(childId)
+                            print("Added child \(childId) to ScrollView")
+                        }
+                    } else {
+                        print("Child \(childId) not found in views dictionary")
+                    }
+                }
+                
+                // Force layout after adding all children
+                scrollView.setNeedsLayout()
+                scrollView.layoutIfNeeded()
+            } else {
+                // Handle other view types normally
+                for childId in childrenIds {
+                    if let childView = manager.views[childId] {
+                        // If child is already attached to another parent, create a duplicate
+                        if childView.superview != nil {
+                            print("Child \(childId) already has a parent, creating duplicate")
+                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
+                            if let duplicateView = copyComponent(childView, withNewId: newId) {
+                                manager.views[newId] = duplicateView
+                                view.addSubview(duplicateView)
+                                manager.childViews[viewId]?.append(newId)
+                            }
+                        } else {
+                            // Child isn't attached yet, proceed normally
+                            view.addSubview(childView)
+                            manager.childViews[viewId]?.append(childId)
+                        }
+                    }
+                }
+                // Force layout update after adding all children
+                view.yoga.applyLayout(preservingOrigin: true)
+            }
+        }
+        
+        result(viewId)
+    }
+    
+    // ATTACH operation (for parent-child relationships)
+    func handleAttachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let manager = manager,
+              let args = call.arguments as? [String: Any],
+              let parentId = args["parentId"] as? String,
+              let childId = args["childId"] as? String,
+              let parentView = manager.views[parentId],
+              let childView = manager.views[childId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid parent or child ID", details: nil))
+            return
+        }
+        
+        print("Attaching \(childId) to \(parentId)")
+        
+        // Check if child already has a parent
+        if childView.superview != nil {
+            print("Child \(childId) already has a parent, creating duplicate")
+            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
+            if let duplicateView = copyComponent(childView, withNewId: newId) {
+                manager.views[newId] = duplicateView
+                parentView.addSubview(duplicateView)
+                manager.childViews[parentId]?.append(newId)
+                
+                // Copy state for duplicated view
+                if let state = viewStates[childId] {
+                    viewStates[newId] = state
+                    duplicateView.handleStateChange(state)
+                }
+                
+                result(true)
+                return
+            }
+        }
+        
+        parentView.addSubview(childView)
+        manager.childViews[parentId]?.append(childId)
+        
+        // Force layout update
+        parentView.yoga.applyLayout(preservingOrigin: true)
+        parentView.layoutIfNeeded()
+        
+        result(true)
+    }
+    
+    // DELETE operation
+    func handleDeleteView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let manager = manager,
+              let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let view = manager.views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
+            return
+        }
+        
+        // Remove from parent's children list
+        if let parentId = manager.views.first(where: { $0.value == view.superview })?.key {
+            manager.childViews[parentId]?.removeAll { $0 == viewId }
+        }
+        
+        // Remove view and its references
+        view.removeFromSuperview()
+        manager.views.removeValue(forKey: viewId)
+        manager.childViews.removeValue(forKey: viewId)
+        
+        // Clean up state references
+        viewStates.removeValue(forKey: viewId)
+        
+        // Remove this view ID from state consumers
+        for (stateKey, viewIds) in stateConsumers {
+            stateConsumers[stateKey] = viewIds.filter { $0 != viewId }
+        }
+        
+        result(true)
+    }
+    
+    // GET ROOT VIEW operation
+    func handleGetRootView(result: @escaping FlutterResult) {
+        guard let manager = manager,
+              let rootViewId = manager.getRootViewId(),
+              let rootView = manager.views[rootViewId] else {
+            // If no root view exists, create one
+            manager?.setupRootView()
+            
+            // Retry after setup
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.handleGetRootView(result: result)
+            }
+            return
+        }
+        
+        result([
+            "viewId": rootViewId,
+            "width": rootView.frame.width,
+            "height": rootView.frame.height
+        ])
+    }
+    
+    // MARK: - State Management
+    
+    // SET STATE operation (global state change)
+    func handleSetState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let stateKey = args["stateKey"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid state arguments", details: nil))
+            return
+        }
+        
+        // Store the new state value
+        let value = args["value"]
+        globalStates[stateKey] = value
+        
+        // Find all views consuming this state and update them
+        if let consumers = stateConsumers[stateKey] {
+            for viewId in consumers {
+                if let view = manager?.views[viewId] {
+                    // Create or update the view's state
+                    var viewState = viewStates[viewId] ?? [:]
+                    viewState[stateKey] = value
+                    viewStates[viewId] = viewState
+                    
+                    // Apply the state change to the view
+                    view.handleStateChange([stateKey: value])
+                    
+                    // Mark for layout update
+                    view.setNeedsLayout()
+                }
+            }
+        }
+        
+        result(true)
+    }
+    
+    // UPDATE VIEW STATE operation (per-view state update)
+    func handleUpdateViewState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let state = args["state"] as? [String: Any],
+              let view = manager?.views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view state update arguments", details: nil))
+            return
+        }
+        
+        // Update the view's state store
+        var currentState = viewStates[viewId] ?? [:]
+        for (key, value) in state {
+            currentState[key] = value
+        }
+        viewStates[viewId] = currentState
+        
+        // Apply the state changes to the view
+        view.handleStateChange(state)
+        
+        // Force layout update if needed
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        result(true)
+    }
+    
+    // Register a view as consumer of state
+    func registerStateConsumer(viewId: String, stateKey: String) {
+        var consumers = stateConsumers[stateKey] ?? []
+        if !consumers.contains(viewId) {
+            consumers.append(viewId)
+            stateConsumers[stateKey] = consumers
+            
+            // Apply current state value if available
+            if let value = globalStates[stateKey] {
+                var viewState = viewStates[viewId] ?? [:]
+                viewState[stateKey] = value
+                viewStates[viewId] = viewState
+                
+                if let view = manager?.views[viewId] {
+                    view.handleStateChange([stateKey: value])
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func createComponent(ofType type: ViewType, withId id: String, properties: [String: Any]) -> DCView {
+        switch type {
+        case .view:
+            return DCView(viewId: id)
+        case .label:
+            // Initialize with empty text first
+            let textView = DCText(viewId: id, text: "")
+            // Apply text style immediately
+            if let textStyle = properties["textStyle"] as? [String: Any] {
+                textView.applyStyle(["textStyle": textStyle])
+            }
+            return textView
+        case .image:
+            return DCImage(viewId: id)
+        case .scrollView:
+            return DCScrollView(viewId: id)
+        case .textInput:
+            return DCTextInput(viewId: id)
+        case .touchableOpacity:
+            return DCTouchable(viewId: id)
+        case .listView:
+            return DCListView(viewId: id)
+        case .animatedView:
+            return DCAnimatedView(viewId: id)
+        case .safeAreaView:
+            return DCSafeAreaView(viewId: id)
+        }
+    }
+    
+    private func copyComponent(_ originalView: DCView, withNewId newId: String) -> DCView? {
+        guard let manager = manager else { return nil }
+        let properties = getViewProperties(originalView)
+        
+        // Safe dictionary access
+        let viewTypeString = originalView.viewId.split(separator: "-").first.map(String.init) ?? ""
+        guard let type = ViewType(rawValue: viewTypeString) else { return nil }
+        
+        let newView = createComponent(ofType: type, withId: newId, properties: properties)
+        
+        // Copy yoga layout properties
+        if let yogaConfig = properties["layout"] as? [String: Any] {
+            newView.yoga.applyFlexbox(yogaConfig)
+            newView.yoga.applySpacing(yogaConfig)
+        }
+        
+        // Copy state
+        if let state = viewStates[originalView.viewId] {
+            viewStates[newId] = state
+            newView.handleStateChange(state)
+        }
+        
+        // Setup events if needed
+        if let channel = manager.getMethodChannel() {
+            let events = properties["events"] as? [String: Any] ?? [:]
+            newView.setupEvents(events, channel: channel)
+        }
+        
+        return newView
+    }
+    
+    private func getViewProperties(_ view: DCView) -> [String: Any] {
+        var properties: [String: Any] = [:]
+        
+        // Get specific properties from various view types
+        if let textView = view as? DCText {
+            properties["text"] = textView.getText()
+        }
+        
+        if let imageView = view as? DCImage {
+            if let image = imageView.getImage() {
+                properties["image"] = image
+            }
+        }
+        
+        // Add other common properties
+        if let backgroundColor = view.backgroundColor {
+            properties["backgroundColor"] = backgroundColor.toARGB32()
+        }
+        
+        // Include state in properties
+        if let state = viewStates[view.viewId] {
+            properties["state"] = state
+        }
+        
+        // Capture additional state from the component
+        let componentState = view.captureCurrentState()
+        for (key, value) in componentState {
+            properties[key] = value
+        }
+        
+        return properties
+    }
+}
