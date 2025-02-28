@@ -51,7 +51,36 @@ class DCView: UIView, DCComponent {
     }
     
     func handleStateChange(_ newState: [String: Any]) {
-        // Base state handling
+        // Apply generic state changes that might affect any view
+        if let opacity = newState["opacity"] as? CGFloat {
+            self.alpha = opacity
+        }
+        if let hidden = newState["hidden"] as? Bool {
+            self.isHidden = hidden
+        }
+        if let transform = newState["transform"] as? [String: Any] {
+            applyTransformFromState(transform)
+        }
+    }
+    
+    private func applyTransformFromState(_ transform: [String: Any]) {
+        var transformations = CGAffineTransform.identity
+        
+        if let scale = transform["scale"] as? CGFloat {
+            transformations = transformations.scaledBy(x: scale, y: scale)
+        }
+        
+        if let rotation = transform["rotation"] as? CGFloat {
+            transformations = transformations.rotated(by: rotation)
+        }
+        
+        if let translation = transform["translation"] as? [String: CGFloat] {
+            let x = translation["x"] ?? 0
+            let y = translation["y"] ?? 0
+            transformations = transformations.translatedBy(x: x, y: y)
+        }
+        
+        self.transform = transformations
     }
     
     func applyStyle(_ style: [String: Any]) {
@@ -128,7 +157,47 @@ class DCView: UIView, DCComponent {
     }
     
     func captureCurrentState() -> [String: Any] {
-        return [:]
+        var state: [String: Any] = [:]
+        
+        // Capture transform state
+        if transform != .identity {
+            var transformState: [String: Any] = [:]
+            
+            // Extract scale
+            let scaleX = sqrt(transform.a * transform.a + transform.c * transform.c)
+            let scaleY = sqrt(transform.b * transform.b + transform.d * transform.d)
+            if scaleX != 1.0 || scaleY != 1.0 {
+                transformState["scale"] = (scaleX + scaleY) / 2 // Average for simplicity
+            }
+            
+            // Extract rotation (simplified)
+            if transform.b != 0 || transform.c != 0 {
+                transformState["rotation"] = atan2(transform.b, transform.a)
+            }
+            
+            // Translation
+            if transform.tx != 0 || transform.ty != 0 {
+                transformState["translation"] = [
+                    "x": transform.tx,
+                    "y": transform.ty
+                ]
+            }
+            
+            if !transformState.isEmpty {
+                state["transform"] = transformState
+            }
+        }
+        
+        // Capture visibility state
+        if alpha != 1.0 {
+            state["opacity"] = alpha
+        }
+        
+        if isHidden {
+            state["hidden"] = true
+        }
+        
+        return state
     }
 }
 

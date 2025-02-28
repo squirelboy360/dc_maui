@@ -212,6 +212,38 @@ class DCTextInput: DCView {
         ])
     }
     
+    override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
+        if let text = newState["text"] as? String, text != currentText {
+            currentText = text
+            textField.text = text
+        }
+        
+        if let enabled = newState["enabled"] as? Bool {
+            textField.isEnabled = enabled
+        }
+        
+        if let focused = newState["focused"] as? Bool, focused {
+            textField.becomeFirstResponder()
+        } else if let focused = newState["focused"] as? Bool, !focused {
+            textField.resignFirstResponder()
+        }
+        
+        if let placeholder = newState["placeholder"] as? String {
+            textField.placeholder = placeholder
+        }
+    }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        state["text"] = textField.text ?? ""
+        state["enabled"] = textField.isEnabled
+        state["focused"] = textField.isFirstResponder
+        state["placeholder"] = textField.placeholder ?? ""
+        return state
+    }
+    
     // Clean up properly
     deinit {
         NotificationCenter.default.removeObserver(self)

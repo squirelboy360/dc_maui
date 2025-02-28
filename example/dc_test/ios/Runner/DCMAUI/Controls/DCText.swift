@@ -121,9 +121,36 @@ class DCText: DCView {
     }
     
     override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
         if let text = newState["text"] as? String {
             label.text = text
+            setNeedsLayout()
         }
+        
+        if let color = newState["textColor"] as? UInt32 {
+            label.textColor = UIColor(rgb: color)
+        }
+        
+        if let fontSize = newState["fontSize"] as? CGFloat {
+            let currentFont = label.font ?? UIFont.systemFont(ofSize: fontSize)
+            label.font = currentFont.withSize(fontSize)
+        }
+    }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        
+        state["text"] = label.text ?? ""
+        if let textColor = label.textColor {
+            let argb = textColor.toARGB32()
+            state["textColor"] = argb
+        }
+        if let font = label.font {
+            state["fontSize"] = font.pointSize
+        }
+        
+        return state
     }
     
     override func applyStyle(_ style: [String: Any]) {

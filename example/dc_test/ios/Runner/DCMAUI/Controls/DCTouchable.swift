@@ -79,6 +79,27 @@ class DCTouchable: DCView {
         isUserInteractionEnabled = true
     }
     
+    override func handleStateChange(_ newState: [String: Any]) {
+        super.handleStateChange(newState)
+        
+        if let enabled = newState["enabled"] as? Bool {
+            self.isUserInteractionEnabled = enabled
+            // Optionally adjust opacity for visual feedback
+            self.alpha = enabled ? 1.0 : 0.6
+        }
+        
+        if let activeOpacity = newState["activeOpacity"] as? CGFloat {
+            self.activeOpacity = activeOpacity
+        }
+    }
+    
+    override func captureCurrentState() -> [String: Any] {
+        var state = super.captureCurrentState()
+        state["enabled"] = self.isUserInteractionEnabled
+        state["activeOpacity"] = self.activeOpacity
+        return state
+    }
+    
     override func applyStyle(_ style: [String: Any]) {
         // First apply base view styles
         super.applyStyle(style)
