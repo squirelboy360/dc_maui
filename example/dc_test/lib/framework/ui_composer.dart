@@ -29,9 +29,8 @@ abstract class UIComposer {
   }
 }
 
-// UI Component base class for Flutter-like syntax
+
 abstract class UIComponent<T> {
-  // Make these non-final so subclasses can modify them directly
   Map<String, dynamic> properties = {};
   Map<String, dynamic> layout = {};
   Map<String, dynamic> style = {};

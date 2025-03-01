@@ -110,6 +110,7 @@ class ScrollViewComposer extends UIComposer {
       scrollViewStyle: ScrollViewStyle(
         backgroundColor: Color(0xFFF0F0F0).value,
         showsIndicators: true,
+        initialScrollY: 5,
         bounces: true,
         direction: ScrollDirection.vertical,
       ),
@@ -117,9 +118,12 @@ class ScrollViewComposer extends UIComposer {
         flex: 1,
         width: YogaValue(100, YogaUnit.percent),
       ),
-      children: [
+      listChildren: [
         _buildStoriesSection(),
-        ...List.generate(10, (i) => _buildPostItem(i)), // Initial 10 posts
+        ...List.generate(
+          visibleCountState.value,
+          (i) => _buildPostItem(i),
+        ),
       ],
     );
   }
@@ -163,7 +167,7 @@ class ScrollViewComposer extends UIComposer {
             width: YogaValue(100, YogaUnit.percent),
             height: YogaValue(120, YogaUnit.point),
           ),
-          children: List.generate(15, (i) => _buildStoryItem(i)),
+          listChildren: List.generate(15, (i) => _buildStoryItem(i)),
         ),
       ],
     );

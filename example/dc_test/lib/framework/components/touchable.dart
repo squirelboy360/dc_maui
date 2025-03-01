@@ -1,5 +1,4 @@
 import '../bridge/controls/touchable.dart' as bridge;
-import '../bridge/types/view_types/view_styles.dart';
 import '../bridge/types/layout_layouts/yoga_types.dart';
 import '../ui_composer.dart';
 
