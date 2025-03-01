@@ -85,6 +85,9 @@ class NativeUIManager: NSObject, FlutterPlugin {
             case "attachView":
                 self.operationsHandler.handleAttachView(call, result: result)
                 
+            case "detachView":
+                self.operationsHandler.handleDetachView(call, result: result)
+                
             case "deleteView":
                 self.operationsHandler.handleDeleteView(call, result: result)
                 
@@ -96,6 +99,15 @@ class NativeUIManager: NSObject, FlutterPlugin {
                 
             case "updateViewState":
                 self.operationsHandler.handleUpdateViewState(call, result: result)
+                
+            case "getState":
+                self.operationsHandler.handleGetState(call, result: result)
+                
+            case "getChildrenIds":
+                self.operationsHandler.handleGetChildrenIds(call, result: result)
+                
+            case "addEventListener":
+                self.operationsHandler.handleAddEventListener(call, result: result)
                 
             default:
                 result(FlutterMethodNotImplemented)

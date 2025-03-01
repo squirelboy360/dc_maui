@@ -42,6 +42,7 @@ class NativeUIOperationsHandler {
     private var viewStates: [String: [String: Any]] = [:]
     private var globalStates: [String: Any] = [:]
     private var stateConsumers: [String: [String]] = [:]  // Maps state keys to consuming view IDs
+    private var eventListeners: [String: Bool] = [:]  // Store event listener registrations
     
     init(manager: NativeUIManager) {
         self.manager = manager
@@ -287,6 +288,9 @@ class NativeUIOperationsHandler {
             }
         }
         
+        // Notify observers about the state change
+        notifyStateObservers(stateKey, value as Any)
+        
         result(true)
     }
     
@@ -430,5 +434,97 @@ class NativeUIOperationsHandler {
         }
         
         return properties
+    }
+    
+    // Add these methods to handle state and view operations properly
+
+    // Add the getState method to retrieve view state
+    func handleGetState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let keys = args["keys"] as? [String],
+              let view = manager?.views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for getState", details: nil))
+            return
+        }
+        
+        // Get current state for requested keys
+        var stateValues: [String: Any] = [:]
+        let currentState = viewStates[viewId] ?? [:]
+        
+        for key in keys {
+            if let value = currentState[key] {
+                stateValues[key] = value
+            }
+        }
+        
+        result(stateValues)
+    }
+
+    // Add getChildrenIds method
+    func handleGetChildrenIds(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid view ID", details: nil))
+            return
+        }
+        
+        if let childIds = manager?.childViews[viewId] {
+            result(childIds)
+        } else {
+            result([])
+        }
+    }
+
+    // Add detachView method
+    func handleDetachView(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let manager = manager,
+              let args = call.arguments as? [String: Any],
+              let parentId = args["parentId"] as? String,
+              let childId = args["childId"] as? String,
+              let parentView = manager.views[parentId],
+              let childView = manager.views[childId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid parent or child ID", details: nil))
+            return
+        }
+        
+        // Remove child from parent
+        childView.removeFromSuperview()
+        
+        // Update child tracking
+        if var children = manager.childViews[parentId] {
+            children.removeAll { $0 == childId }
+            manager.childViews[parentId] = children
+        }
+        
+        result(true)
+    }
+
+    // Add addEventListener method
+    func handleAddEventListener(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let eventType = args["eventType"] as? String,
+              let view = manager?.views[viewId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for addEventListener", details: nil))
+            return
+        }
+        
+        // Store event listener registration
+        let eventKey = "\(viewId)_\(eventType)"
+        eventListeners[eventKey] = true
+        
+        result(true)
+    }
+
+    // Add the proper state notification mechanism
+    private func notifyStateObservers(_ stateKey: String, _ value: Any) {
+        guard let channel = manager?.getMethodChannel() else { return }
+        
+        // Notify Dart side of state change
+        channel.invokeMethod("onStateChange", arguments: [
+            "stateKey": stateKey,
+            "value": value
+        ])
     }
 }
