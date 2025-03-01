@@ -28,3 +28,90 @@ abstract class UIComposer {
     }
   }
 }
+
+// UI Component base class for Flutter-like syntax
+abstract class UIComponent<T> {
+  // Make these non-final so subclasses can modify them directly
+  Map<String, dynamic> properties = {};
+  Map<String, dynamic> layout = {};
+  Map<String, dynamic> style = {};
+  List<UIComponent> children = [];
+
+  String? _id;
+  String get id => _id ?? '';
+
+  // Add children to this component
+  UIComponent<T> addChild(UIComponent child) {
+    children.add(child);
+    return this;
+  }
+
+  // Add multiple children at once
+  UIComponent<T> addChildren(List<UIComponent> children) {
+    this.children.addAll(children);
+    return this;
+  }
+
+  // Create component and return its ID
+  Future<String?> create() async {
+    _id = await _createComponent();
+
+    // Create all children and attach them
+    for (var child in children) {
+      final childId = await child.create();
+      if (_id != null && childId != null) {
+        await Core.attachView(_id!, childId);
+      }
+    }
+
+    return _id;
+  }
+
+  // Abstract method to create the actual component
+  Future<String?> _createComponent();
+}
+
+// UIState class that wraps StateValue for reactive state
+class UIState<T> {
+  final StateValue<T> _stateValue;
+  T _currentValue;
+
+  UIState(T initialValue)
+      : _stateValue = StateValue<T>(initialValue),
+        _currentValue = initialValue;
+
+  T get value => _currentValue;
+
+  set value(T newValue) {
+    _currentValue = newValue;
+    _stateValue.setValue(newValue);
+  }
+
+  void register(String componentId) {
+    _stateValue.register(componentId);
+  }
+
+  void addListener(VoidCallback listener) {
+    _stateValue.addObserver(listener);
+  }
+}
+
+// Component Tree class for hierarchical composition
+class ComponentTree {
+  final UIComponent _root;
+  final Map<String, UIComponent> _components = {};
+
+  ComponentTree(this._root);
+
+  Future<String?> build() async {
+    return await _root.create();
+  }
+
+  void registerComponent(String key, UIComponent component) {
+    _components[key] = component;
+  }
+
+  UIComponent? getComponent(String key) {
+    return _components[key];
+  }
+}
