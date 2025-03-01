@@ -53,8 +53,17 @@ class DCAnimatedView: DCView {
     override func handleStateChange(_ newState: [String: Any]) {
         super.handleStateChange(newState)
         
+        // Handle animation configuration
         if let animation = newState["animation"] as? [String: Any] {
             let type = AnimationType(rawValue: animation["type"] as? String ?? "basic") ?? .basic
+            
+            // Stop any current animation if requested
+            if let stop = animation["stop"] as? Bool, stop {
+                currentAnimation?.stopAnimation(true)
+                currentAnimation = nil
+                return
+            }
+            
             switch type {
             case .basic:
                 animate(with: animation)
@@ -64,6 +73,28 @@ class DCAnimatedView: DCView {
                 animateKeyframes(with: animation)
             case .chain:
                 animateChain(with: animation)
+            }
+        }
+        
+        // Handle direct animation controls
+        if let animationProgress = newState["animationProgress"] as? CGFloat,
+           let currentAnimation = self.currentAnimation {
+            currentAnimation.fractionComplete = animationProgress
+        }
+        
+        // Handle animation pausing/resuming
+        if let isPaused = newState["isPaused"] as? Bool {
+            if isPaused {
+                currentAnimation?.pauseAnimation()
+            } else {
+                currentAnimation?.startAnimation()
+            }
+        }
+        
+        // Handle direct transform changes
+        if let transform = newState["transform"] as? [String: Any] {
+            UIView.animate(withDuration: 0.3) {
+                self.applyTransform(transform)
             }
         }
     }
@@ -177,12 +208,18 @@ class DCAnimatedView: DCView {
     override func captureCurrentState() -> [String: Any] {
         var state = super.captureCurrentState()
         
-        // Store animation state
-        if currentAnimation != nil {
+        // Animation state
+        if let currentAnimation = currentAnimation {
             state["isAnimating"] = true
-            state["animationProgress"] = currentAnimation?.fractionComplete
+            state["animationProgress"] = currentAnimation.fractionComplete
+            state["isPaused"] = currentAnimation.state == .inactive
         } else {
             state["isAnimating"] = false
+        }
+        
+        // Transform state
+        if transform != .identity {
+            // Transform is already captured in the super.captureCurrentState()
         }
         
         return state

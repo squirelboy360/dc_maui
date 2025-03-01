@@ -216,6 +216,7 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
     override func handleStateChange(_ newState: [String: Any]) {
         super.handleStateChange(newState)
         
+        // Handle list configuration
         if let showsIndicators = newState["showsIndicators"] as? Bool {
             collectionView.showsVerticalScrollIndicator = showsIndicators
             collectionView.showsHorizontalScrollIndicator = showsIndicators
@@ -232,9 +233,10 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
             }
         }
         
+        // Handle item management
         if let childViewsState = newState["childViews"] as? [[String: Any]],
            let viewRegistry = newState["viewRegistry"] as? [String: DCView] {
-            // This would handle bulk updates of child views
+            // Process child views from state
             var newViews: [DCView] = []
             for childState in childViewsState {
                 if let viewId = childState["viewId"] as? String,
@@ -248,19 +250,75 @@ class DCListView: DCView, UICollectionViewDataSource, UICollectionViewDelegateFl
                 collectionView.reloadData()
             }
         }
+        
+        // Handle adding a single item
+        if let appendItemId = newState["appendItemId"] as? String,
+           let viewRegistry = newState["viewRegistry"] as? [String: DCView],
+           let view = viewRegistry[appendItemId] {
+            
+            items.append(view)
+            collectionView.insertItems(at: [IndexPath(item: items.count - 1, section: 0)])
+        }
+        
+        // Handle scrolling to position
+        if let scrollToIndex = newState["scrollToIndex"] as? Int,
+           scrollToIndex >= 0 && scrollToIndex < items.count {
+            collectionView.scrollToItem(
+                at: IndexPath(item: scrollToIndex, section: 0),
+                at: .centeredVertically,
+                animated: true
+            )
+        }
+        
+        // Handle content offset directly
+        if let contentOffset = newState["contentOffset"] as? [String: CGFloat] {
+            collectionView.contentOffset = CGPoint(
+                x: contentOffset["x"] ?? collectionView.contentOffset.x,
+                y: contentOffset["y"] ?? collectionView.contentOffset.y
+            )
+        }
     }
 
     override func captureCurrentState() -> [String: Any] {
         var state = super.captureCurrentState()
         
-        state["visibleItems"] = collectionView.indexPathsForVisibleItems.map { $0.item }
+        // Basic configuration
+        state["itemCount"] = items.count
+        state["visibleItemIndices"] = collectionView.indexPathsForVisibleItems.map { $0.item }
         state["showsIndicators"] = collectionView.showsVerticalScrollIndicator
         state["scrollEnabled"] = collectionView.isScrollEnabled
         state["prefetchingEnabled"] = prefetchingEnabled
+        
+        // Scroll position
         state["contentOffset"] = [
             "x": collectionView.contentOffset.x,
             "y": collectionView.contentOffset.y
         ]
+        
+        // List dimensions
+        state["contentSize"] = [
+            "width": collectionView.contentSize.width, 
+            "height": collectionView.contentSize.height
+        ]
+        
+        // Currently visible items information
+        if let visibleItems = collectionView.visibleCells as? [DCListViewCell] {
+            let visibleItemsInfo = visibleItems.compactMap { cell -> [String: Any]? in
+                if let view = cell.currentView {
+                    return [
+                        "id": view.viewId,
+                        "frame": [
+                            "x": cell.frame.origin.x,
+                            "y": cell.frame.origin.y,
+                            "width": cell.frame.size.width,
+                            "height": cell.frame.size.height
+                        ]
+                    ]
+                }
+                return nil
+            }
+            state["visibleItems"] = visibleItemsInfo
+        }
         
         return state
     }
@@ -315,7 +373,7 @@ extension DCListView {
 }
 
 class DCListViewCell: UICollectionViewCell {
-    private var currentView: DCView?
+    internal var currentView: DCView?
     
     override init(frame: CGRect) {
         super.init(frame: frame)

@@ -87,17 +87,30 @@ class DCImage: DCView {
     override func handleStateChange(_ newState: [String: Any]) {
         super.handleStateChange(newState)
         
+        // Handle image source URL
         if let urlString = newState["source"] as? String,
            let url = URL(string: urlString) {
             loadImage(from: url)
         }
         
+        // Handle local asset source
+        if let assetName = newState["asset"] as? String {
+            imageView.image = UIImage(named: assetName)
+        }
+        
+        // Handle image content mode/resize mode
         if let contentMode = newState["resizeMode"] as? String {
             imageView.contentMode = ImageResizeMode(rawValue: contentMode)?.uiContentMode ?? .scaleAspectFit
         }
         
+        // Handle tint color for template images
         if let tintColor = newState["tintColor"] as? UInt32 {
             imageView.tintColor = UIColor(rgb: tintColor)
+        }
+        
+        // Handle rendering mode
+        if let templateMode = newState["templateMode"] as? Bool, templateMode {
+            imageView.image = imageView.image?.withRenderingMode(.alwaysTemplate)
         }
     }
     
@@ -150,17 +163,18 @@ class DCImage: DCView {
     override func captureCurrentState() -> [String: Any] {
         var state = super.captureCurrentState()
         
-        // Capture the image source URL if it exists
+        // Capture current image state
         if let image = imageView.image {
-            // We can't easily get back the original URL, but we can note if an image exists
             state["hasImage"] = true
             state["imageSize"] = [
                 "width": image.size.width,
                 "height": image.size.height
             ]
+        } else {
+            state["hasImage"] = false
         }
         
-        // Map ContentMode back to resizeMode string
+        // Capture content mode
         switch imageView.contentMode {
         case .scaleAspectFill:
             state["resizeMode"] = "cover"
@@ -171,7 +185,17 @@ class DCImage: DCView {
         case .center:
             state["resizeMode"] = "center"
         default:
-            break
+            state["resizeMode"] = "default"
+        }
+        
+        // Capture tint color if applicable
+        if let tintColor = imageView.tintColor {
+            state["tintColor"] = tintColor.toARGB32()
+        }
+        
+        // Capture template mode
+        if imageView.image?.renderingMode == .alwaysTemplate {
+            state["templateMode"] = true
         }
         
         return state

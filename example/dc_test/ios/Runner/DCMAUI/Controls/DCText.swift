@@ -128,13 +128,39 @@ class DCText: DCView {
             setNeedsLayout()
         }
         
-        if let color = newState["textColor"] as? UInt32 {
-            label.textColor = UIColor(rgb: color)
+        if let textColor = newState["textColor"] as? UInt32 {
+            // Use the globally available extension method
+            label.textColor = UIColor(rgb: textColor as UInt32)
+        }
+        
+        if let color = newState["color"] as? UInt32 {
+            // Use the globally available extension method
+            label.textColor = UIColor(rgb: color as UInt32)
         }
         
         if let fontSize = newState["fontSize"] as? CGFloat {
-            let currentFont = label.font ?? UIFont.systemFont(ofSize: fontSize)
-            label.font = currentFont.withSize(fontSize)
+            let weight = label.font?.getWeight() ?? .regular
+            label.font = .systemFont(ofSize: fontSize, weight: weight)
+        }
+        
+        if let fontWeight = newState["fontWeight"] as? String {
+            let weight = UIFont.Weight(fontWeight)
+            let size = label.font?.pointSize ?? 14
+            label.font = .systemFont(ofSize: size, weight: weight)
+        }
+        
+        if let alignment = newState["textAlign"] as? String {
+            switch alignment {
+            case "left": label.textAlignment = .left
+            case "center": label.textAlignment = .center
+            case "right": label.textAlignment = .right
+            case "justified": label.textAlignment = .justified
+            default: break
+            }
+        }
+        
+        if let numberOfLines = newState["numberOfLines"] as? Int {
+            label.numberOfLines = numberOfLines
         }
     }
     
@@ -142,13 +168,28 @@ class DCText: DCView {
         var state = super.captureCurrentState()
         
         state["text"] = label.text ?? ""
+        
         if let textColor = label.textColor {
+            // Use the globally available extension method
             let argb = textColor.toARGB32()
             state["textColor"] = argb
+            state["color"] = argb
         }
+        
         if let font = label.font {
             state["fontSize"] = font.pointSize
+            state["fontWeight"] = font.getWeightString()
         }
+        
+        switch label.textAlignment {
+        case .left: state["textAlign"] = "left"
+        case .center: state["textAlign"] = "center" 
+        case .right: state["textAlign"] = "right"
+        case .justified: state["textAlign"] = "justified"
+        default: break
+        }
+        
+        state["numberOfLines"] = label.numberOfLines
         
         return state
     }
@@ -178,7 +219,7 @@ class DCText: DCView {
             
             // Color and alignment
             if let color = textStyle["color"] as? UInt32 {
-                label.textColor = UIColor(rgb: color)
+                label.textColor = UIColor(rgb: color as UInt32) // Use fully qualified name if needed
             }
             if let alignment = textStyle["textAlignment"] as? String {
                 switch alignment {
@@ -241,8 +282,8 @@ class DCText: DCView {
                 }
                 
                 if let decorationColor = textStyle["decorationColor"] as? UInt32 {
-                    attributes[.underlineColor] = UIColor(rgb: decorationColor)
-                    attributes[.strikethroughColor] = UIColor(rgb: decorationColor)
+                    attributes[.underlineColor] = UIColor(rgb: decorationColor as UInt32)
+                    attributes[.strikethroughColor] = UIColor(rgb: decorationColor as UInt32)
                 }
                 
                 if !attributes.isEmpty {

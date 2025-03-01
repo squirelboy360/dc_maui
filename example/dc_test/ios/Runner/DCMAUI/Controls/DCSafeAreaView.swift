@@ -117,6 +117,7 @@ class DCSafeAreaView: DCView {
     override func handleStateChange(_ newState: [String: Any]) {
         super.handleStateChange(newState)
         
+        // Handle edges configuration
         if let edges = newState["edges"] as? [String: Bool] {
             var insets = UIEdgeInsets.zero
             
@@ -136,6 +137,21 @@ class DCSafeAreaView: DCView {
             self.edges = insets
             updateSafeAreaInsets()
         }
+        
+        // Handle individual edge states
+        if let topEnabled = newState["topEdgeEnabled"] as? Bool {
+            var newEdges = self.edges
+            newEdges.top = topEnabled ? safeAreaInsets.top : 0
+            self.edges = newEdges
+            updateSafeAreaInsets()
+        }
+        
+        if let bottomEnabled = newState["bottomEdgeEnabled"] as? Bool {
+            var newEdges = self.edges
+            newEdges.bottom = bottomEnabled ? safeAreaInsets.bottom : 0
+            self.edges = newEdges
+            updateSafeAreaInsets()
+        }
     }
 
     override func captureCurrentState() -> [String: Any] {
@@ -148,6 +164,12 @@ class DCSafeAreaView: DCView {
             "bottom": edges.bottom > 0,
             "right": edges.right > 0
         ]
+        
+        // Add individual edge states
+        state["topEdgeEnabled"] = edges.top > 0
+        state["leftEdgeEnabled"] = edges.left > 0
+        state["bottomEdgeEnabled"] = edges.bottom > 0
+        state["rightEdgeEnabled"] = edges.right > 0
         
         return state
     }

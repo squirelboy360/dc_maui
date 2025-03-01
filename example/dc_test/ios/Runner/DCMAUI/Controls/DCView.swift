@@ -58,6 +58,15 @@ class DCView: UIView, DCComponent {
         if let hidden = newState["hidden"] as? Bool {
             self.isHidden = hidden
         }
+        if let alpha = newState["alpha"] as? CGFloat {
+            self.alpha = alpha
+        }
+        if let background = newState["backgroundColor"] as? UInt32 {
+            self.backgroundColor = UIColor(rgb: background as UInt32)
+        }
+        if let cornerRadius = newState["cornerRadius"] as? CGFloat {
+            self.layer.cornerRadius = cornerRadius
+        }
         if let transform = newState["transform"] as? [String: Any] {
             applyTransformFromState(transform)
         }
@@ -96,7 +105,7 @@ class DCView: UIView, DCComponent {
         
         // Handle visual properties directly just like backgroundColor
         if let backgroundColor = style["backgroundColor"] as? UInt32 {
-            self.backgroundColor = UIColor(rgb: backgroundColor)
+            self.backgroundColor = UIColor(rgb: backgroundColor as UInt32)
         }
         if let cornerRadius = style["cornerRadius"] as? CGFloat {
             self.layer.cornerRadius = cornerRadius
@@ -108,7 +117,7 @@ class DCView: UIView, DCComponent {
             self.layer.opacity = opacity
         }
         if let shadowColor = style["shadowColor"] as? UInt32 {
-            self.layer.shadowColor = UIColor(rgb: shadowColor).cgColor
+            self.layer.shadowColor = UIColor(rgb: shadowColor as UInt32).cgColor
         }
         if let shadowOpacity = style["shadowOpacity"] as? Float {
             self.layer.shadowOpacity = shadowOpacity
@@ -126,7 +135,7 @@ class DCView: UIView, DCComponent {
             self.layer.borderWidth = borderWidth
         }
         if let borderColor = style["borderColor"] as? UInt32 {
-            self.layer.borderColor = UIColor(rgb: borderColor).cgColor
+            self.layer.borderColor = UIColor(rgb: borderColor as UInt32).cgColor
         }
         if let clipsToBounds = style["clipsToBounds"] as? Bool {
             self.clipsToBounds = clipsToBounds
@@ -159,7 +168,23 @@ class DCView: UIView, DCComponent {
     func captureCurrentState() -> [String: Any] {
         var state: [String: Any] = [:]
         
-        // Capture transform state
+        if alpha != 1.0 {
+            state["opacity"] = alpha
+            state["alpha"] = alpha
+        }
+        
+        if isHidden {
+            state["hidden"] = true
+        }
+        
+        if let backgroundColor = backgroundColor {
+            state["backgroundColor"] = backgroundColor.toARGB32()
+        }
+        
+        if layer.cornerRadius > 0 {
+            state["cornerRadius"] = layer.cornerRadius
+        }
+        
         if transform != .identity {
             var transformState: [String: Any] = [:]
             
@@ -186,15 +211,6 @@ class DCView: UIView, DCComponent {
             if !transformState.isEmpty {
                 state["transform"] = transformState
             }
-        }
-        
-        // Capture visibility state
-        if alpha != 1.0 {
-            state["opacity"] = alpha
-        }
-        
-        if isHidden {
-            state["hidden"] = true
         }
         
         return state

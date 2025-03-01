@@ -84,12 +84,22 @@ class DCTouchable: DCView {
         
         if let enabled = newState["enabled"] as? Bool {
             self.isUserInteractionEnabled = enabled
-            // Optionally adjust opacity for visual feedback
+            // Visual feedback
             self.alpha = enabled ? 1.0 : 0.6
         }
         
         if let activeOpacity = newState["activeOpacity"] as? CGFloat {
             self.activeOpacity = activeOpacity
+        }
+        
+        // Support direct passing of state key buttonText to child text component
+        if let buttonText = newState["buttonText"] as? String {
+            // Find child text components and update their text
+            for subview in subviews {
+                if let textView = subview as? DCText {
+                    textView.handleStateChange(["text": buttonText])
+                }
+            }
         }
     }
     
@@ -97,6 +107,17 @@ class DCTouchable: DCView {
         var state = super.captureCurrentState()
         state["enabled"] = self.isUserInteractionEnabled
         state["activeOpacity"] = self.activeOpacity
+        
+        // Get text from child text component if exists
+        for subview in subviews {
+            if let textView = subview as? DCText {
+                let textState = textView.captureCurrentState()
+                if let text = textState["text"] as? String {
+                    state["buttonText"] = text
+                }
+            }
+        }
+        
         return state
     }
     

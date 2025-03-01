@@ -116,44 +116,77 @@ class DCScrollView: DCView, UIScrollViewDelegate {
     override func handleStateChange(_ newState: [String: Any]) {
         super.handleStateChange(newState)
         
-        if let offset = newState["contentOffset"] as? [String: CGFloat] {
+        // Support direct content offset updates
+        if let contentOffset = newState["contentOffset"] as? [String: CGFloat] {
             scrollView.contentOffset = CGPoint(
-                x: offset["x"] ?? 0,
-                y: offset["y"] ?? 0
+                x: contentOffset["x"] ?? scrollView.contentOffset.x,
+                y: contentOffset["y"] ?? scrollView.contentOffset.y
             )
         }
         
+        // Simple x/y offset properties
+        if let offsetX = newState["offsetX"] as? CGFloat {
+            scrollView.contentOffset.x = offsetX
+        }
+        
+        if let offsetY = newState["offsetY"] as? CGFloat {
+            scrollView.contentOffset.y = offsetY
+        }
+        
+        // Scroll indicators
         if let showsIndicators = newState["showsIndicators"] as? Bool {
             scrollView.showsVerticalScrollIndicator = showsIndicators
             scrollView.showsHorizontalScrollIndicator = showsIndicators
         }
         
+        // Enable/disable scrolling
         if let scrollEnabled = newState["scrollEnabled"] as? Bool {
             scrollView.isScrollEnabled = scrollEnabled
         }
         
+        // Bounce behavior
         if let bounces = newState["bounces"] as? Bool {
             scrollView.bounces = bounces
         }
         
-        // Store children IDs for later processing by the NativeUIManager
-        if let childrenIds = newState["childrenIds"] as? [String] {
-            print("DCScrollView \(viewId): Storing \(childrenIds.count) children IDs for later processing")
-            pendingChildrenIds = childrenIds
+        // Scroll direction 
+        if let direction = newState["scrollDirection"] as? String {
+            switch direction {
+            case "horizontal":
+                isHorizontal = true
+                contentContainer.yoga.flexDirection = .row
+                scrollView.alwaysBounceHorizontal = true
+                scrollView.alwaysBounceVertical = false
+                
+            case "vertical":
+                isHorizontal = false
+                contentContainer.yoga.flexDirection = .column
+                scrollView.alwaysBounceHorizontal = false
+                scrollView.alwaysBounceVertical = true
+                
+            default:
+                break
+            }
+            setNeedsLayout() // Ensure layout updates
         }
     }
     
     override func captureCurrentState() -> [String: Any] {
         var state = super.captureCurrentState()
         
+        // Current offset
         state["contentOffset"] = [
             "x": scrollView.contentOffset.x,
             "y": scrollView.contentOffset.y
         ]
+        state["offsetX"] = scrollView.contentOffset.x
+        state["offsetY"] = scrollView.contentOffset.y
         
+        // Configuration
         state["showsIndicators"] = scrollView.showsVerticalScrollIndicator
         state["scrollEnabled"] = scrollView.isScrollEnabled
         state["bounces"] = scrollView.bounces
+        state["scrollDirection"] = isHorizontal ? "horizontal" : "vertical"
         
         return state
     }
