@@ -1,57 +1,45 @@
-import '../ui_composer.dart';
-import '../bridge/controls/text_input.dart' as native;
-import '../bridge/types/layout_layouts/yoga_types.dart';
+import '../bridge/controls/text_input.dart' as bridge;
 import '../bridge/types/view_types/view_styles.dart';
+import '../bridge/types/layout_layouts/yoga_types.dart';
+import '../ui_composer.dart';
 
-class DCTextInput extends UIComponent<native.TextInput> {
-  final native.TextInputStyle? inputStyle;
-  final ViewStyle? viewStyle;
-  final YogaLayout? yogaLayout;
+class DCTextInput extends UIComponent<String> {
+  final bridge.TextInputStyle inputStyle;
+  final ViewStyle viewStyle;
+  final YogaLayout yogaLayout;
   final void Function(String)? onTextChange;
   final void Function(String)? onSubmit;
   final void Function()? onFocus;
   final void Function()? onBlur;
 
   DCTextInput({
-    this.inputStyle,
-    this.viewStyle,
-    this.yogaLayout,
+    this.inputStyle = const bridge.TextInputStyle(),
+    this.viewStyle = const ViewStyle(),
+    this.yogaLayout = const YogaLayout(),
     this.onTextChange,
     this.onSubmit,
     this.onFocus,
     this.onBlur,
   }) {
-    if (viewStyle != null) {
-      style.addAll(viewStyle!.toMap());
-    }
-    if (inputStyle != null) {
-      style['inputStyle'] = inputStyle!.toMap();
-    }
-    if (yogaLayout != null) {
-      layout.addAll(yogaLayout!.toMap());
-    }
-    
-    properties['events'] = {
-      if (onTextChange != null) 'onTextChange': true,
-      if (onSubmit != null) 'onSubmit': true,
-      if (onFocus != null) 'onFocus': true,
-      if (onBlur != null) 'onBlur': true,
+    style = {
+      ...viewStyle.toMap(),
+      'inputStyle': inputStyle.toMap(),
     };
+    layout = yogaLayout.toMap();
   }
 
   @override
-  Future<String?> _createComponent() async {
-    final textInput = native.TextInput(
-      inputStyle: inputStyle ?? const native.TextInputStyle(),
-      style: viewStyle ?? const ViewStyle(),
-      layout: yogaLayout ?? const YogaLayout(),
+  Future<String?> createComponent() async {
+    final textInput = bridge.TextInput(
+      inputStyle: inputStyle,
+      style: viewStyle,
+      layout: yogaLayout,
       onTextChange: onTextChange,
       onSubmit: onSubmit,
       onFocus: onFocus,
       onBlur: onBlur,
     );
     
-    final id = await textInput.create();
-    return id;
+    return await textInput.create();
   }
 }

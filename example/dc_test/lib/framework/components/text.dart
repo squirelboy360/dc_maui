@@ -1,42 +1,37 @@
-import '../ui_composer.dart';
-import '../bridge/controls/text.dart' as native;
+import '../bridge/controls/text.dart' as bridge;
+import '../bridge/types/text_types/text_styles.dart';
 import '../bridge/types/layout_layouts/yoga_types.dart';
 import '../bridge/types/view_types/view_styles.dart';
-import '../bridge/types/text_types/text_styles.dart';
+import '../ui_composer.dart';
 
-class DCText extends UIComponent<native.Text> {
+class DCText extends UIComponent<String> {
   final String text;
-  final TextStyle? textStyle;
-  final ViewStyle? viewStyle;
-  final YogaLayout? yogaLayout;
+  final TextStyle textStyle;
+  final ViewStyle viewStyle;
+  final YogaLayout yogaLayout;
 
   DCText(
     this.text, {
-    this.textStyle,
-    this.viewStyle,
-    this.yogaLayout,
-  }) {
-    properties['text'] = text;
-    properties['textStyle'] = textStyle?.toMap() ?? TextStyle(text: text).toMap();
-    
-    if (viewStyle != null) {
-      style.addAll(viewStyle!.toMap());
-    }
-    if (yogaLayout != null) {
-      layout.addAll(yogaLayout!.toMap());
-    }
+    TextStyle? textStyle,
+    this.viewStyle = const ViewStyle(),
+    this.yogaLayout = const YogaLayout(),
+  }) : textStyle = (textStyle ?? TextStyle()).copyWith(text: text) {
+    style = {
+      'textStyle': this.textStyle.toMap(),
+      'style': viewStyle.toMap(),
+    };
+    layout = yogaLayout.toMap();
   }
 
   @override
-  Future<String?> _createComponent() async {
-    final textComponent = native.Text(
+  Future<String?> createComponent() async {
+    final textComponent = bridge.Text(
       text: text,
-      textStyle: textStyle ?? TextStyle(text: text),
-      style: viewStyle ?? const ViewStyle(),
-      layout: yogaLayout ?? const YogaLayout(),
+      textStyle: textStyle,
+      style: viewStyle,
+      layout: yogaLayout,
     );
     
-    final id = await textComponent.create();
-    return id;
+    return await textComponent.create();
   }
 }

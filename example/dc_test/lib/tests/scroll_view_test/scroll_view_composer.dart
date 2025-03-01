@@ -1,7 +1,6 @@
 import 'package:dc_test/framework/bridge/controls/touchable.dart';
 import 'package:flutter/material.dart' hide ScrollView, Text, TextStyle;
 import '../../framework/ui_composer.dart';
-import '../../framework/ui_composer.dart';
 import '../../framework/components/view.dart';
 import '../../framework/components/text.dart';
 import '../../framework/components/scroll_view.dart';
@@ -11,8 +10,10 @@ import '../../framework/bridge/core.dart';
 import '../../framework/bridge/types/view_types/view_styles.dart';
 import '../../framework/bridge/types/layout_layouts/yoga_types.dart';
 import '../../framework/bridge/types/text_types/text_styles.dart';
-import '../../framework/bridge/controls/text_input.dart' show ContentType, TextInputStyle;
-import '../../framework/bridge/controls/scroll_view.dart' show ScrollDirection, ScrollViewStyle;
+import '../../framework/bridge/controls/text_input.dart'
+    show ContentType, TextInputStyle;
+import '../../framework/bridge/controls/scroll_view.dart'
+    show ScrollDirection, ScrollViewStyle;
 
 class ScrollViewComposer extends UIComposer {
   // States
@@ -20,11 +21,19 @@ class ScrollViewComposer extends UIComposer {
   final buttonOpacityState = UIState<double>(1.0);
   final visibleCountState = UIState<int>(10);
   final searchQueryState = UIState<String>("");
-  
+
   // Colors for styling
   final colors = [
-    0xFF64B5F6, 0xFFFFB74D, 0xFFBA68C8, 0xFF4DB6AC, 0xFFFFD54F,
-    0xFF7986CB, 0xFFE57373, 0xFF9CCC65, 0xFF4CAF50, 0xFFF44336,
+    0xFF64B5F6,
+    0xFFFFB74D,
+    0xFFBA68C8,
+    0xFF4DB6AC,
+    0xFFFFD54F,
+    0xFF7986CB,
+    0xFFE57373,
+    0xFF9CCC65,
+    0xFF4CAF50,
+    0xFFF44336,
   ];
 
   @override
@@ -37,13 +46,9 @@ class ScrollViewComposer extends UIComposer {
         width: YogaValue(100, YogaUnit.percent),
         height: YogaValue(100, YogaUnit.percent),
       ),
-      children: [
-        _buildAppBar(),
-        _buildMainContent(),
-        _buildLoadMoreButton()
-      ],
+      children: [_buildAppBar(), _buildMainContent(), _buildLoadMoreButton()],
     );
-    
+
     // Save the root component so we can create it in bind()
     rootComponent = root;
   }
@@ -234,7 +239,8 @@ class ScrollViewComposer extends UIComposer {
           children: [
             DCView(
               viewStyle: ViewStyle(
-                backgroundColor: Color(colors[(index + 3) % colors.length]).value,
+                backgroundColor:
+                    Color(colors[(index + 3) % colors.length]).value,
                 cornerRadius: 20,
               ),
               yogaLayout: YogaLayout(
@@ -257,7 +263,7 @@ class ScrollViewComposer extends UIComposer {
             ),
           ],
         ),
-        
+
         // Post image
         DCView(
           viewStyle: ViewStyle(
@@ -268,7 +274,7 @@ class ScrollViewComposer extends UIComposer {
             height: YogaValue(300, YogaUnit.point),
           ),
         ),
-        
+
         // Post caption
         DCText(
           "This is post ${index} caption with some text to demonstrate wrapping.",
@@ -322,18 +328,18 @@ class ScrollViewComposer extends UIComposer {
       ],
     );
   }
-  
+
   // Event handlers
   void _handleSearchInput(String text) {
     searchQueryState.value = text;
   }
-  
+
   void _handleLoadMore() {
     // Logic for loading more posts would go here
     // The component structure would be updated through state changes
     // rather than manually tracking and adding components
   }
-  
+
   // Root component to attach to native
   UIComponent? rootComponent;
 

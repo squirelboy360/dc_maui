@@ -54,7 +54,7 @@ abstract class UIComponent<T> {
 
   // Create component and return its ID
   Future<String?> create() async {
-    _id = await _createComponent();
+    _id = await createComponent();
 
     // Create all children and attach them
     for (var child in children) {
@@ -67,8 +67,8 @@ abstract class UIComponent<T> {
     return _id;
   }
 
-  // Abstract method to create the actual component
-  Future<String?> _createComponent();
+  // Abstract method that subclasses must implement
+  Future<String?> createComponent();
 }
 
 // UIState class that wraps StateValue for reactive state

@@ -1,55 +1,41 @@
-import '../ui_composer.dart';
-import '../bridge/controls/touchable.dart' as native;
+import '../bridge/controls/touchable.dart' as bridge;
+import '../bridge/types/view_types/view_styles.dart';
 import '../bridge/types/layout_layouts/yoga_types.dart';
+import '../ui_composer.dart';
 
-typedef OnPressCallback = void Function();
-
-class DCTouchable extends UIComponent<native.Touchable> {
-  final native.TouchableStyle? touchableStyle;
-  final YogaLayout? yogaLayout;
-  final OnPressCallback? onPress;
-  final OnPressCallback? onLongPress;
-  final OnPressCallback? onPressIn;
-  final OnPressCallback? onPressOut;
+class DCTouchable extends UIComponent<String> {
+  final bridge.TouchableStyle touchableStyle;
+  final YogaLayout yogaLayout;
+  final bridge.TouchCallback? onPress;
+  final bridge.TouchCallback? onLongPress;
+  final bridge.TouchCallback? onPressIn;
+  final bridge.TouchCallback? onPressOut;
 
   DCTouchable({
-    this.touchableStyle,
-    this.yogaLayout,
+    this.touchableStyle = const bridge.TouchableStyle(),
+    this.yogaLayout = const YogaLayout(),
     this.onPress,
     this.onLongPress,
     this.onPressIn,
     this.onPressOut,
     List<UIComponent> children = const [],
   }) {
-    if (touchableStyle != null) {
-      style.addAll(touchableStyle!.toMap());
-    }
-    if (yogaLayout != null) {
-      layout.addAll(yogaLayout!.toMap());
-    }
-    
-    properties['events'] = {
-      if (onPress != null) 'onPress': true,
-      if (onLongPress != null) 'onLongPress': true,
-      if (onPressIn != null) 'onPressIn': true,
-      if (onPressOut != null) 'onPressOut': true,
-    };
-    
-    this.children.addAll(children);
+    style = touchableStyle.toMap();
+    layout = yogaLayout.toMap();
+    this.children = List.from(children);
   }
 
   @override
-  Future<String?> _createComponent() async {
-    final touchable = native.Touchable(
-      style: touchableStyle ?? const native.TouchableStyle(),
-      layout: yogaLayout ?? const YogaLayout(),
+  Future<String?> createComponent() async {
+    final touchable = bridge.Touchable(
+      style: touchableStyle,
+      layout: yogaLayout,
       onPress: onPress,
       onLongPress: onLongPress,
       onPressIn: onPressIn,
       onPressOut: onPressOut,
     );
     
-    final id = await touchable.create();
-    return id;
+    return await touchable.create();
   }
 }

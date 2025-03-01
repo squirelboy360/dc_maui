@@ -344,3 +344,44 @@ private enum TextAlignment: String {
         }
     }
 }
+
+// Add these extension methods for UIFont at the end of the file
+
+extension UIFont {
+    func getWeight() -> UIFont.Weight {
+        // Try to derive the font weight from the font name
+        let name = fontName.lowercased()
+        
+        if name.contains("bold") || name.contains("heavy") {
+            return .bold
+        } else if name.contains("medium") {
+            return .medium
+        } else if name.contains("light") {
+            return .light
+        } else if name.contains("thin") {
+            return .thin
+        } else if name.contains("semibold") {
+            return .semibold
+        } else {
+            return .regular
+        }
+    }
+    
+    func getWeightString() -> String {
+        // Convert weight to string format
+        let weight = getWeight()
+        
+        switch weight {
+        case .ultraLight: return "ultraLight"
+        case .thin: return "thin"
+        case .light: return "light"
+        case .regular: return "regular"
+        case .medium: return "medium"
+        case .semibold: return "semibold"
+        case .bold: return "bold"
+        case .heavy: return "heavy"
+        case .black: return "black"
+        default: return "regular"
+        }
+    }
+}
