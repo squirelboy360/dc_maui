@@ -8,7 +8,7 @@ class DCScrollView extends UIComponent<String> {
   final YogaLayout yogaLayout;
   final void Function(bridge.ScrollMetrics)? onScroll;
   final List<UIComponent> listChildren;
-  
+
   final VoidCallback? onScrollEnd;
 
   DCScrollView({
@@ -20,10 +20,13 @@ class DCScrollView extends UIComponent<String> {
   }) {
     style = scrollViewStyle.toMap();
     layout = yogaLayout.toMap();
+    children = [];
   }
 
   @override
   Future<String?> createComponent() async {
+    print(
+        "list children items: ${listChildren.length}  and values:::: ${List.from(listChildren.map((e) => e.id))}");
     // Create scroll view with our properties
     final scrollView = bridge.ScrollView(
         style: scrollViewStyle,
@@ -31,7 +34,7 @@ class DCScrollView extends UIComponent<String> {
         onScroll: onScroll,
         onScrollEnd: onScrollEnd,
         // don't consume from children as those are for normal views
-        children: List.from(['root']));
+        children: List.from(listChildren.map((e) => e.id)));
 
     return await scrollView.create();
   }
