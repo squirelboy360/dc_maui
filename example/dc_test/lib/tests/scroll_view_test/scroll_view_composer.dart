@@ -1,11 +1,11 @@
 import 'package:dc_test/framework/bridge/controls/touchable.dart';
 import 'package:flutter/material.dart' hide ScrollView, Text, TextStyle;
 import '../../framework/ui_composer.dart';
-import '../../framework/components/view.dart';
-import '../../framework/components/text.dart';
-import '../../framework/components/scroll_view.dart';
-import '../../framework/components/text_input.dart';
-import '../../framework/components/touchable.dart';
+import '../../framework/composers/view.dart';
+import '../../framework/composers/text.dart';
+import '../../framework/composers/scroll_view.dart';
+import '../../framework/composers/text_input.dart';
+import '../../framework/composers/touchable.dart';
 import '../../framework/bridge/core.dart';
 import '../../framework/bridge/types/view_types/view_styles.dart';
 import '../../framework/bridge/types/layout_layouts/yoga_types.dart';

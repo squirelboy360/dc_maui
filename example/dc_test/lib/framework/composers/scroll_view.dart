@@ -7,8 +7,8 @@ class DCScrollView extends UIComponent<String> {
   final bridge.ScrollViewStyle scrollViewStyle;
   final YogaLayout yogaLayout;
   final void Function(bridge.ScrollMetrics)? onScroll;
-
   final List<UIComponent> listChildren;
+  
   final VoidCallback? onScrollEnd;
 
   DCScrollView({
@@ -31,7 +31,7 @@ class DCScrollView extends UIComponent<String> {
         onScroll: onScroll,
         onScrollEnd: onScrollEnd,
         // don't consume from children as those are for normal views
-        children: List.from(listChildren));
+        children: List.from(['root']));
 
     return await scrollView.create();
   }

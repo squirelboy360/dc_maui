@@ -3,11 +3,11 @@ export 'ui_composer.dart';
 export 'bridge/core.dart';
 
 // Components
-export 'components/view.dart';
-export 'components/text.dart';
-export 'components/touchable.dart';
-export 'components/text_input.dart';
-export 'components/scroll_view.dart';
+export 'composers/view.dart';
+export 'composers/text.dart';
+export 'composers/touchable.dart';
+export 'composers/text_input.dart';
+export 'composers/scroll_view.dart';
 
 // Types
 export 'bridge/types/layout_layouts/yoga_types.dart';
