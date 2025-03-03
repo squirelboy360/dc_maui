@@ -3,7 +3,6 @@ import 'package:flutter/material.dart' hide ScrollView, Text, TextStyle;
 import '../../framework/ui_composer.dart';
 import '../../framework/composers/view.dart';
 import '../../framework/composers/text.dart';
-import '../../framework/composers/scroll_view.dart';
 import '../../framework/composers/text_input.dart';
 import '../../framework/composers/touchable.dart';
 import '../../framework/bridge/core.dart';
@@ -57,7 +56,7 @@ class ScrollViewComposer extends UIComposer {
   DCView _buildAppBar() {
     return DCView(
       viewStyle: ViewStyle(
-        backgroundColor: Color(0xFF3F51B5).value,
+        backgroundColor: Colors.pink.value,
       ),
       yogaLayout: YogaLayout(
         width: YogaValue(100, YogaUnit.percent),
@@ -105,20 +104,23 @@ class ScrollViewComposer extends UIComposer {
   }
 
   // Main scroll view containing stories and posts
-  DCScrollView _buildMainContent() {
-    return DCScrollView(
-      scrollViewStyle: ScrollViewStyle(
+  UIComponent _buildMainContent() {
+    return DCView(
+      viewStyle: ViewStyle(
         backgroundColor: Color(0xFFF0F0F0).value,
-        showsIndicators: true,
-        initialScrollY: 5,
-        bounces: true,
-        direction: ScrollDirection.vertical,
       ),
       yogaLayout: YogaLayout(
         flex: 1,
         width: YogaValue(100, YogaUnit.percent),
       ),
-      listChildren: [
+    ).makeScrollable(
+      style: ScrollViewStyle(
+        showsIndicators: true,
+        initialScrollY: 5,
+        bounces: true,
+        direction: ScrollDirection.vertical,
+      ),
+      scrollChildren: [
         _buildStoriesSection(),
         ...List.generate(
           visibleCountState.value,
@@ -156,18 +158,20 @@ class ScrollViewComposer extends UIComposer {
             ),
           ),
         ),
-        DCScrollView(
-          scrollViewStyle: ScrollViewStyle(
-            backgroundColor: Colors.transparent.value,
-            showsIndicators: true,
-            bounces: true,
-            direction: ScrollDirection.horizontal,
-          ),
+        // Horizontal scrolling stories container
+        DCView(
           yogaLayout: YogaLayout(
             width: YogaValue(100, YogaUnit.percent),
             height: YogaValue(120, YogaUnit.point),
           ),
-          listChildren: List.generate(15, (i) => _buildStoryItem(i)),
+        ).makeScrollable(
+          style: ScrollViewStyle(
+            direction: ScrollDirection.horizontal,
+            backgroundColor: Colors.transparent.value,
+            showsIndicators: false,
+            bounces: true,
+          ),
+          scrollChildren: List.generate(15, (index) => _buildStoryItem(index)),
         ),
       ],
     );
@@ -339,9 +343,9 @@ class ScrollViewComposer extends UIComposer {
   }
 
   void _handleLoadMore() {
-    // Logic for loading more posts would go here
-    // The component structure would be updated through state changes
-    // rather than manually tracking and adding components
+    // Update the number of visible posts
+    visibleCountState.value += 5;
+    print("Loading more posts, now showing ${visibleCountState.value}");
   }
 
   // Root component to attach to native

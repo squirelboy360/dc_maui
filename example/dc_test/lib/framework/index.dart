@@ -7,7 +7,7 @@ export 'composers/view.dart';
 export 'composers/text.dart';
 export 'composers/touchable.dart';
 export 'composers/text_input.dart';
-export 'composers/scroll_view.dart';
+// export 'composers/scroll_view.dart'; // Remove this line, as ScrollView is now part of UIComponent
 
 // Types
 export 'bridge/types/layout_layouts/yoga_types.dart';
