@@ -1,4 +1,4 @@
-import 'package:dc_test/tests/view_tests/grid_view_binder.dart';
+import 'package:dc_test/tests/ui_random_tets/test_composer.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -7,7 +7,7 @@ void main() {
 }
 
 Future<void> startApp() async {
-  final test = GridViewBinder();
+  final test = TestViewComposer();
   // final viewBinder = TextViewBinder();
   // final touchable = TouchableViewComposer();
   //final test = TextInputTestComposer();
