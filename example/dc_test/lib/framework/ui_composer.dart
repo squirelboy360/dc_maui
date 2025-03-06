@@ -29,7 +29,6 @@ abstract class UIComposer {
   }
 }
 
-
 abstract class UIComponent<T> {
   Map<String, dynamic> properties = {};
   Map<String, dynamic> layout = {};
@@ -37,7 +36,7 @@ abstract class UIComponent<T> {
   List<UIComponent> children = [];
 
   String? _id;
-  String get id => _id ?? '';
+  String? get id => _id; // Make it clear this can be null
 
   // Add children to this component
   UIComponent<T> addChild(UIComponent child) {

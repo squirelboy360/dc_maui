@@ -10,7 +10,7 @@ class Core {
   static final Map<String, EventCallback> _eventCallbacks = {};
   static final Map<String, Map<String, dynamic>> _viewStates = {};
   static final Map<String, List<String>> _stateConsumers = {};
-  
+
   // Store observers for state changes
   static final Map<String, List<Function()>> _stateObservers = {};
 
@@ -65,7 +65,7 @@ class Core {
         _updateViewState(viewId, {stateKey: newValue});
       }
     }
-    
+
     // Notify observers
     final observers = _stateObservers[stateKey] ?? [];
     for (final callback in observers) {
@@ -270,7 +270,7 @@ class Core {
       return false;
     }
   }
-  
+
   /// Helper to find a state value in all views
   static dynamic _findStateValue(String stateKey) {
     for (var entry in _viewStates.entries) {
@@ -279,6 +279,16 @@ class Core {
       }
     }
     return null;
+  }
+
+  static Future<dynamic> invokeMethod(String method,
+      [dynamic arguments]) async {
+    try {
+      return await _channel.invokeMethod(method, arguments);
+    } catch (e) {
+      debugPrint('Error invoking method $method: $e');
+      return null;
+    }
   }
 }
 

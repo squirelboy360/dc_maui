@@ -371,6 +371,8 @@ class NativeUIOperationsHandler {
             return textView
         case .scrollView:
             return DCScrollView(viewId: id)
+        case .listView:
+            return DCListView(viewId: id)
         case .textInput:
             return DCTextInput(viewId: id)
         case .touchableOpacity:
@@ -571,5 +573,108 @@ class NativeUIOperationsHandler {
             "stateKey": stateKey,
             "value": value
         ])
+    }
+
+    // Handle specific methods for ListView
+    func handleSetItem(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let listViewId = args["listViewId"] as? String,
+              let index = args["index"] as? Int,
+              let itemId = args["itemId"] as? String,
+              let listView = manager?.views[listViewId] as? DCListView,
+              let itemView = manager?.views[itemId] else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for setItem", details: nil))
+            return
+        }
+        
+        // Get optional key
+        let key = args["key"] as? String
+        
+        // Set the item in the list view
+        listView.setItem(index, itemView: itemView, key: key)
+        result(true)
+    }
+
+    func handleScrollToIndex(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let listViewId = args["listViewId"] as? String,
+              let index = args["index"] as? Int,
+              let listView = manager?.views[listViewId] as? DCListView else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for scrollToIndex", details: nil))
+            return
+        }
+        
+        let animated = args["animated"] as? Bool ?? true
+        listView.scrollToIndex(index, animated: animated)
+        result(true)
+    }
+
+    func handleRefreshData(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let listViewId = args["listViewId"] as? String,
+              let dataLength = args["dataLength"] as? Int,
+              let listView = manager?.views[listViewId] as? DCListView else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments for refreshData", details: nil))
+            return
+        }
+        
+        // Update the data length property
+        listView.handleStateChange(["dataLength": dataLength])
+        
+        // Remove all existing items
+        listView.removeAllItems()
+        
+        result(true)
+    }
+
+    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            switch call.method {
+            case "createView":
+                self.handleCreateView(call, result: result)
+                
+            case "attachView":
+                self.handleAttachView(call, result: result)
+                
+            case "detachView":
+                self.handleDetachView(call, result: result)
+                
+            case "deleteView":
+                self.handleDeleteView(call, result: result)
+                
+            case "getRootView":
+                self.handleGetRootView(result: result)
+                
+            case "setState":
+                self.handleSetState(call, result: result)
+                
+            case "updateViewState":
+                self.handleUpdateViewState(call, result: result)
+                
+            case "getState":
+                self.handleGetState(call, result: result)
+                
+            case "getChildrenIds":
+                self.handleGetChildrenIds(call, result: result)
+                
+            case "addEventListener":
+                self.handleAddEventListener(call, result: result)
+
+            // Add new ListView-specific methods
+            case "setItem":
+                self.handleSetItem(call, result: result)
+                
+            case "scrollToIndex":
+                self.handleScrollToIndex(call, result: result)
+                
+            case "refreshData":
+                self.handleRefreshData(call, result: result)
+                
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
     }
 }
