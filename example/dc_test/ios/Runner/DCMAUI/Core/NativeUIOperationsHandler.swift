@@ -76,14 +76,25 @@ class NativeUIOperationsHandler {
             view.handleStateChange(initialState)
         }
         
-        // Apply properties
+        // Apply properties - first apply layout properties
         if let layout = properties["layout"] as? [String: Any] {
             view.yoga.applyFlexbox(layout)
             view.yoga.applySpacing(layout)
         }
         
+        // Then apply style properties
         if let style = properties["style"] as? [String: Any] {
             view.applyStyle(style)
+        }
+        
+        // Special handling for ScrollView
+        if type == .scrollView {
+            if let scrollView = view as? DCScrollView {
+                // Apply scroll view specific style properties
+                if let scrollViewStyle = properties["scrollViewStyle"] as? [String: Any] {
+                    view.applyStyle(["scrollViewStyle": scrollViewStyle])
+                }
+            }
         }
         
         // Setup events if present
@@ -96,33 +107,41 @@ class NativeUIOperationsHandler {
         manager.views[viewId] = view
         manager.childViews[viewId] = []
         
-        // Handle children if provided (for ScrollView, ListView, etc.)
+        // Handle children if provided (for container views)
         if let childrenIds = properties["children"] as? [String] {
             print("Processing \(childrenIds.count) children for \(viewId)")
             
- 
-                for childId in childrenIds {
-                    if let childView = manager.views[childId] {
-                        // If child is already attached to another parent, create a duplicate
-                        if childView.superview != nil {
-                            print("Child \(childId) already has a parent, creating duplicate")
-                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
-                            if let duplicateView = copyComponent(childView, withNewId: newId) {
-                                manager.views[newId] = duplicateView
-                                view.addSubview(duplicateView)
-                                manager.childViews[viewId]?.append(newId)
-                            }
-                        } else {
-                            // Child isn't attached yet, proceed normally
-                            view.addSubview(childView)
-                            manager.childViews[viewId]?.append(childId)
+            // Special handling for ScrollView 
+            let isScrollView = view is DCScrollView
+            
+            for childId in childrenIds {
+                if let childView = manager.views[childId] {
+                    // If child is already attached to another parent, create a duplicate
+                    if childView.superview != nil {
+                        print("Child \(childId) already has a parent, creating duplicate")
+                        let newId = "\(childId)-duplicate-\(UUID().uuidString)"
+                        if let duplicateView = copyComponent(childView, withNewId: newId) {
+                            manager.views[newId] = duplicateView
+                            view.addSubview(duplicateView)
+                            manager.childViews[viewId]?.append(newId)
                         }
+                    } else {
+                        // Child isn't attached yet, proceed normally
+                        view.addSubview(childView)
+                        manager.childViews[viewId]?.append(childId)
                     }
                 }
-                // Force layout update after adding all children
-                view.yoga.applyLayout(preservingOrigin: true)
             }
-        
+            
+            // Force layout update after adding all children
+            view.yoga.applyLayout(preservingOrigin: true)
+            
+            // Special handling for ScrollView content size adjustment
+            if isScrollView {
+                view.setNeedsLayout()
+                view.layoutIfNeeded()
+            }
+        }
         
         result(viewId)
     }
@@ -161,12 +180,24 @@ class NativeUIOperationsHandler {
             }
         }
         
+        // Handle specific behavior for ScrollView
+        let isScrollViewParent = parentView is DCScrollView
+        
         parentView.addSubview(childView)
         manager.childViews[parentId]?.append(childId)
         
-        // Force layout update
-        parentView.yoga.applyLayout(preservingOrigin: true)
-        parentView.layoutIfNeeded()
+        // Force layout update with special handling for ScrollView
+        if isScrollViewParent {
+            // For ScrollView, ensure proper content size calculation
+            childView.yoga.applyLayout(preservingOrigin: true)
+            childView.layoutIfNeeded()
+            parentView.setNeedsLayout()
+            parentView.layoutIfNeeded()
+        } else {
+            // Standard layout flow
+            parentView.yoga.applyLayout(preservingOrigin: true)
+            parentView.layoutIfNeeded()
+        }
         
         result(true)
     }
@@ -186,8 +217,16 @@ class NativeUIOperationsHandler {
             manager.childViews[parentId]?.removeAll { $0 == viewId }
         }
         
+        // Special handling for ScrollView - may need to update content size
+        if let parentView = view.superview as? DCScrollView {
+            view.removeFromSuperview()
+            parentView.setNeedsLayout()
+            parentView.layoutIfNeeded()
+        } else {
+            view.removeFromSuperview()
+        }
+        
         // Remove view and its references
-        view.removeFromSuperview()
         manager.views.removeValue(forKey: viewId)
         manager.childViews.removeValue(forKey: viewId)
         
@@ -282,9 +321,16 @@ class NativeUIOperationsHandler {
         // Apply the state changes to the view
         view.handleStateChange(state)
         
-        // Force layout update if needed
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+        // Special handling for ScrollView state updates
+        if view is DCScrollView {
+            // Ensure proper layout for scroll view state changes
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+        } else {
+            // Force layout update if needed
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+        }
         
         result(true)
     }
@@ -323,6 +369,8 @@ class NativeUIOperationsHandler {
                 textView.applyStyle(["textStyle": textStyle])
             }
             return textView
+        case .scrollView:
+            return DCScrollView(viewId: id)
         case .textInput:
             return DCTextInput(viewId: id)
         case .touchableOpacity:
@@ -354,6 +402,13 @@ class NativeUIOperationsHandler {
             newView.handleStateChange(state)
         }
         
+        // Copy component specific properties
+        if let originalScrollView = originalView as? DCScrollView, 
+           let newScrollView = newView as? DCScrollView,
+           let scrollViewStyle = properties["scrollViewStyle"] as? [String: Any] {
+            newScrollView.applyStyle(["scrollViewStyle": scrollViewStyle])
+        }
+        
         // Setup events if needed
         if let channel = manager.getMethodChannel() {
             let events = properties["events"] as? [String: Any] ?? [:]
@@ -371,6 +426,35 @@ class NativeUIOperationsHandler {
             properties["text"] = textView.getText()
         }
         
+        // Get scroll view properties
+        if let scrollView = view as? DCScrollView {
+            // Capture scroll view specific properties
+            let scrollViewState = scrollView.captureCurrentState()
+            var scrollViewStyle: [String: Any] = [:]
+            
+            // Extract scroll-specific properties from state
+            if let showsIndicators = scrollViewState["showsIndicators"] as? Bool {
+                scrollViewStyle["showsIndicators"] = showsIndicators
+            }
+            if let bounces = scrollViewState["bounces"] as? Bool {
+                scrollViewStyle["bounces"] = bounces
+            }
+            if let direction = scrollViewState["direction"] as? String {
+                scrollViewStyle["direction"] = direction
+            }
+            if let contentOffset = scrollViewState["contentOffset"] as? [String: Any] {
+                if let y = contentOffset["y"] as? CGFloat {
+                    scrollViewStyle["initialScrollY"] = y
+                }
+                if let x = contentOffset["x"] as? CGFloat {
+                    scrollViewStyle["initialScrollX"] = x
+                }
+            }
+            
+            if !scrollViewStyle.isEmpty {
+                properties["scrollViewStyle"] = scrollViewStyle
+            }
+        }
         
         // Add other common properties
         if let backgroundColor = view.backgroundColor {
@@ -391,8 +475,8 @@ class NativeUIOperationsHandler {
         return properties
     }
     
-    // Add these methods to handle state and view operations properly
-
+    // MARK: - Additional Methods for View Operations
+    
     // Add the getState method to retrieve view state
     func handleGetState(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
@@ -450,6 +534,12 @@ class NativeUIOperationsHandler {
         if var children = manager.childViews[parentId] {
             children.removeAll { $0 == childId }
             manager.childViews[parentId] = children
+        }
+        
+        // Special handling for scroll view parent
+        if parentView is DCScrollView {
+            parentView.setNeedsLayout()
+            parentView.layoutIfNeeded()
         }
         
         result(true)
