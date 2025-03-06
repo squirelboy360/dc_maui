@@ -100,39 +100,7 @@ class NativeUIOperationsHandler {
         if let childrenIds = properties["children"] as? [String] {
             print("Processing \(childrenIds.count) children for \(viewId)")
             
-            // For ScrollView, handle children differently
-            if type == .scrollView, let scrollView = view as? DCScrollView {
-                print("Adding children to ScrollView: \(viewId)")
-                
-                for childId in childrenIds {
-                    if let childView = manager.views[childId] {
-                        if childView.superview != nil {
-                            print("Child \(childId) already has a parent, creating duplicate")
-                            let newId = "\(childId)-duplicate-\(UUID().uuidString)"
-                            if let duplicateView = copyComponent(childView, withNewId: newId) {
-                                manager.views[newId] = duplicateView
-                                duplicateView.frame = CGRect(x: 0, y: 0, width: 200, height: 100) // Set initial frame
-                                scrollView.addSubview(duplicateView)
-                                manager.childViews[viewId]?.append(newId)
-                                print("Added duplicate \(newId) to ScrollView")
-                            }
-                        } else {
-                            // Set initial frame before adding to ensure visibility
-                            childView.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
-                            scrollView.addSubview(childView)
-                            manager.childViews[viewId]?.append(childId)
-                            print("Added child \(childId) to ScrollView")
-                        }
-                    } else {
-                        print("Child \(childId) not found in views dictionary")
-                    }
-                }
-                
-                // Force layout after adding all children
-                scrollView.setNeedsLayout()
-                scrollView.layoutIfNeeded()
-            } else {
-                // Handle other view types normally
+ 
                 for childId in childrenIds {
                     if let childView = manager.views[childId] {
                         // If child is already attached to another parent, create a duplicate
@@ -154,7 +122,7 @@ class NativeUIOperationsHandler {
                 // Force layout update after adding all children
                 view.yoga.applyLayout(preservingOrigin: true)
             }
-        }
+        
         
         result(viewId)
     }
@@ -355,20 +323,12 @@ class NativeUIOperationsHandler {
                 textView.applyStyle(["textStyle": textStyle])
             }
             return textView
-        case .image:
-            return DCImage(viewId: id)
-        case .scrollView:
-            return DCScrollView(viewId: id)
         case .textInput:
             return DCTextInput(viewId: id)
         case .touchableOpacity:
             return DCTouchable(viewId: id)
-        case .listView:
-            return DCListView(viewId: id)
-        case .animatedView:
-            return DCAnimatedView(viewId: id)
-        case .safeAreaView:
-            return DCSafeAreaView(viewId: id)
+        default:
+            return DCView(viewId: id)
         }
     }
     
@@ -411,11 +371,6 @@ class NativeUIOperationsHandler {
             properties["text"] = textView.getText()
         }
         
-        if let imageView = view as? DCImage {
-            if let image = imageView.getImage() {
-                properties["image"] = image
-            }
-        }
         
         // Add other common properties
         if let backgroundColor = view.backgroundColor {
