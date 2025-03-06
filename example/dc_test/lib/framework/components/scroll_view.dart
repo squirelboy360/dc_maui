@@ -34,12 +34,21 @@ class DCScrollView extends UIComponent<String> {
       ...viewStyle.toMap(),
       'scrollViewStyle': scrollViewStyle.toMap(),
     };
-    layout = yogaLayout.toMap();
+
+    // Ensure the layout includes a flex value if not already specified
+    Map<String, dynamic> finalLayout = yogaLayout.toMap();
+    if (!finalLayout.containsKey('flex') &&
+        !finalLayout.containsKey('height')) {
+      finalLayout['flex'] = 1;
+    }
+
+    layout = finalLayout;
     this.children = List.from(children);
   }
 
   @override
   Future<String?> createComponent() async {
+    // Create the scroll view
     final scrollView = bridge.ScrollView(
       style: scrollViewStyle,
       viewStyle: viewStyle,

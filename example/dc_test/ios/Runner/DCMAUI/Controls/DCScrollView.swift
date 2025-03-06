@@ -83,53 +83,106 @@ class DCScrollView: DCView, UIScrollViewDelegate {
         didSetupScrollView = true
     }
     
+    private func getContentWidth() -> CGFloat {
+        return scrollView.bounds.width - 32 // 16pt padding on each side
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         
         // Set the scroll view to fill the DCScrollView bounds
         scrollView.frame = bounds
         
-        // Apply yoga layout to the content view first
+        // For vertical scrolling, content view should have fixed width matching the scroll view
+        if scrollDirection == .vertical {
+            contentView.frame.size.width = scrollView.bounds.width
+        }
+        
+        // Apply yoga layout to the content view 
         contentView.yoga.applyLayout(preservingOrigin: true)
         
         print("DCScrollView layout: frame=\(frame), bounds=\(bounds)")
         print("ScrollView frame: \(scrollView.frame), contentSize before: \(scrollView.contentSize)")
         print("ContentView frame: \(contentView.frame), subviews count: \(contentView.subviews.count)")
         
-        // Update content size based on direction and content
-        let contentSize: CGSize
-        switch scrollDirection {
-        case .horizontal:
-            // For horizontal, we need the width of all content but the height should be the scroll view's height
-            contentSize = CGSize(width: max(contentView.frame.width, 1), height: bounds.height)
-        case .vertical:
-            // For vertical, the width should be the scroll view's width, but we need the height of all content
-            contentSize = CGSize(width: bounds.width, height: max(contentView.frame.height, 1))
-        case .both:
-            contentSize = CGSize(width: max(contentView.frame.width, 1), height: max(contentView.frame.height, 1))
+        // Calculate content size based on children for proper scrolling
+        if scrollDirection == .vertical {
+            // Find the maximum Y position of all subviews to determine content height
+            var maxY: CGFloat = 0
+            
+            // Print each child's frame for debugging
+            for (index, subview) in contentView.subviews.enumerated() {
+                print("Child \(index) frame before: \(subview.frame), yoga.width=\(subview.yoga.width)")
+                
+                // Ensure horizontal positioning is correct
+                if subview.yoga.alignSelf.rawValue == YGAlign.center.rawValue {
+                    // Center horizontally
+                    subview.center.x = contentView.frame.width / 2
+                }
+                
+                // Handle percentage widths
+                if subview.yoga.width.unit == .percent {
+                    let percentWidth = CGFloat(subview.yoga.width.value) / 100.0
+                    let newWidth = contentView.bounds.width * percentWidth
+                    subview.frame.size.width = newWidth
+                }
+                
+                // Update max Y position for content height calculation
+                let subviewMaxY = subview.frame.maxY
+                if subviewMaxY > maxY {
+                    maxY = subviewMaxY
+                }
+                
+                print("Child \(index) frame after: \(subview.frame)")
+            }
+            
+            // Add padding to ensure scrolling works well
+            maxY += 20
+            
+            // Update scroll view content size to allow for proper scrolling
+            scrollView.contentSize = CGSize(
+                width: contentView.bounds.width,
+                height: max(maxY, bounds.height + 1)  // Ensure scrollable even with small content
+            )
+            
+            // Update content view frame to match the content size
+            contentView.frame.size = CGSize(width: contentView.frame.width, height: maxY)
+        } else if scrollDirection == .horizontal {
+            // For horizontal scrolling, we need to calculate the total width
+            var maxX: CGFloat = 0
+            for subview in contentView.subviews {
+                let subviewMaxX = subview.frame.maxX
+                if subviewMaxX > maxX {
+                    maxX = subviewMaxX
+                }
+            }
+            
+            // Add padding to the total width
+            maxX += 20
+            
+            // Set content view height to match scroll view
+            contentView.frame.size.height = scrollView.bounds.height
+            
+            // Determine the content size
+            scrollView.contentSize = CGSize(
+                width: max(maxX, bounds.width + 1), // Ensure it's scrollable
+                height: contentView.frame.height
+            )
+        } else {
+            // Both directions
+            scrollView.contentSize = CGSize(
+                width: max(contentView.frame.width, bounds.width + 1),
+                height: max(contentView.frame.height, bounds.height + 1)
+            )
         }
         
         // Ensure content view's position is at origin
         contentView.frame.origin = .zero
         
-        // Content view width should match scroll view width for vertical scrolling
-        if scrollDirection == .vertical {
-            contentView.frame.size.width = bounds.width
-        }
-        
-        // Content view height should match scroll view height for horizontal scrolling
-        if scrollDirection == .horizontal {
-            contentView.frame.size.height = bounds.height
-        }
-        
-        // Always ensure the content size is larger than the bounds to enable scrolling
-        scrollView.contentSize = contentSize
-        
         print("ScrollView contentSize after: \(scrollView.contentSize)")
-        
-        // Force layout of all child views
-        for subview in contentView.subviews {
-            subview.layoutIfNeeded()
+        print("Children frames:")
+        for (index, subview) in contentView.subviews.enumerated() {
+            print("Child \(index): frame=\(subview.frame), yoga.width=\(subview.yoga.width)")
         }
     }
     
@@ -252,13 +305,36 @@ class DCScrollView: DCView, UIScrollViewDelegate {
             // Add to content view instead
             contentView.addSubview(view)
             
-            // Print diagnostic information
-            print("Adding subview to content view: \(view), frame: \(view.frame)")
+            print("Adding subview to content view: \(view), frame: \(view.frame), yoga config: \(view.yoga.width), alignSelf: \(view.yoga.alignSelf.rawValue)")
+            
+            // After adding a view to the content view, we need to make sure positions don't overlap
+            var yPosition: CGFloat = 0
+            
+            // Find the current maximum Y position to place new views
+            for subview in contentView.subviews where subview != view {
+                let subviewMaxY = subview.frame.maxY
+                if subviewMaxY > yPosition {
+                    yPosition = subviewMaxY
+                }
+            }
+            
+            // Set vertical position for stack-like layout if this is a vertical scroll
+            if scrollDirection == .vertical && contentView.subviews.count > 1 {
+                // Respect the margin from yoga if available
+                let topMargin = CGFloat(view.yoga.marginTop.value)
+                // Only override position if not explicitly set through yoga
+                if view.frame.origin.y < yPosition && topMargin <= 0 {
+                    var newFrame = view.frame
+                    newFrame.origin.y = yPosition + 16  // Add spacing between items
+                    view.frame = newFrame
+                }
+            }
             
             // Force layout update to calculate content size
             view.setNeedsLayout()
             view.layoutIfNeeded()
-            contentView.yoga.applyLayout(preservingOrigin: true)
+            
+            // Update our layout as well
             setNeedsLayout()
             layoutIfNeeded()
         }

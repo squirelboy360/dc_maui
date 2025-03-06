@@ -122,13 +122,17 @@ class TestViewComposer extends UIComposer {
           ),
           yogaLayout: YogaLayout(
             margin: EdgeValues(
+              top: YogaValue(20, YogaUnit.point),
               left: YogaValue(16, YogaUnit.point),
               right: YogaValue(16, YogaUnit.point),
-              top: YogaValue(16, YogaUnit.point),
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
-            width: YogaValue(100, YogaUnit.percent),
-            height: YogaValue(100, YogaUnit.point), // Explicit height
+            // Use percentage width that will actually work
+            width: YogaValue(92, YogaUnit.percent),
+            height: YogaValue(100, YogaUnit.point),
+            alignSelf: YogaAlign.center,
+            justifyContent: YogaJustify.center,
+            alignItems: YogaAlign.center,
           ),
           children: [
             DCText(
@@ -136,7 +140,8 @@ class TestViewComposer extends UIComposer {
               textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white.value, // White text on red background
+                color: Colors.white.value,
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -150,12 +155,15 @@ class TestViewComposer extends UIComposer {
           ),
           yogaLayout: YogaLayout(
             margin: EdgeValues(
-              horizontal: YogaValue(16, YogaUnit.point),
-              top: YogaValue(16, YogaUnit.point),
+              top: YogaValue(30, YogaUnit.point),
+              left: YogaValue(16, YogaUnit.point),
+              right: YogaValue(16, YogaUnit.point),
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
-            width: YogaValue(100, YogaUnit.percent),
-            height: YogaValue(200, YogaUnit.point), // Explicit height
+            // Use percentage width that will actually work
+            width: YogaValue(92, YogaUnit.percent),
+            height: YogaValue(200, YogaUnit.point),
+            alignSelf: YogaAlign.center,
             justifyContent: YogaJustify.center,
             alignItems: YogaAlign.center,
           ),
@@ -165,7 +173,7 @@ class TestViewComposer extends UIComposer {
               textStyle: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white.value, // White text on blue background
+                color: Colors.white.value,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -180,13 +188,16 @@ class TestViewComposer extends UIComposer {
           ),
           yogaLayout: YogaLayout(
             margin: EdgeValues(
-              horizontal: YogaValue(16, YogaUnit.point),
-              top: YogaValue(16, YogaUnit.point),
-              bottom: YogaValue(16, YogaUnit.point),
+              top: YogaValue(30, YogaUnit.point),
+              bottom: YogaValue(20, YogaUnit.point),
+              left: YogaValue(16, YogaUnit.point),
+              right: YogaValue(16, YogaUnit.point),
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
-            width: YogaValue(100, YogaUnit.percent),
-            height: YogaValue(400, YogaUnit.point), // Explicit height
+            // Use percentage width that will actually work
+            width: YogaValue(92, YogaUnit.percent),
+            height: YogaValue(400, YogaUnit.point),
+            alignSelf: YogaAlign.center,
             justifyContent: YogaJustify.center,
             alignItems: YogaAlign.center,
           ),
@@ -196,7 +207,7 @@ class TestViewComposer extends UIComposer {
               textStyle: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white.value, // White text on green background
+                color: Colors.white.value,
                 textAlign: TextAlign.center,
               ),
             ),
