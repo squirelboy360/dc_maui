@@ -96,7 +96,7 @@ class TestViewComposer extends UIComposer {
   // Main content area with ScrollView
   UIComponent _buildMainContent() {
     return DCScrollView(
-      scrollViewStyle: ScrollViewStyle(
+      scrollViewStyle: ScrollViewStyle(contentInset: EdgeInsets.all(0),
         backgroundColor: Colors.amber.value,
         showsIndicators: true,
         bounces: true,
@@ -128,7 +128,7 @@ class TestViewComposer extends UIComposer {
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
             // Use percentage width that will actually work
-            width: YogaValue(92, YogaUnit.percent),
+            width: YogaValue(100, YogaUnit.percent),
             height: YogaValue(100, YogaUnit.point),
             alignSelf: YogaAlign.center,
             justifyContent: YogaJustify.center,
@@ -161,7 +161,7 @@ class TestViewComposer extends UIComposer {
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
             // Use percentage width that will actually work
-            width: YogaValue(92, YogaUnit.percent),
+            width: YogaValue(100, YogaUnit.percent),
             height: YogaValue(200, YogaUnit.point),
             alignSelf: YogaAlign.center,
             justifyContent: YogaJustify.center,
@@ -195,7 +195,7 @@ class TestViewComposer extends UIComposer {
             ),
             padding: EdgeValues(all: YogaValue(16, YogaUnit.point)),
             // Use percentage width that will actually work
-            width: YogaValue(92, YogaUnit.percent),
+            width: YogaValue(100, YogaUnit.percent),
             height: YogaValue(400, YogaUnit.point),
             alignSelf: YogaAlign.center,
             justifyContent: YogaJustify.center,
