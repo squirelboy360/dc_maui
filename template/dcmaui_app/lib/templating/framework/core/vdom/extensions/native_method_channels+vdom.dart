@@ -8,6 +8,10 @@ class NativeVDOM extends ComponentVDOM {
   // Event handlers map: viewId -> eventName -> callback
   final Map<String, Map<String, Function>> _eventHandlers = {};
 
+  // Additional map to track event handler keys to identify replacements
+  // key: [button/control identifier] -> viewId
+  final Map<String, String> _controlKeyToViewId = {};
+
   NativeVDOM() {
     // Listen for events from native side
     MainViewCoordinatorInterface.eventStream.listen(_handleNativeEvent);
@@ -30,59 +34,120 @@ class NativeVDOM extends ComponentVDOM {
       debugPrint(
           'NativeVDOM: Normalized event $eventName for view $viewId with data: $eventData');
 
-      // Find and trigger the event handler
+      // Check if we have a direct handler for this view
       if (_eventHandlers.containsKey(viewId) &&
           _eventHandlers[viewId]!.containsKey(eventName)) {
-        debugPrint('NativeVDOM: Found handler for $eventName, executing...');
-        _eventHandlers[viewId]![eventName]!(eventData);
-      } else {
         debugPrint(
-            'NativeVDOM: No handler found for $eventName on view $viewId');
+            'NativeVDOM: Found direct handler for $eventName, executing...');
+        _eventHandlers[viewId]![eventName]!(eventData);
+        return;
+      }
 
-        // CRITICAL FIX: Try to find the correct handler by exploring prefixes
-        // Often the view IDs might have been incremented, so view_19 might be a replacement for view_9
+      // This is where your issue occurs - we need to fix how we track and resolve event handlers
+      // Let's try to find a handler based on control type + title/id for buttons
+
+      // CRITICAL FIX: Try to match the handler based on title or ID
+      // This is essential for when views are re-created during state updates
+      if (!_eventHandlers.containsKey(viewId)) {
         bool handlerFound = false;
-        if (viewId.startsWith('view_')) {
-          final numericPart = int.tryParse(viewId.substring(5));
-          if (numericPart != null && numericPart > 15) {
-            // This is likely a newly created view after state update
-            // Try to find the corresponding original view (usually views 6-14 are the buttons)
-            for (int i = 6; i <= 14; i++) {
-              final originalViewId = 'view_$i';
-              if (_eventHandlers.containsKey(originalViewId) &&
-                  _eventHandlers[originalViewId]!.containsKey(eventName)) {
-                debugPrint(
-                    'NativeVDOM: Found handler on original view $originalViewId, transferring to $viewId');
-                // Transfer the handler to the new view ID
-                _eventHandlers.putIfAbsent(viewId, () => {});
-                _eventHandlers[viewId]![eventName] =
-                    _eventHandlers[originalViewId]![eventName]!;
 
-                // Execute the handler
-                _eventHandlers[viewId]![eventName]!(eventData);
-                handlerFound = true;
-                break;
-              }
+        // Extract control info from the native event
+        final buttonTitle = eventData['title'];
+        final controlType = event['controlType'] ?? '';
+        final controlId = eventData['id'];
+
+        // Create keys for lookup based on control details
+        final possibleKeys = <String>[];
+        if (buttonTitle != null) possibleKeys.add('button_$buttonTitle');
+        if (controlId != null) possibleKeys.add('control_$controlId');
+        if (controlType.isNotEmpty) possibleKeys.add('${controlType}_$viewId');
+
+        for (final key in possibleKeys) {
+          final srcViewId = _controlKeyToViewId[key];
+          if (srcViewId != null && _eventHandlers.containsKey(srcViewId)) {
+            debugPrint(
+                'NativeVDOM: Found handler by control key: $key, mapping from $srcViewId to $viewId');
+
+            // Copy the handler from source view to current view
+            _eventHandlers[viewId] = Map.from(_eventHandlers[srcViewId]!);
+
+            // Also update the view ID mapping
+            _controlKeyToViewId[key] = viewId;
+
+            // Execute the handler
+            if (_eventHandlers[viewId]!.containsKey(eventName)) {
+              _eventHandlers[viewId]![eventName]!(eventData);
+              handlerFound = true;
+              break;
             }
           }
         }
 
-        if (!handlerFound) {
-          debugPrint(
-              'NativeVDOM: No suitable handler found after trying fallbacks');
-          debugPrint('NativeVDOM: Available handlers: ${_eventHandlers.keys}');
+        if (handlerFound) return;
+      }
+
+      // LEGACY FALLBACK: Try numeric view ID approach (can be removed after new approach is confirmed)
+      bool handlerFound = false;
+      if (viewId.startsWith('view_')) {
+        final numericPart = int.tryParse(viewId.substring(5));
+        if (numericPart != null) {
+          // Try to find a corresponding handler in any other view
+          for (final srcViewId in _eventHandlers.keys) {
+            if (srcViewId.startsWith('view_') &&
+                _eventHandlers[srcViewId]!.containsKey(eventName)) {
+              debugPrint(
+                  'NativeVDOM: Borrowing handler from $srcViewId for $viewId');
+
+              // Copy all handlers
+              _eventHandlers[viewId] = Map.from(_eventHandlers[srcViewId]!);
+
+              // Execute the handler
+              _eventHandlers[viewId]![eventName]!(eventData);
+              handlerFound = true;
+              break;
+            }
+          }
         }
       }
-    } catch (e) {
+
+      if (!handlerFound) {
+        debugPrint(
+            'NativeVDOM: No handler found for $eventName on view $viewId');
+      }
+    } catch (e, stack) {
       debugPrint('NativeVDOM: ERROR handling native event - $e');
+      debugPrint('NativeVDOM: Stack trace: $stack');
     }
   }
 
   // Register an event handler
-  void registerEventHandler(
-      String viewId, String eventName, Function callback) {
+  void registerEventHandler(String viewId, String eventName, Function callback,
+      {Map<String, dynamic>? props}) {
+    // Initialize the map for this view if needed
     _eventHandlers.putIfAbsent(viewId, () => {});
     _eventHandlers[viewId]![eventName] = callback;
+
+    // Extract key information from props to help with tracking
+    if (props != null) {
+      final title = props['title'];
+      final id = props['id'] ?? props['style']?['id'];
+
+      // Store mappings that will help us find the handler when views are recreated
+      if (title != null) {
+        _controlKeyToViewId['button_$title'] = viewId;
+      }
+
+      if (id != null) {
+        _controlKeyToViewId['control_$id'] = viewId;
+      }
+
+      // Store by type
+      final type = props['_type'] ?? props['_viewType'] ?? '';
+      if (type.isNotEmpty) {
+        _controlKeyToViewId['${type}_$viewId'] = viewId;
+      }
+    }
+
     debugPrint('NativeVDOM: Registered handler for $eventName on view $viewId');
   }
 
@@ -95,6 +160,9 @@ class NativeVDOM extends ComponentVDOM {
       // Create a copy of props without event handlers
       final cleanProps = _removeEventHandlersFromProps(node.props);
 
+      // Add type information for tracking
+      cleanProps['_viewType'] = node.type;
+
       debugPrint('NativeVDOM: Creating view $viewId of type ${node.type}');
 
       if (eventHandlers.isNotEmpty) {
@@ -103,7 +171,8 @@ class NativeVDOM extends ComponentVDOM {
 
         // Register event handlers on our side
         for (final entry in eventHandlers.entries) {
-          registerEventHandler(viewId, entry.key, entry.value);
+          registerEventHandler(viewId, entry.key, entry.value,
+              props: cleanProps);
         }
       }
 
@@ -135,6 +204,9 @@ class NativeVDOM extends ComponentVDOM {
       // Create a copy of props without event handlers
       final cleanProps = _removeEventHandlersFromProps(newNode.props);
 
+      // Add type information for tracking
+      cleanProps['_viewType'] = newNode.type;
+
       // Add any event listener prop keys to cleanProps to signal to native side
       final listenerNames = eventHandlers.keys
           .map((name) => 'on${name[0].toUpperCase()}${name.substring(1)}')
@@ -143,10 +215,11 @@ class NativeVDOM extends ComponentVDOM {
         cleanProps['_eventListeners'] = listenerNames;
       }
 
-      // Re-register event handlers if any have changed
+      // Re-register event handlers
       if (eventHandlers.isNotEmpty) {
         for (final entry in eventHandlers.entries) {
-          registerEventHandler(viewId, entry.key, entry.value);
+          registerEventHandler(viewId, entry.key, entry.value,
+              props: cleanProps);
         }
       }
 

@@ -1,7 +1,6 @@
 import 'package:dc_test/templating/framework/controls/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:flutter/painting.dart' hide TextStyle;
 import 'package:flutter/widgets.dart';
 
 /// Style properties for View

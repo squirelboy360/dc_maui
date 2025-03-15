@@ -9,6 +9,7 @@ import 'package:dc_test/templating/framework/core/core.dart';
 import 'package:dc_test/templating/framework/core/vdom/extensions/native_method_channels+vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/hooks/index.dart'; // Import our hooks
 import 'package:dc_test/templating/framework/utility/flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle, View, Text;
@@ -22,21 +23,18 @@ final themeContext = Context<Map<String, dynamic>>({
   'backgroundColor': '#ffffff',
 });
 
-// New component for rebuild visualization
+// New component for rebuild visualization using the hooks pattern
 class RebuildIndicator extends Component {
-  // Timer for animation
+  // Create hooks
+  final _indicatorState = UseState<bool>('active', false);
+  final _colorState = UseState<String>('color', '#ffffff');
+  final _animationEffect = UseEffect('animation');
   Timer? _resetTimer;
 
   @override
-  Map<String, dynamic> getInitialState() {
-    return {
-      'active': false,
-      'color': '#ffffff',
-    };
-  }
-
-  @override
   void componentDidMount() {
+    super.componentDidMount();
+
     // Register a notification listener
     ComponentEventBus.instance.onRebuild = () {
       flash();
@@ -52,17 +50,13 @@ class RebuildIndicator extends Component {
     final color =
         '#${(random.nextDouble() * 0xFFFFFF).toInt().toRadixString(16).padLeft(6, '0')}';
 
-    // Set state to show the flash
-    setState({
-      'active': true,
-      'color': color,
-    });
+    // Set state using our hooks
+    _colorState.value = color;
+    _indicatorState.value = true;
 
     // Schedule reset back to inactive after animation
     _resetTimer = Timer(Duration(milliseconds: 800), () {
-      setState({
-        'active': false,
-      });
+      _indicatorState.value = false;
     });
   }
 
@@ -70,6 +64,11 @@ class RebuildIndicator extends Component {
   void componentWillUnmount() {
     _resetTimer?.cancel();
     ComponentEventBus.instance.onRebuild = null;
+
+    // Clean up hooks
+    _indicatorState.dispose();
+    _colorState.dispose();
+    _animationEffect.dispose();
   }
 
   @override
@@ -80,18 +79,18 @@ class RebuildIndicator extends Component {
         style: ViewStyle(
           height: 120,
           width: double.infinity,
-          backgroundColor: FlutterUtility.hexToColor(state['color']),
+          backgroundColor: FlutterUtility.hexToColor(_colorState.value),
           borderRadius: BorderRadius.circular(4),
-          boxShadow: state['active']
+          boxShadow: _indicatorState.value
               ? [
                   BoxShadow(
-                    color:  FlutterUtility.hexToColor(state['color']).withOpacity(0.8),
+                    color: FlutterUtility.hexToColor(_colorState.value)
+                        .withOpacity(0.8),
                     blurRadius: 8,
                     spreadRadius: 2,
                   )
                 ]
               : [],
-          // Remove the transition property since it's not supported
         ),
       ),
       children: [],
@@ -113,29 +112,49 @@ class ComponentEventBus {
   }
 }
 
-// A counter component that demonstrates state management
+// A counter component that demonstrates state management using hooks
 class Counter extends Component {
-  @override
-  Map<String, dynamic> getInitialState() {
-    return {'count': 0};
-  }
-
-  void _increment() {
-    setState({'count': state['count'] + 1});
-  }
+  // Create hooks for state
+  final _counterState = UseState<int>('count', 0);
+  final _timerEffect = UseEffect('autoIncrement');
 
   @override
   void componentDidMount() {
     if (kDebugMode) {
       print('Counter mounted');
     }
+
+    // Demonstrate useEffect with a timer that increments every 30 seconds
+    _timerEffect.run(() {
+      if (kDebugMode) {
+        print('Setting up auto-increment timer');
+      }
+
+      final timer = Timer.periodic(Duration(seconds: 30), (_) {
+        _counterState.value += 1;
+      });
+
+      // Return cleanup function
+      return () {
+        if (kDebugMode) {
+          print('Cleaning up auto-increment timer');
+        }
+        timer.cancel();
+      };
+    }, []); // Empty dependency array means only run on mount
+  }
+
+  void _increment() {
+    // Use the hook's setter
+    _counterState.value += 1;
   }
 
   @override
   void componentDidUpdate(
       Map<String, dynamic> prevProps, Map<String, dynamic> prevState) {
     if (kDebugMode) {
-      print('Counter updated from ${prevState['count']} to ${state['count']}');
+      final oldCount = prevState['count'] ?? 0;
+      print('Counter updated from $oldCount to ${_counterState.value}');
     }
 
     // Notify the rebuild indicator
@@ -147,12 +166,22 @@ class Counter extends Component {
     if (kDebugMode) {
       print('Counter unmounting');
     }
+
+    // Clean up hooks
+    _counterState.dispose();
+    _timerEffect.dispose();
+  }
+
+  @override
+  Map<String, dynamic> getInitialState() {
+    // We still need to provide initial state for Component class compatibility
+    return {'count': _counterState.value};
   }
 
   @override
   VNode render() {
     if (kDebugMode) {
-      print('Counter rendering with count: ${state['count']}');
+      print('Counter rendering with count: ${_counterState.value}');
     }
 
     // Create controls
@@ -166,7 +195,7 @@ class Counter extends Component {
       ),
       children: <Control>[
         Text(
-          'Counter: ${state['count']}',
+          'Counter: ${_counterState.value}',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -186,46 +215,58 @@ class Counter extends Component {
   }
 }
 
-// App component that uses context and manages child components
+// App component that uses context and manages child components with hooks
 class App extends Component {
-  @override
-  Map<String, dynamic> getInitialState() {
-    return {'showCounter': true, 'theme': 'light'};
-  }
+  // Create hooks for app state
+  final _showCounterState = UseState<bool>('showCounter', true);
+  final _themeState = UseState<String>('theme', 'light');
 
   // Use separate handler methods with distinct identifiers for each button
   void _handleToggleCounter(Map<String, dynamic> _) {
-    final bool currentValue = state['showCounter'];
+    final bool currentValue = _showCounterState.value;
     debugPrint(
         'App: Toggle counter button pressed, current=${currentValue}, new=${!currentValue}');
-    setState({'showCounter': !currentValue});
+    _showCounterState.value = !currentValue;
 
     // Notify the rebuild indicator
     ComponentEventBus.instance.notifyRebuild();
   }
 
   void _handleToggleTheme(Map<String, dynamic> _) {
-    final String currentTheme = state['theme'];
+    final String currentTheme = _themeState.value;
     final String newTheme = currentTheme == 'light' ? 'dark' : 'light';
     debugPrint(
         'App: Toggle theme button pressed, current=${currentTheme}, new=${newTheme}');
-    setState({'theme': newTheme});
+    _themeState.value = newTheme;
 
     // Notify the rebuild indicator
     ComponentEventBus.instance.notifyRebuild();
   }
 
   @override
+  void componentWillUnmount() {
+    // Clean up hooks
+    _showCounterState.dispose();
+    _themeState.dispose();
+  }
+
+  @override
+  Map<String, dynamic> getInitialState() {
+    // We still need to provide initial state for Component class compatibility
+    return {'showCounter': _showCounterState.value, 'theme': _themeState.value};
+  }
+
+  @override
   VNode render() {
     if (kDebugMode) {
       debugPrint(
-          'App rendering with theme: ${state["theme"]}, showCounter: ${state["showCounter"]}');
+          'App rendering with theme: ${_themeState.value}, showCounter: ${_showCounterState.value}');
     }
 
     final Color backgroundColor =
-        state['theme'] == 'light' ? Color(0xFFFFFFFF) : Color(0xFF343A40);
+        _themeState.value == 'light' ? Color(0xFFFFFFFF) : Color(0xFF343A40);
     final Color textColor =
-        state['theme'] == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
+        _themeState.value == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
 
     // Add our rebuild indicator at the bottom
     final rebuildIndicator = ElementFactory.createComponent(
@@ -243,7 +284,7 @@ class App extends Component {
 
       // IMPORTANT FIX: Use unique identifiers in button titles to ensure proper event routing
       Button(
-        title: state['theme'] == 'light'
+        title: _themeState.value == 'light'
             ? '🌙 Switch to Dark Theme'
             : '☀️ Switch to Light Theme',
         onPress: _handleToggleTheme,
@@ -256,7 +297,7 @@ class App extends Component {
       ),
 
       Button(
-        title: state['showCounter']
+        title: _showCounterState.value
             ? '🙈 Hide Counter Component'
             : '👁️ Show Counter Component',
         onPress: _handleToggleCounter,
@@ -270,7 +311,7 @@ class App extends Component {
     ];
 
     // Conditionally add counter component
-    if (state['showCounter']) {
+    if (_showCounterState.value) {
       // Create the counter component and wrap it in our adapter
       final counterComponent = ElementFactory.createComponent(
           () => Counter(), {'key': 'main-counter'});
@@ -297,20 +338,8 @@ class App extends Component {
   }
 }
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // The VM service messages are normal and helpful for debugging
-  // They indicate that:
-  // 1. Your app is running correctly on the device
-  // 2. DevTools is available for debugging
-  // 3. You have VM service connectivity to the device
-  // This is especially important for our framework which uses method channels
-  // to communicate between Flutter and native code
-
-  // Initialize the coordinator
   try {
     await MainViewCoordinatorInterface.initialize();
   } catch (e) {

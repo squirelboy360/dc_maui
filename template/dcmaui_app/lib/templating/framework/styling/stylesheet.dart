@@ -1,4 +1,3 @@
-import 'dart:collection';
 
 /// StyleSheet utility similar to React Native's StyleSheet
 class StyleSheet {
