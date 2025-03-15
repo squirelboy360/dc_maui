@@ -127,25 +127,28 @@ class App extends Component {
     return {'showCounter': true, 'theme': 'light'};
   }
 
-  // Fix toggle counter function to make it more reliable
-  void _toggleCounter() {
+  // CRITICAL FIX: Use separate functions with stabilized context capturing
+  // This prevents the event handlers from getting mixed up during updates
+  void _handleToggleCounter(Map<String, dynamic> _) {
+    final bool currentValue = state['showCounter'];
     debugPrint(
-        'App: Toggling counter visibility from ${state['showCounter']} to ${!state['showCounter']}');
-    setState({'showCounter': !state['showCounter']});
+        'App: Toggle counter button pressed, current=${currentValue}, new=${!currentValue}');
+    setState({'showCounter': !currentValue});
   }
 
-  // Fix toggle theme function to make it more reliable
-  void _toggleTheme() {
+  void _handleToggleTheme(Map<String, dynamic> _) {
+    final String currentTheme = state['theme'];
+    final String newTheme = currentTheme == 'light' ? 'dark' : 'light';
     debugPrint(
-        'App: Toggling theme from ${state['theme']} to ${state['theme'] == 'light' ? 'dark' : 'light'}');
-    setState({'theme': state['theme'] == 'light' ? 'dark' : 'light'});
+        'App: Toggle theme button pressed, current=${currentTheme}, new=${newTheme}');
+    setState({'theme': newTheme});
   }
 
   @override
   VNode render() {
     if (kDebugMode) {
       debugPrint(
-          'App rendering with theme: ${state['theme']}, showCounter: ${state['showCounter']}');
+          'App rendering with theme: ${state["theme"]}, showCounter: ${state["showCounter"]}');
     }
 
     final Color backgroundColor =
@@ -153,30 +156,8 @@ class App extends Component {
     final Color textColor =
         state['theme'] == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
 
-    // Create the theme toggle button (removed the 'key' parameter)
-    final Button themeToggleButton = Button(
-      title: 'Toggle Theme',
-      onPress: (data) {
-        debugPrint('App: Theme toggle button pressed');
-        _toggleTheme();
-      },
-      style: {'marginBottom': 16, 'id': 'theme-toggle-button'},
-    );
-
-    // Create the counter toggle button (removed the 'key' parameter)
-    final Button counterToggleButton = Button(
-      title: state['showCounter'] ? 'Hide Counter' : 'Show Counter',
-      onPress: (data) {
-        debugPrint('App: Counter toggle button pressed');
-        _toggleCounter();
-      },
-      style: {
-        'marginBottom': 24,
-        'id': 'counter-toggle-button' // Use an ID in the style map instead
-      },
-    );
-
-    // Create a list of controls for our view
+    // CRITICAL FIX: Use consistent element key pattern for all buttons
+    // and assign these built-in event handlers directly
     final List<Control> viewControls = <Control>[
       Text(
         'DC MAUI Demo App',
@@ -186,8 +167,25 @@ class App extends Component {
           color: textColor,
         ),
       ),
-      themeToggleButton,
-      counterToggleButton,
+      Button(
+        title:
+            'Toggle Theme (${state["theme"] == "light" ? "to Dark" : "to Light"})',
+        onPress: _handleToggleTheme,
+        style: {
+          'marginBottom': 16,
+          'backgroundColor': '#007bff',
+          'id': 'theme-button'
+        },
+      ),
+      Button(
+        title: state['showCounter'] ? 'Hide Counter' : 'Show Counter',
+        onPress: _handleToggleCounter,
+        style: {
+          'marginBottom': 24,
+          'backgroundColor': '#28a745',
+          'id': 'counter-button'
+        },
+      ),
     ];
 
     // Conditionally add counter component
@@ -217,6 +215,14 @@ class App extends Component {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // The VM service messages are normal and helpful for debugging
+  // They indicate that:
+  // 1. Your app is running correctly on the device
+  // 2. DevTools is available for debugging
+  // 3. You have VM service connectivity to the device
+  // This is especially important for our framework which uses method channels
+  // to communicate between Flutter and native code
 
   // Initialize the coordinator
   try {
