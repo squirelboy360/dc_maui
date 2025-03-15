@@ -127,18 +127,24 @@ class App extends Component {
     return {'showCounter': true, 'theme': 'light'};
   }
 
+  // Fix toggle counter function to make it more reliable
   void _toggleCounter() {
+    debugPrint(
+        'App: Toggling counter visibility from ${state['showCounter']} to ${!state['showCounter']}');
     setState({'showCounter': !state['showCounter']});
   }
 
+  // Fix toggle theme function to make it more reliable
   void _toggleTheme() {
+    debugPrint(
+        'App: Toggling theme from ${state['theme']} to ${state['theme'] == 'light' ? 'dark' : 'light'}');
     setState({'theme': state['theme'] == 'light' ? 'dark' : 'light'});
   }
 
   @override
   VNode render() {
     if (kDebugMode) {
-      print(
+      debugPrint(
           'App rendering with theme: ${state['theme']}, showCounter: ${state['showCounter']}');
     }
 
@@ -146,6 +152,29 @@ class App extends Component {
         state['theme'] == 'light' ? Color(0xFFFFFFFF) : Color(0xFF343A40);
     final Color textColor =
         state['theme'] == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
+
+    // Create the theme toggle button (removed the 'key' parameter)
+    final Button themeToggleButton = Button(
+      title: 'Toggle Theme',
+      onPress: (data) {
+        debugPrint('App: Theme toggle button pressed');
+        _toggleTheme();
+      },
+      style: {'marginBottom': 16, 'id': 'theme-toggle-button'},
+    );
+
+    // Create the counter toggle button (removed the 'key' parameter)
+    final Button counterToggleButton = Button(
+      title: state['showCounter'] ? 'Hide Counter' : 'Show Counter',
+      onPress: (data) {
+        debugPrint('App: Counter toggle button pressed');
+        _toggleCounter();
+      },
+      style: {
+        'marginBottom': 24,
+        'id': 'counter-toggle-button' // Use an ID in the style map instead
+      },
+    );
 
     // Create a list of controls for our view
     final List<Control> viewControls = <Control>[
@@ -157,16 +186,8 @@ class App extends Component {
           color: textColor,
         ),
       ),
-      Button(
-        title: 'Toggle Theme',
-        onPress: (_) => _toggleTheme(),
-        style: {'marginBottom': 16},
-      ),
-      Button(
-        title: state['showCounter'] ? 'Hide Counter' : 'Show Counter',
-        onPress: (_) => _toggleCounter(),
-        style: {'marginBottom': 24},
-      ),
+      themeToggleButton,
+      counterToggleButton,
     ];
 
     // Conditionally add counter component
@@ -197,10 +218,6 @@ class App extends Component {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kDebugMode) {
-    print('\n====== Starting DC MAUI App ======\n');
-  }
-
   // Initialize the coordinator
   try {
     await MainViewCoordinatorInterface.initialize();
@@ -215,47 +232,12 @@ void main() async {
 
   // Create root app component
   final app = ElementFactory.createComponent(() => App(), {'key': 'root-app'});
-
-  if (kDebugMode) {
-    print('\n====== Starting App Render ======\n');
-  }
-
-  // Log detailed VDOM tree before rendering
-  _logElementTree(app);
-
-  // Render the app - fix the call to be explicit about the render method
   try {
-    vdom.render(app); // Fixed to use the correct render method
+    vdom.render(app);
   } catch (e) {
     if (kDebugMode) {
       print('ERROR: Failed to render app: $e');
     }
   }
-
-  if (kDebugMode) {
-    print('\n====== VDOM Rendering Complete ======\n');
-    print('The app is now running. You should see the UI tree logged above.');
-  }
-
-  // Request log of the native view tree after a short delay
-  Future.delayed(Duration(seconds: 2), () {
-    MainViewCoordinatorInterface.logNativeViewTree();
-  });
-}
-
-// Helper function to log the element tree
-void _logElementTree(VNode node, [int depth = 0]) {
-  final indent = ' ' * (depth * 2);
-  final isComponent = node.props['_isComponent'] == true;
-
-  print(
-      '$indent- ${node.type} (${isComponent ? "Component" : "Element"}) key: ${node.key}');
-
-  if (isComponent) {
-    print('$indent  ComponentID: ${node.props['_componentId']}');
-  }
-
-  for (final child in node.children) {
-    _logElementTree(child, depth + 1);
-  }
+  MainViewCoordinatorInterface.logNativeViewTree();
 }
