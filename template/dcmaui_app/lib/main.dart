@@ -6,7 +6,6 @@ import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/component.dart';
 import 'package:dc_test/templating/framework/core/context.dart';
 import 'package:dc_test/templating/framework/core/core.dart';
-import 'package:dc_test/templating/framework/core/vdom/component_vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/extensions/native_method_channels+vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
@@ -145,7 +144,6 @@ class App extends Component {
 
     final Color backgroundColor =
         state['theme'] == 'light' ? Color(0xFFFFFFFF) : Color(0xFF343A40);
-
     final Color textColor =
         state['theme'] == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
 
@@ -176,7 +174,6 @@ class App extends Component {
       // Create the counter component and wrap it in our adapter
       final counterComponent = ElementFactory.createComponent(
           () => Counter(), {'key': 'main-counter'});
-
       viewControls.add(ComponentAdapter(counterComponent));
     }
 
@@ -244,15 +241,6 @@ void main() async {
   Future.delayed(Duration(seconds: 2), () {
     MainViewCoordinatorInterface.logNativeViewTree();
   });
-
-  // Simulate an event from native side after 3 seconds
-  Future.delayed(Duration(seconds: 3), () {
-    if (kDebugMode) {
-      print('\n====== Simulating Native Event ======\n');
-    }
-    MainViewCoordinatorInterface.simulateNativeEvent(
-        'view_0', 'press', {'x': 100, 'y': 200});
-  });
 }
 
 // Helper function to log the element tree
@@ -265,15 +253,6 @@ void _logElementTree(VNode node, [int depth = 0]) {
 
   if (isComponent) {
     print('$indent  ComponentID: ${node.props['_componentId']}');
-  } else {
-    // Print some key props
-    final keyProps = <String, dynamic>{};
-    if (node.props.containsKey('style'))
-      keyProps['style'] = node.props['style'];
-    if (node.props.containsKey('text')) keyProps['text'] = node.props['text'];
-    if (node.props.containsKey('title'))
-      keyProps['title'] = node.props['title'];
-    print('$indent  Props: $keyProps');
   }
 
   for (final child in node.children) {

@@ -158,16 +158,7 @@ class MainViewCoordinatorInterface {
     }
   }
 
-  // Simulate a native event for testing
-  static Future<void> simulateNativeEvent(
-      String viewId, String eventName, Map<String, dynamic> data) async {
-    debugPrint('Simulating native event: $eventName for view $viewId');
-    await _channel.invokeMethod('simulateEvent', {
-      'viewId': viewId,
-      'eventName': eventName,
-      'data': data,
-    });
-  }
+  // CRITICAL FIX: Removed simulate event method as it's not needed
 
   // Make logging more verbose for debugging
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
