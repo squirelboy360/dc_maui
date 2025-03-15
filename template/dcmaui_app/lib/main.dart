@@ -11,6 +11,8 @@ import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle, View, Text;
+import 'dart:math' as math;
+import 'dart:async';
 
 // A theme context for app-wide styling
 final themeContext = Context<Map<String, dynamic>>({
@@ -18,6 +20,96 @@ final themeContext = Context<Map<String, dynamic>>({
   'textColor': '#212529',
   'backgroundColor': '#ffffff',
 });
+
+// New component for rebuild visualization
+class RebuildIndicator extends Component {
+  // Timer for animation
+  Timer? _resetTimer;
+
+  @override
+  Map<String, dynamic> getInitialState() {
+    return {
+      'active': false,
+      'color': '#ffffff',
+    };
+  }
+
+  @override
+  void componentDidMount() {
+    // Register a notification listener
+    ComponentEventBus.instance.onRebuild = () {
+      flash();
+    };
+  }
+
+  void flash() {
+    // Cancel existing timer if there is one
+    _resetTimer?.cancel();
+
+    // Generate a random color
+    final random = math.Random();
+    final color =
+        '#${(random.nextDouble() * 0xFFFFFF).toInt().toRadixString(16).padLeft(6, '0')}';
+
+    // Set state to show the flash
+    setState({
+      'active': true,
+      'color': color,
+    });
+
+    // Schedule reset back to inactive after animation
+    _resetTimer = Timer(Duration(milliseconds: 800), () {
+      setState({
+        'active': false,
+      });
+    });
+  }
+
+  @override
+  void componentWillUnmount() {
+    _resetTimer?.cancel();
+    ComponentEventBus.instance.onRebuild = null;
+  }
+
+  @override
+  VNode render() {
+    return View(
+      props: ViewProps(
+        style: ViewStyle(
+          height: 8,
+          width: double.infinity,
+          backgroundColor: Color.fromHexString(state['color']),
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: state['active']
+              ? [
+                  BoxShadow(
+                    color: Color.fromHexString(state['color']).withOpacity(0.8),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  )
+                ]
+              : [],
+          transition: 'all 0.3s ease',
+        ),
+      ),
+      children: [],
+    ).build();
+  }
+}
+
+// Event bus for component rebuild notifications
+class ComponentEventBus {
+  static final ComponentEventBus _instance = ComponentEventBus._internal();
+  static ComponentEventBus get instance => _instance;
+
+  ComponentEventBus._internal();
+
+  Function? onRebuild;
+
+  void notifyRebuild() {
+    onRebuild?.call();
+  }
+}
 
 // A counter component that demonstrates state management
 class Counter extends Component {
@@ -43,6 +135,9 @@ class Counter extends Component {
     if (kDebugMode) {
       print('Counter updated from ${prevState['count']} to ${state['count']}');
     }
+
+    // Notify the rebuild indicator
+    ComponentEventBus.instance.notifyRebuild();
   }
 
   @override
@@ -79,38 +174,7 @@ class Counter extends Component {
         Button(
           title: 'Increment by 1',
           onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
+          style: {'backgroundColor': '#6c757d', 'marginTop': 8},
         ),
       ],
     );
@@ -127,13 +191,15 @@ class App extends Component {
     return {'showCounter': true, 'theme': 'light'};
   }
 
-  // CRITICAL FIX: Use separate functions with stabilized context capturing
-  // This prevents the event handlers from getting mixed up during updates
+  // Use separate handler methods with distinct identifiers for each button
   void _handleToggleCounter(Map<String, dynamic> _) {
     final bool currentValue = state['showCounter'];
     debugPrint(
         'App: Toggle counter button pressed, current=${currentValue}, new=${!currentValue}');
     setState({'showCounter': !currentValue});
+
+    // Notify the rebuild indicator
+    ComponentEventBus.instance.notifyRebuild();
   }
 
   void _handleToggleTheme(Map<String, dynamic> _) {
@@ -142,6 +208,9 @@ class App extends Component {
     debugPrint(
         'App: Toggle theme button pressed, current=${currentTheme}, new=${newTheme}');
     setState({'theme': newTheme});
+
+    // Notify the rebuild indicator
+    ComponentEventBus.instance.notifyRebuild();
   }
 
   @override
@@ -156,8 +225,10 @@ class App extends Component {
     final Color textColor =
         state['theme'] == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
 
-    // CRITICAL FIX: Use consistent element key pattern for all buttons
-    // and assign these built-in event handlers directly
+    // Add our rebuild indicator at the bottom
+    final rebuildIndicator = ElementFactory.createComponent(
+        () => RebuildIndicator(), {'key': 'rebuild-indicator'});
+
     final List<Control> viewControls = <Control>[
       Text(
         'DC MAUI Demo App',
@@ -167,23 +238,31 @@ class App extends Component {
           color: textColor,
         ),
       ),
+
+      // IMPORTANT FIX: Use unique identifiers in button titles to ensure proper event routing
       Button(
-        title:
-            'Toggle Theme (${state["theme"] == "light" ? "to Dark" : "to Light"})',
+        title: state['theme'] == 'light'
+            ? '🌙 Switch to Dark Theme'
+            : '☀️ Switch to Light Theme',
         onPress: _handleToggleTheme,
         style: {
           'marginBottom': 16,
           'backgroundColor': '#007bff',
-          'id': 'theme-button'
+          'id': 'theme-button',
+          'padding': 12,
         },
       ),
+
       Button(
-        title: state['showCounter'] ? 'Hide Counter' : 'Show Counter',
+        title: state['showCounter']
+            ? '🙈 Hide Counter Component'
+            : '👁️ Show Counter Component',
         onPress: _handleToggleCounter,
         style: {
           'marginBottom': 24,
           'backgroundColor': '#28a745',
-          'id': 'counter-button'
+          'id': 'counter-button',
+          'padding': 12,
         },
       ),
     ];
@@ -195,6 +274,9 @@ class App extends Component {
           () => Counter(), {'key': 'main-counter'});
       viewControls.add(ComponentAdapter(counterComponent));
     }
+
+    // Add rebuild indicator at the bottom
+    viewControls.add(ComponentAdapter(rebuildIndicator));
 
     // Create the root view control
     final rootView = View(
@@ -210,6 +292,16 @@ class App extends Component {
 
     // Convert the View Control into a VNode
     return rootView.build();
+  }
+}
+
+// Extension method for Color to support hex string creation
+extension ColorExtension on Color {
+  static Color fromHexString(String hexString) {
+    final buffer = StringBuffer();
+    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+    buffer.write(hexString.replaceFirst('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
   }
 }
 
