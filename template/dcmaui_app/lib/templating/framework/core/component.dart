@@ -12,7 +12,7 @@ abstract class Component {
   String get componentId => _componentId;
 
   // Component state - needs to be accessed by ComponentVDOM, so using public field with getter
-  late Map<String, dynamic> _state = {};
+  late final Map<String, dynamic> _state = {};
   Map<String, dynamic> get state => Map.unmodifiable(_state);
 
   // Context API implementation
@@ -27,6 +27,9 @@ abstract class Component {
 
   // Flag to prevent multiple state updates in rapid succession
   bool _isUpdating = false;
+
+  // Flag to indicate if this component uses hooks for state management
+  bool _usesHooksForState = false;
 
   Component() {
     // Generate a unique ID for this component instance
@@ -98,6 +101,9 @@ abstract class Component {
 
   // Initialize state with values
   void initializeState(Map<String, dynamic> initialState) {
+    // Skip initialization if using hooks for state
+    if (_usesHooksForState) return;
+
     _state.clear();
     _state.addAll(initialState);
 
@@ -115,7 +121,13 @@ abstract class Component {
   VNode render();
 
   // Initialize state - called before first render
+  // This method can be overridden to return an empty map if using hooks
   Map<String, dynamic> getInitialState() => {};
+
+  // Mark this component as using hooks for state management
+  void useHooksForState() {
+    _usesHooksForState = true;
+  }
 
   // LIFECYCLE METHODS
 

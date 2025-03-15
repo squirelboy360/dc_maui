@@ -1,79 +1,58 @@
+import 'package:dc_test/templating/framework/core/component.dart';
+import 'package:dc_test/templating/framework/hooks/base_hook.dart';
 import 'package:flutter/foundation.dart';
 
-/// Manages side effects in a component, similar to React's useEffect
-class UseEffect {
+/// Effect hook similar to React's useEffect
+class UseEffect extends BaseHook {
   Function? _cleanup;
-  List<dynamic>? _dependencies;
-  final String _effectName;
+  List<dynamic>? _lastDeps;
 
-  /// Create an effect hook
-  ///
-  /// Example usage:
-  /// ```dart
-  /// final effect = UseEffect('timerEffect');
-  ///
-  /// // Run an effect with cleanup
-  /// effect.run(() {
-  ///   final timer = Timer.periodic(Duration(seconds: 1), (_) => print('tick'));
-  ///   return () => timer.cancel();
-  /// }, [someValue]);
-  /// ```
-  UseEffect(String name) : _effectName = name;
-
-  /// Run an effect with optional dependencies
-  /// Returns a cleanup function that should be called when the component unmounts
-  void run(Function() effect, [List<dynamic>? dependencies]) {
-    // Check if dependencies have changed
-    bool shouldRun = _dependencies == null;
-    if (!shouldRun && dependencies != null) {
-      shouldRun = !_areListsEqual(_dependencies!, dependencies);
+  UseEffect(String effectId, {Component? component})
+      : super('effect_$effectId') {
+    if (component != null) {
+      registerComponent(component);
     }
+  }
 
-    // Update dependencies
-    _dependencies = dependencies;
+  /// Run the effect function with optional dependencies
+  void run(Function() effect, [List<dynamic>? dependencies]) {
+    // If no dependencies provided, run every time
+    final shouldRun = dependencies == null ||
+        _lastDeps == null ||
+        !_areListsEqual(_lastDeps!, dependencies);
 
     if (shouldRun) {
-      if (kDebugMode) {
-        print('UseEffect: Running effect $_effectName');
-      }
-
-      // Call cleanup from last effect
+      // Run cleanup from previous effect if it exists
       if (_cleanup != null) {
-        try {
-          _cleanup!();
-        } catch (e) {
-          if (kDebugMode) {
-            print('UseEffect: Error in cleanup: $e');
-          }
+        if (kDebugMode) {
+          print('UseEffect: Running cleanup for $hookId');
         }
+        _cleanup!();
       }
 
-      // Run the effect and store its cleanup
-      try {
-        _cleanup = effect();
-      } catch (e) {
-        if (kDebugMode) {
-          print('UseEffect: Error in effect: $e');
-        }
+      // Run the effect and capture cleanup function
+      if (kDebugMode) {
+        print('UseEffect: Running effect for $hookId');
       }
+
+      _cleanup = effect();
+      _lastDeps = dependencies;
     }
   }
 
-  /// Clean up the effect
+  /// Clean up resources when component unmounts
+  @override
   void dispose() {
     if (_cleanup != null) {
-      try {
-        _cleanup!();
-        _cleanup = null;
-      } catch (e) {
-        if (kDebugMode) {
-          print('UseEffect: Error in final cleanup: $e');
-        }
+      if (kDebugMode) {
+        print('UseEffect: Running cleanup during dispose for $hookId');
       }
+      _cleanup!();
+      _cleanup = null;
     }
   }
 
-  // Helper to compare dependency lists
+  // Helper function to compare dependency lists
   bool _areListsEqual(List<dynamic> a, List<dynamic> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
