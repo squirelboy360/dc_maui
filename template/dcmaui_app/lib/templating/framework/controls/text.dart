@@ -1,7 +1,9 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' hide TextStyle;
+import 'dart:io' show Platform;
 
 /// Style properties for Text
 class TextStyle implements StyleProps {
@@ -101,6 +103,22 @@ class TextStyle implements StyleProps {
     }
 
     if (letterSpacing != null) map['letterSpacing'] = letterSpacing;
+
+    // Add platform-specific style properties
+    if (kIsWeb) {
+      map['whiteSpace'] = 'pre-wrap'; // Better text wrapping for web
+    } else if (Platform.isIOS) {
+      // iOS-specific text properties
+      if (fontWeight == FontWeight.w600) {
+        // iOS uses semibold where Android might use bold
+        map['fontWeight'] = 'semibold';
+      }
+    } else if (Platform.isAndroid) {
+      // Android-specific text properties
+      if (fontFamily == null && !map.containsKey('fontFamily')) {
+        map['fontFamily'] = 'Roboto'; // Default Android font
+      }
+    }
 
     return map;
   }
@@ -216,6 +234,30 @@ class TextProps implements ControlProps {
     if (selectable != null) map['selectable'] = selectable;
     if (onPress != null) map['onPress'] = onPress;
     if (testID != null) map['testID'] = testID;
+
+    // Add platform-specific props
+    if (kIsWeb) {
+      map['_platform'] = 'web';
+      // Web-specific text properties
+      if (!map.containsKey('selectable') &&
+          !additionalProps.containsKey('selectable')) {
+        map['selectable'] = true; // Better web experience with selectable text
+      }
+    } else if (Platform.isIOS) {
+      map['_platform'] = 'ios';
+      // iOS-specific text properties
+      if (!map.containsKey('allowsFontScaling') &&
+          !additionalProps.containsKey('allowsFontScaling')) {
+        map['allowsFontScaling'] = true; // iOS dynamic type
+      }
+    } else if (Platform.isAndroid) {
+      map['_platform'] = 'android';
+      // Android-specific text properties
+      if (!map.containsKey('includeFontPadding') &&
+          !additionalProps.containsKey('includeFontPadding')) {
+        map['includeFontPadding'] = false; // More consistent with iOS
+      }
+    }
 
     return map;
   }

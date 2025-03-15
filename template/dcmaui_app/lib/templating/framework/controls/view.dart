@@ -1,7 +1,9 @@
 import 'package:dc_test/templating/framework/controls/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'dart:io' show Platform;
 
 /// Style properties for View
 class ViewStyle implements StyleProps {
@@ -167,6 +169,13 @@ class ViewStyle implements StyleProps {
       // Add more alignment mappings as needed
     }
 
+    // Add platform-specific style properties
+    if (kIsWeb) {
+      // Web-specific style properties (will be converted to CSS)
+      map['display'] = 'flex';
+      map['flexDirection'] = 'column';
+    }
+
     return map;
   }
 
@@ -244,6 +253,27 @@ class ViewProps implements ControlProps {
     if (onLayout != null) map['onLayout'] = onLayout;
     if (opacity != null) map['opacity'] = opacity;
     if (testID != null) map['testID'] = testID;
+
+    // Add platform-specific props
+    if (kIsWeb) {
+      map['_platform'] = 'web';
+      // Web-specific layout properties
+      if (!map.containsKey('accessibilityRole')) {
+        map['accessibilityRole'] = 'div'; // Default HTML element
+      }
+    } else if (Platform.isIOS) {
+      map['_platform'] = 'ios';
+      // iOS-specific view properties
+      if (!map.containsKey('clipsToBounds')) {
+        map['clipsToBounds'] = true; // Similar to overflow: hidden
+      }
+    } else if (Platform.isAndroid) {
+      map['_platform'] = 'android';
+      // Android-specific view properties
+      if (!map.containsKey('clipToOutline')) {
+        map['clipToOutline'] = true; // For consistent rounded corners
+      }
+    }
 
     return map;
   }
