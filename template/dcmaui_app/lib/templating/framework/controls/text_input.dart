@@ -1,8 +1,10 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
-import 'package:flutter/services.dart' hide TextInputType;
+import 'package:dc_test/templating/framework/controls/low_level/control.dart';
+import 'package:flutter/material.dart' hide TextStyle,TextInputType;
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
 
 /// Custom TextInputType enum
 enum TextInputType {
@@ -13,6 +15,153 @@ enum TextInputType {
   url,
   visiblePassword,
   none
+}
+
+/// Style properties for TextInput
+class TextInputStyle implements StyleProps {
+  final TextStyle? textStyle;
+  final TextStyle? placeholderStyle;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final double? borderWidth;
+  final double? borderRadius;
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
+  final double? height;
+  final double? width;
+
+  const TextInputStyle({
+    this.textStyle,
+    this.placeholderStyle,
+    this.backgroundColor,
+    this.borderColor,
+    this.borderWidth,
+    this.borderRadius,
+    this.padding,
+    this.margin,
+    this.height,
+    this.width,
+  });
+
+  @override
+  Map<String, dynamic> toMap() {
+    final map = <String, dynamic>{};
+
+    if (textStyle != null) map['textStyle'] = textStyle!.toMap();
+    if (placeholderStyle != null)
+      map['placeholderStyle'] = placeholderStyle!.toMap();
+
+    if (backgroundColor != null) {
+      final colorValue =
+          backgroundColor!.value.toRadixString(16).padLeft(8, '0');
+      map['backgroundColor'] = '#$colorValue';
+    }
+
+    if (borderColor != null) {
+      final colorValue = borderColor!.value.toRadixString(16).padLeft(8, '0');
+      map['borderColor'] = '#$colorValue';
+    }
+
+    if (borderWidth != null) map['borderWidth'] = borderWidth;
+    if (borderRadius != null) map['borderRadius'] = borderRadius;
+
+    if (padding != null) {
+      if (padding!.left == padding!.right &&
+          padding!.top == padding!.bottom &&
+          padding!.left == padding!.top) {
+        map['padding'] = padding!.top;
+      } else {
+        map['paddingLeft'] = padding!.left;
+        map['paddingRight'] = padding!.right;
+        map['paddingTop'] = padding!.top;
+        map['paddingBottom'] = padding!.bottom;
+      }
+    }
+
+    if (margin != null) {
+      if (margin!.left == margin!.right &&
+          margin!.top == margin!.bottom &&
+          margin!.left == margin!.top) {
+        map['margin'] = margin!.top;
+      } else {
+        map['marginLeft'] = margin!.left;
+        map['marginRight'] = margin!.right;
+        map['marginTop'] = margin!.top;
+        map['marginBottom'] = margin!.bottom;
+      }
+    }
+
+    if (height != null) map['height'] = height;
+    if (width != null) map['width'] = width;
+
+    return map;
+  }
+
+  factory TextInputStyle.fromMap(Map<String, dynamic> map) {
+    // Helper function to convert hex string to Color
+    Color? hexToColor(String? hexString) {
+      if (hexString == null || !hexString.startsWith('#')) return null;
+      hexString = hexString.replaceAll('#', '');
+      if (hexString.length == 6) {
+        hexString = 'FF' + hexString;
+      }
+      return Color(int.parse(hexString, radix: 16));
+    }
+
+    return TextInputStyle(
+      textStyle:
+          map['textStyle'] is Map ? TextStyle.fromMap(map['textStyle']) : null,
+      placeholderStyle: map['placeholderStyle'] is Map
+          ? TextStyle.fromMap(map['placeholderStyle'])
+          : null,
+      backgroundColor: map['backgroundColor'] is Color
+          ? map['backgroundColor']
+          : hexToColor(map['backgroundColor']),
+      borderColor: map['borderColor'] is Color
+          ? map['borderColor']
+          : hexToColor(map['borderColor']),
+      borderWidth: map['borderWidth'] is double ? map['borderWidth'] : null,
+      borderRadius: map['borderRadius'] is double ? map['borderRadius'] : null,
+      padding: map['padding'] is EdgeInsets
+          ? map['padding']
+          : map['padding'] is double
+              ? EdgeInsets.all(map['padding'])
+              : null,
+      margin: map['margin'] is EdgeInsets
+          ? map['margin']
+          : map['margin'] is double
+              ? EdgeInsets.all(map['margin'])
+              : null,
+      height: map['height'] is double ? map['height'] : null,
+      width: map['width'] is double ? map['width'] : null,
+    );
+  }
+
+  TextInputStyle copyWith({
+    TextStyle? textStyle,
+    TextStyle? placeholderStyle,
+    Color? backgroundColor,
+    Color? borderColor,
+    double? borderWidth,
+    double? borderRadius,
+    EdgeInsets? padding,
+    EdgeInsets? margin,
+    double? height,
+    double? width,
+  }) {
+    return TextInputStyle(
+      textStyle: textStyle ?? this.textStyle,
+      placeholderStyle: placeholderStyle ?? this.placeholderStyle,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      borderColor: borderColor ?? this.borderColor,
+      borderWidth: borderWidth ?? this.borderWidth,
+      borderRadius: borderRadius ?? this.borderRadius,
+      padding: padding ?? this.padding,
+      margin: margin ?? this.margin,
+      height: height ?? this.height,
+      width: width ?? this.width,
+    );
+  }
 }
 
 /// Props for TextInput component
@@ -33,6 +182,7 @@ class TextInputProps implements ControlProps {
   final Function(String)? onSubmitEditing;
   final Function()? onFocus;
   final Function()? onBlur;
+  final TextInputStyle? inputStyle;
   final Map<String, dynamic> additionalProps;
 
   const TextInputProps({
@@ -52,6 +202,7 @@ class TextInputProps implements ControlProps {
     this.onSubmitEditing,
     this.onFocus,
     this.onBlur,
+    this.inputStyle,
     this.additionalProps = const {},
   });
 
@@ -87,6 +238,39 @@ class TextInputProps implements ControlProps {
     if (onSubmitEditing != null) map['onSubmitEditing'] = onSubmitEditing;
     if (onFocus != null) map['onFocus'] = onFocus;
     if (onBlur != null) map['onBlur'] = onBlur;
+    if (inputStyle != null) map['inputStyle'] = inputStyle!.toMap();
+
+    // Add platform-specific props
+    if (kIsWeb) {
+      map['_platform'] = 'web';
+      // Web-specific input properties
+      if (!map.containsKey('autoComplete') &&
+          !additionalProps.containsKey('autoComplete')) {
+        map['autoComplete'] = 'on'; // Default autocomplete behavior
+      }
+    } else if (Platform.isIOS) {
+      map['_platform'] = 'ios';
+      // iOS-specific input properties
+      if (!map.containsKey('clearButtonMode') &&
+          !additionalProps.containsKey('clearButtonMode')) {
+        map['clearButtonMode'] =
+            'while-editing'; // iOS default clear button behavior
+      }
+      if (!map.containsKey('returnKeyType') &&
+          !additionalProps.containsKey('returnKeyType')) {
+        map['returnKeyType'] = 'done'; // Default return key type
+      }
+    } else if (Platform.isAndroid) {
+      map['_platform'] = 'android';
+      // Android-specific input properties
+      if (!map.containsKey('underlineColorAndroid') &&
+          !additionalProps.containsKey('underlineColorAndroid')) {
+        map['underlineColorAndroid'] = 'transparent'; // Hide default underline
+      }
+      if (!map.containsKey('numberOfLines') && multiline == true) {
+        map['numberOfLines'] = 4; // Default number of lines for multiline
+      }
+    }
 
     return map;
   }
@@ -140,6 +324,7 @@ class TextInputProps implements ControlProps {
     Function(String)? onSubmitEditing,
     Function()? onFocus,
     Function()? onBlur,
+    TextInputStyle? inputStyle,
     Map<String, dynamic>? additionalProps,
   }) {
     return TextInputProps(
@@ -159,6 +344,7 @@ class TextInputProps implements ControlProps {
       onSubmitEditing: onSubmitEditing ?? this.onSubmitEditing,
       onFocus: onFocus ?? this.onFocus,
       onBlur: onBlur ?? this.onBlur,
+      inputStyle: inputStyle ?? this.inputStyle,
       additionalProps: additionalProps ?? this.additionalProps,
     );
   }
@@ -185,6 +371,8 @@ class TextInput extends Control {
     Function(String)? onSubmitEditing,
     Function()? onFocus,
     Function()? onBlur,
+    TextInputStyle? inputStyle,
+    Map<String, dynamic>? styleMap,
   }) : props = TextInputProps(
           value: value,
           placeholder: placeholder,
@@ -202,9 +390,51 @@ class TextInput extends Control {
           onSubmitEditing: onSubmitEditing,
           onFocus: onFocus,
           onBlur: onBlur,
+          inputStyle: inputStyle ??
+              (styleMap != null ? TextInputStyle.fromMap(styleMap) : null),
         );
 
   TextInput.custom({required this.props});
+
+  /// Create a multiline text input
+  static TextInput multiline({
+    String? value,
+    String? placeholder,
+    TextStyle? style,
+    TextStyle? placeholderStyle,
+    bool? autoFocus,
+    bool? editable,
+    TextInputType? keyboardType,
+    int? maxLength,
+    TextAlign? textAlign,
+    String? testID,
+    Function(String)? onChangeText,
+    Function(String)? onSubmitEditing,
+    Function()? onFocus,
+    Function()? onBlur,
+    TextInputStyle? inputStyle,
+    Map<String, dynamic>? styleMap,
+  }) {
+    return TextInput(
+      value: value,
+      placeholder: placeholder,
+      style: style,
+      placeholderStyle: placeholderStyle,
+      autoFocus: autoFocus,
+      editable: editable,
+      keyboardType: keyboardType,
+      multiline: true,
+      maxLength: maxLength,
+      textAlign: textAlign,
+      testID: testID,
+      onChangeText: onChangeText,
+      onSubmitEditing: onSubmitEditing,
+      onFocus: onFocus,
+      onBlur: onBlur,
+      inputStyle: inputStyle ??
+          (styleMap != null ? TextInputStyle.fromMap(styleMap) : null),
+    );
+  }
 
   @override
   VNode build() {

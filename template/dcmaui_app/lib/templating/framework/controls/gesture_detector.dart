@@ -1,8 +1,10 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_level/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
+
+import 'package:flutter/material.dart';
 
 /// Style properties for GestureDetector
 class GestureDetectorStyle implements StyleProps {
@@ -30,7 +32,8 @@ class GestureDetectorStyle implements StyleProps {
     }
 
     if (highlightColor != null) {
-      final colorValue = highlightColor!.value.toRadixString(16).padLeft(8, '0');
+      final colorValue =
+          highlightColor!.value.toRadixString(16).padLeft(8, '0');
       map['highlightColor'] = '#$colorValue';
     }
 
@@ -58,7 +61,7 @@ class GestureDetectorStyle implements StyleProps {
       if (hexString == null || !hexString.startsWith('#')) return null;
       hexString = hexString.replaceAll('#', '');
       if (hexString.length == 6) {
-        hexString = 'FF' + hexString;
+        hexString = 'FF$hexString';
       }
       return Color(int.parse(hexString, radix: 16));
     }
@@ -82,7 +85,8 @@ class GestureDetectorStyle implements StyleProps {
             )
           : null,
       cancelOnHorizontalDrag: map['cancelOnHorizontalDrag'],
-      pressedOpacity: map['pressedOpacity'] is double ? map['pressedOpacity'] : null,
+      pressedOpacity:
+          map['pressedOpacity'] is double ? map['pressedOpacity'] : null,
     );
   }
 
@@ -97,7 +101,8 @@ class GestureDetectorStyle implements StyleProps {
       rippleColor: rippleColor ?? this.rippleColor,
       highlightColor: highlightColor ?? this.highlightColor,
       hitSlop: hitSlop ?? this.hitSlop,
-      cancelOnHorizontalDrag: cancelOnHorizontalDrag ?? this.cancelOnHorizontalDrag,
+      cancelOnHorizontalDrag:
+          cancelOnHorizontalDrag ?? this.cancelOnHorizontalDrag,
       pressedOpacity: pressedOpacity ?? this.pressedOpacity,
     );
   }
@@ -170,7 +175,9 @@ class GestureDetectorProps implements ControlProps {
     } else if (Platform.isIOS) {
       map['_platform'] = 'ios';
       // iOS-specific gesture handling
-      if (style?.pressedOpacity == null && onTap != null && !map.containsKey('pressedOpacity')) {
+      if (style?.pressedOpacity == null &&
+          onTap != null &&
+          !map.containsKey('pressedOpacity')) {
         map['pressedOpacity'] = 0.2; // Standard iOS touch feedback
       }
       if (!map.containsKey('delaysContentTouches')) {
@@ -182,7 +189,9 @@ class GestureDetectorProps implements ControlProps {
     } else if (Platform.isAndroid) {
       map['_platform'] = 'android';
       // Android-specific gesture handling
-      if (style?.rippleColor == null && onTap != null && !map.containsKey('rippleColor')) {
+      if (style?.rippleColor == null &&
+          onTap != null &&
+          !map.containsKey('rippleColor')) {
         map['rippleColor'] = '#20000000'; // Standard Android ripple
       }
       if (!map.containsKey('useForeground') && onTap != null) {
@@ -242,7 +251,8 @@ class GestureDetector extends Control {
     Function(Map<String, dynamic>)? onPan,
     Function(Map<String, dynamic>)? onPanStart,
     Function(Map<String, dynamic>)? onPanUpdate,
-    Function(Map<String, dynamic>))? onPanEnd,
+    Function(Map<String, dynamic>)?
+        onPanEnd, // Fixed syntax error here (removed extra parenthesis)
     Function(Map<String, dynamic>)? onPinch,
     Function(double)? onPinchStart,
     Function(double)? onPinchUpdate,
@@ -265,7 +275,10 @@ class GestureDetector extends Control {
           onPinchEnd: onPinchEnd,
           onRotate: onRotate,
           enabled: enabled,
-          style: style ?? (styleMap != null ? GestureDetectorStyle.fromMap(styleMap) : null),
+          style: style ??
+              (styleMap != null
+                  ? GestureDetectorStyle.fromMap(styleMap)
+                  : null),
           testID: testID,
         );
 

@@ -1,9 +1,15 @@
+import 'package:dc_test/templating/framework/controls/activity_indicator.dart';
 import 'package:dc_test/templating/framework/controls/button.dart';
 import 'package:dc_test/templating/framework/controls/checkbox.dart';
-import 'package:dc_test/templating/framework/controls/component_adapter.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/gesture_detector.dart';
+import 'package:dc_test/templating/framework/controls/image.dart';
+import 'package:dc_test/templating/framework/controls/list_view.dart';
+import 'package:dc_test/templating/framework/controls/low_level/component_adapter.dart';
+import 'package:dc_test/templating/framework/controls/low_level/control.dart';
+import 'package:dc_test/templating/framework/controls/modal.dart';
 import 'package:dc_test/templating/framework/controls/switch.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
+import 'package:dc_test/templating/framework/controls/text_input.dart';
 import 'package:dc_test/templating/framework/controls/touchable.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/component.dart';
@@ -13,19 +19,20 @@ import 'package:dc_test/templating/framework/core/vdom/extensions/native_method_
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/hooks/index.dart';
-import 'package:dc_test/templating/framework/styling/stylesheet.dart';
-import 'package:dc_test/templating/framework/utility/flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide TextStyle, View, Text,Checkbox, Switch, ;
+import 'package:flutter/material.dart' hide TextStyle, View, Text, Checkbox, Switch, Image, TextInputType;
 import 'dart:math' as math;
 import 'dart:async';
 
-// Main component that demonstrates our hook-based state management
-class MainApp extends Component {
+/// This class demonstrates all our controls and ensures they work with the native implementation
+class MauiDemoApp extends Component {
   late final UseState<String> _themeState;
   late final UseState<int> _counterState;
   late final UseState<bool> _switchState;
   late final UseState<bool> _checkboxState;
+  late final UseState<String> _inputTextState;
+  late final UseState<bool> _modalVisible;
+  late final UseState<bool> _isLoading;
   late final UseEffect _timerEffect;
 
   @override
@@ -37,6 +44,9 @@ class MainApp extends Component {
     _counterState = hooks.useState('counter', 0);
     _switchState = hooks.useState('switchValue', false);
     _checkboxState = hooks.useState('checkboxValue', false);
+    _inputTextState = hooks.useState('inputText', '');
+    _modalVisible = hooks.useState('modalVisible', false);
+    _isLoading = hooks.useState('isLoading', false);
     _timerEffect = hooks.useEffect('timer');
   }
 
@@ -45,20 +55,29 @@ class MainApp extends Component {
     super.componentDidMount();
 
     if (kDebugMode) {
-      print('MainApp mounted');
+      print('MauiDemoApp mounted - This will test all controls with native implementations');
     }
+
+    // Test the native side implementation by logging view tree
+    MainViewCoordinatorInterface.logNativeViewTree();
+
+    // Verify all native components are properly registered
+    _verifyNativeComponentsRegistration();
 
     // Set up timer effect as an example
     _timerEffect.run(() {
       if (kDebugMode) {
-        print('Setting up background timer...');
+        print('Setting up background timer for native control tests...');
       }
 
       // Create a timer that runs every 5 seconds
       final timer = Timer.periodic(Duration(seconds: 5), (_) {
         if (kDebugMode) {
-          print('Timer tick - current counter: ${_counterState.value}');
+          print('Timer tick - testing native control updates');
         }
+        // Toggle loading state to test ActivityIndicator
+        _isLoading.value = !_isLoading.value;
+        setState({'isLoading': _isLoading.value});
       });
 
       // Return cleanup function
@@ -71,79 +90,75 @@ class MainApp extends Component {
     }, []); // Empty deps array = run only on mount
   }
 
+  void _verifyNativeComponentsRegistration() {
+    // This is a diagnostic method to ensure all our components have native implementations
+    final requiredControls = [
+      'View', 'Text', 'Button', 'Switch', 'Checkbox', 'Image', 
+      'ListView', 'TextInput', 'GestureDetector', 'Modal', 'ActivityIndicator'
+    ];
+    
+    if (kDebugMode) {
+      print('NATIVE COMPONENT VERIFICATION:');
+      print('The following components must be implemented on native side:');
+      for (final control in requiredControls) {
+        print('• $control');
+      }
+      print('Please check iOS ViewFactory.swift and Android ViewFactory.java to ensure all components are registered');
+      print('END VERIFICATION');
+    }
+  }
+
   void _toggleTheme() {
     final newTheme = _themeState.value == 'light' ? 'dark' : 'light';
     if (kDebugMode) {
       print('Switching theme from ${_themeState.value} to $newTheme');
     }
 
-    // Update theme state
     _themeState.value = newTheme;
     setState({'theme': newTheme});
   }
 
   void _incrementCounter() {
     final newValue = _counterState.value + 1;
-    if (kDebugMode) {
-      print('Incrementing counter from ${_counterState.value} to $newValue');
-    }
-
-    // Update counter state
     _counterState.value = newValue;
     setState({'counter': newValue});
   }
 
   void _decrementCounter() {
     if (_counterState.value <= 0) return;
-
     final newValue = _counterState.value - 1;
-    if (kDebugMode) {
-      print('Decrementing counter from ${_counterState.value} to $newValue');
-    }
-
-    // Update counter state
     _counterState.value = newValue;
     setState({'counter': newValue});
   }
 
   void _resetCounter() {
-    if (kDebugMode) {
-      print('Resetting counter from ${_counterState.value} to 0');
-    }
-
-    // Reset counter state
     _counterState.value = 0;
     setState({'counter': 0});
   }
 
   void _handleSwitchChange(bool value) {
-    if (kDebugMode) {
-      print('Switch toggled from ${_switchState.value} to $value');
-    }
-
-    // Update switch state
     _switchState.value = value;
     setState({'switchValue': value});
   }
 
   void _handleCheckboxChange(bool value) {
-    if (kDebugMode) {
-      print('Checkbox toggled from ${_checkboxState.value} to $value');
-    }
-
-    // Update checkbox state
     _checkboxState.value = value;
     setState({'checkboxValue': value});
+  }
+
+  void _handleTextInputChange(String value) {
+    _inputTextState.value = value;
+    setState({'inputText': value});
+  }
+
+  void _toggleModal() {
+    _modalVisible.value = !_modalVisible.value;
+    setState({'modalVisible': _modalVisible.value});
   }
 
   @override
   VNode render() {
     final isDarkTheme = _themeState.value == 'dark';
-
-    if (kDebugMode) {
-      print(
-          'MainApp rendering - theme: ${_themeState.value}, counter: ${_counterState.value}');
-    }
 
     // Define colors based on theme
     final backgroundColor = isDarkTheme ? Color(0xFF242424) : Color(0xFFFFFFFF);
@@ -153,46 +168,62 @@ class MainApp extends Component {
     final dangerColor = Color(0xFFDC3545);
     final successColor = Color(0xFF28A745);
 
-    return View(
-      props: ViewProps(
-        style: ViewStyle(
-          backgroundColor: backgroundColor,
-          padding: EdgeInsets.all(16),
-          height: double.infinity,
-        ),
+    return ListView(
+      style: ListViewStyle(
+        backgroundColor: backgroundColor,
+        padding: EdgeInsets.all(16),
       ),
       children: <Control>[
         // Header
         Text(
-          'DC MAUI Demo App',
+          'DC MAUI Controls Demo',
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: textColor,
             lineHeight: 1.2,
           ),
         ),
 
-        // Counter Card
+        Text(
+          'This screen demonstrates all available native controls',
+          style: TextStyle(
+            fontSize: 16,
+            color: textColor.withOpacity(0.7),
+            marginTop: EdgeInsets.only(top: 8),
+            marginBottom: EdgeInsets.only(bottom: 16),
+          ),
+        ),
+
+        // Counter Card - Tests Button and Text
         View(
           props: ViewProps(
             style: ViewStyle(
               backgroundColor: cardColor,
               padding: EdgeInsets.all(16),
               borderRadius: BorderRadius.circular(8),
-              marginTop: EdgeInsets.only(top: 16),
               marginBottom: EdgeInsets.only(bottom: 16),
             ),
           ),
           children: <Control>[
             Text(
+              'Counter Example (Button)',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+                marginBottom: EdgeInsets.only(bottom: 12),
+              ),
+            ),
+
+            Text(
               'Counter: ${_counterState.value}',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 18,
                 color: textColor,
               ),
             ),
+
             View(
               props: ViewProps(
                 style: ViewStyle(
@@ -203,36 +234,36 @@ class MainApp extends Component {
                 Button(
                   title: 'Increment (+1)',
                   onPress: (_) => _incrementCounter(),
-                  style: {
-                    'backgroundColor': '#007bff',
-                    'padding': 12.0,
-                    'marginTop': 8.0,
-                  },
+                  style: ButtonStyle(
+                    backgroundColor: accentColor,
+                    padding: EdgeInsets.all(12),
+                    marginTop: EdgeInsets.only(top: 8),
+                  ),
                 ),
                 Button(
                   title: 'Decrement (-1)',
                   onPress: (_) => _decrementCounter(),
-                  style: {
-                    'backgroundColor': '#dc3545',
-                    'padding': 12.0,
-                    'marginTop': 8.0,
-                  },
+                  style: ButtonStyle(
+                    backgroundColor: dangerColor,
+                    padding: EdgeInsets.all(12),
+                    marginTop: EdgeInsets.only(top: 8),
+                  ),
                 ),
                 Button(
                   title: 'Reset Counter',
                   onPress: (_) => _resetCounter(),
-                  style: {
-                    'backgroundColor': '#28a745',
-                    'padding': 12.0,
-                    'marginTop': 8.0,
-                  },
+                  style: ButtonStyle(
+                    backgroundColor: successColor,
+                    padding: EdgeInsets.all(12),
+                    marginTop: EdgeInsets.only(top: 8),
+                  ),
                 ),
               ],
             ),
           ],
         ),
 
-        // Control Showcase Card
+        // Text Input Card
         View(
           props: ViewProps(
             style: ViewStyle(
@@ -244,74 +275,43 @@ class MainApp extends Component {
           ),
           children: <Control>[
             Text(
-              'Control Showcase',
+              'Text Input Example',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: textColor,
+                marginBottom: EdgeInsets.only(bottom: 12),
               ),
             ),
 
-            // Switch Row
-            View(
-              props: ViewProps(
-                style: ViewStyle(
-                  marginTop: EdgeInsets.only(top: 16),
-                  marginBottom: EdgeInsets.only(bottom: 8),
-                ),
+            TextInput(
+              value: _inputTextState.value,
+              placeholder: 'Enter some text',
+              onChangeText: _handleTextInputChange,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 16,
               ),
-              children: <Control>[
-                Text(
-                  'Switch Control:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: textColor,
-                  ),
-                ),
-                Switch(
-                  value: _switchState.value,
-                  onValueChange: _handleSwitchChange,
-                  activeTrackColor: successColor,
-                ),
-              ],
+              placeholderStyle: TextStyle(
+                color: textColor.withOpacity(0.5),
+                fontSize: 16,
+              ),
+              inputStyle: TextInputStyle(
+                backgroundColor: isDarkTheme ? Color(0xFF1E1E1E) : Color(0xFFFFFFFF),
+                borderColor: Color(0xFFCED4DA),
+                borderWidth: 1,
+                borderRadius: 6,
+                padding: EdgeInsets.all(12),
+                marginTop: EdgeInsets.only(top: 8),
+                marginBottom: EdgeInsets.only(bottom: 8),
+              ),
             ),
 
-            // Checkbox Row
-            View(
-              props: ViewProps(
-                style: ViewStyle(
-                  marginTop: EdgeInsets.only(top: 16),
-                  marginBottom: EdgeInsets.only(bottom: 8),
-                ),
-              ),
-              children: <Control>[
-                Text(
-                  'Checkbox Control:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: textColor,
-                  ),
-                ),
-                Checkbox(
-                  value: _checkboxState.value,
-                  onValueChange: _handleCheckboxChange,
-                  checkedColor: accentColor,
-                ),
-              ],
-            ),
-
-            // Touchable Demo
-            Touchable(
-              onPress: () {
-                if (kDebugMode) {
-                  print('Touchable area pressed!');
-                }
-              },
-              child: View(
-                props: ViewProps(
-                  style: ViewStyle(
-                    backgroundColor:
-                        isDarkTheme ? Color(0xFF343A40) : Color(0xFFE9ECEF),
+            Text(
+              _inputTextState.value.isEmpty 
+                ? 'Enter text above to see it here'
+                : 'You typed: ${_inputTextState.value}',
+              style: TextStyle(
                     padding: EdgeInsets.all(12),
                     borderRadius: BorderRadius.circular(6),
                     marginTop: EdgeInsets.only(top: 8),

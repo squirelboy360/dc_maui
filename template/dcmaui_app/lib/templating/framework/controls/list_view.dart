@@ -1,8 +1,10 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_level/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
+
+import 'package:flutter/material.dart';
 
 /// Style properties for ListView
 class ListViewStyle implements StyleProps {
@@ -57,11 +59,14 @@ class ListViewStyle implements StyleProps {
     }
 
     if (backgroundColor != null) {
-      final colorValue = backgroundColor!.value.toRadixString(16).padLeft(8, '0');
+      final colorValue =
+          backgroundColor!.value.toRadixString(16).padLeft(8, '0');
       map['backgroundColor'] = '#$colorValue';
     }
 
-    if (scrollIndicatorThickness != null) map['scrollIndicatorThickness'] = scrollIndicatorThickness;
+    if (scrollIndicatorThickness != null) {
+      map['scrollIndicatorThickness'] = scrollIndicatorThickness;
+    }
     if (height != null) map['height'] = height;
     if (width != null) map['width'] = width;
     if (contentSpacing != null) map['contentSpacing'] = contentSpacing;
@@ -76,7 +81,7 @@ class ListViewStyle implements StyleProps {
       if (hexString == null || !hexString.startsWith('#')) return null;
       hexString = hexString.replaceAll('#', '');
       if (hexString.length == 6) {
-        hexString = 'FF' + hexString;
+        hexString = 'FF$hexString';
       }
       return Color(int.parse(hexString, radix: 16));
     }
@@ -99,8 +104,10 @@ class ListViewStyle implements StyleProps {
           : null,
       height: map['height'] is double ? map['height'] : null,
       width: map['width'] is double ? map['width'] : null,
-      contentSpacing: map['contentSpacing'] is double ? map['contentSpacing'] : null,
-      scrollPadding: map['scrollPadding'] is double ? map['scrollPadding'] : null,
+      contentSpacing:
+          map['contentSpacing'] is double ? map['contentSpacing'] : null,
+      scrollPadding:
+          map['scrollPadding'] is double ? map['scrollPadding'] : null,
     );
   }
 
@@ -118,7 +125,8 @@ class ListViewStyle implements StyleProps {
       padding: padding ?? this.padding,
       margin: margin ?? this.margin,
       backgroundColor: backgroundColor ?? this.backgroundColor,
-      scrollIndicatorThickness: scrollIndicatorThickness ?? this.scrollIndicatorThickness,
+      scrollIndicatorThickness:
+          scrollIndicatorThickness ?? this.scrollIndicatorThickness,
       height: height ?? this.height,
       width: width ?? this.width,
       contentSpacing: contentSpacing ?? this.contentSpacing,
@@ -211,7 +219,9 @@ class ListViewProps implements ControlProps {
     } else if (Platform.isIOS) {
       map['_platform'] = 'ios';
       // iOS-specific properties
-      if (bounces == null && !map.containsKey('bounces') && !additionalProps.containsKey('bounces')) {
+      if (bounces == null &&
+          !map.containsKey('bounces') &&
+          !additionalProps.containsKey('bounces')) {
         map['bounces'] = true; // iOS usually allows bouncing
       }
       if (!map.containsKey('alwaysBounceVertical') && horizontal == false) {
@@ -223,13 +233,16 @@ class ListViewProps implements ControlProps {
     } else if (Platform.isAndroid) {
       map['_platform'] = 'android';
       // Android-specific properties
-      if (bounces == null && !map.containsKey('bounces') && !additionalProps.containsKey('bounces')) {
+      if (bounces == null &&
+          !map.containsKey('bounces') &&
+          !additionalProps.containsKey('bounces')) {
         map['bounces'] = false; // Android typically doesn't bounce
       }
       if (!map.containsKey('overScrollMode')) {
         map['overScrollMode'] = 'never'; // Android over-scroll behavior
       }
-      if (!map.containsKey('fadingEdgeLength') && !additionalProps.containsKey('fadingEdgeLength')) {
+      if (!map.containsKey('fadingEdgeLength') &&
+          !additionalProps.containsKey('fadingEdgeLength')) {
         map['fadingEdgeLength'] = 16.0; // Fading edge for Android lists
       }
     }
@@ -283,17 +296,19 @@ class ListView extends Control {
     String? testID,
     ListViewStyle? style,
     Map<String, dynamic>? styleMap,
-  }) : props = props ?? ListViewProps(
-          horizontal: horizontal ?? false,
-          showsScrollIndicator: showsScrollIndicator,
-          onScroll: onScroll,
-          onEndReached: onEndReached,
-          onEndReachedThreshold: onEndReachedThreshold,
-          bounces: bounces,
-          initialScrollIndex: initialScrollIndex,
-          testID: testID,
-          style: style ?? (styleMap != null ? ListViewStyle.fromMap(styleMap) : null),
-        );
+  }) : props = props ??
+            ListViewProps(
+              horizontal: horizontal ?? false,
+              showsScrollIndicator: showsScrollIndicator,
+              onScroll: onScroll,
+              onEndReached: onEndReached,
+              onEndReachedThreshold: onEndReachedThreshold,
+              bounces: bounces,
+              initialScrollIndex: initialScrollIndex,
+              testID: testID,
+              style: style ??
+                  (styleMap != null ? ListViewStyle.fromMap(styleMap) : null),
+            );
 
   ListView.custom({
     required this.props,
@@ -324,7 +339,7 @@ class ListView extends Control {
     Map<String, dynamic>? styleMap,
   }) {
     return ListView(
-      props: props?.copyWith(horizontal: true) ?? 
+      props: props?.copyWith(horizontal: true) ??
           ListViewProps(
             horizontal: true,
             showsScrollIndicator: showsScrollIndicator,
@@ -334,7 +349,8 @@ class ListView extends Control {
             bounces: bounces,
             initialScrollIndex: initialScrollIndex,
             testID: testID,
-            style: style ?? (styleMap != null ? ListViewStyle.fromMap(styleMap) : null),
+            style: style ??
+                (styleMap != null ? ListViewStyle.fromMap(styleMap) : null),
           ),
       children: children,
     );

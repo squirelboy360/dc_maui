@@ -1,6 +1,6 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_level/control.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' hide TextStyle;
 import 'dart:io' show Platform;

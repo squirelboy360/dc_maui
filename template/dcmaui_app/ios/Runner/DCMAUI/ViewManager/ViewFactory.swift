@@ -18,7 +18,7 @@ class ViewFactory {
     static func createView(viewType: String, viewId: String, props: [String: Any]) -> UIView? {
         print("DC MAUI: Creating view of type \(viewType) with ID \(viewId)")
         
-        let view: UIView?
+        var view: Any?
         
         switch viewType {
         case "View":
@@ -48,8 +48,17 @@ class ViewFactory {
         case "Modal":
             view = DCModal(viewId: viewId, props: props)
             
-        case "AnimatedView":
-            view = DCAnimatedView(viewId: viewId, props: props)
+        case "TextInput":
+            view = DCTextInput(viewId: viewId, props: props)
+            
+        case "TextArea":
+            view = DCTextArea(viewId: viewId, props: props)
+            
+        case "ActivityIndicator":
+            view = DCActivityIndicator(viewId: viewId, props: props)
+            
+        case "Touchable":
+            view = DCTouchable(viewId: viewId, props: props)
             
         default:
             print("DC MAUI: Unknown view type: \(viewType)")
@@ -62,7 +71,7 @@ class ViewFactory {
         }
         
         // Add the view to the view hierarchy if it's the root container
-        if viewId == "view_0", let rootContainer = view {
+        if viewId == "view_0", let rootContainer = view as? UIView {
             // Find key window using newer API for iOS 13+
             if #available(iOS 13.0, *) {
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -122,12 +131,12 @@ class ViewFactory {
         }
         
         // For debugging, add a visible boundary to all views
-        if let uiView = view {
+        if let uiView = view as? UIView {
             // Uncomment this to see view boundaries during development
             uiView.layer.borderWidth = 0.5
             uiView.layer.borderColor = UIColor.lightGray.cgColor
         }
         
-        return view
+        return view as? UIView
     }
 }
