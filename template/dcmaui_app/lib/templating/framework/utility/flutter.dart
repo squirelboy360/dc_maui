@@ -27,6 +27,8 @@ class FlutterUtility {
     return Color(int.parse(hex, radix: 16));
   }
 
+  
+
   /// Logs information about the current platform and device
   static void logPlatformInfo() {
     debugPrint('Platform: ${defaultTargetPlatform.toString()}');

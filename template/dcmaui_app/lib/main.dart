@@ -9,6 +9,7 @@ import 'package:dc_test/templating/framework/core/core.dart';
 import 'package:dc_test/templating/framework/core/vdom/extensions/native_method_channels+vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/utility/flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle, View, Text;
 import 'dart:math' as math;
@@ -73,23 +74,24 @@ class RebuildIndicator extends Component {
 
   @override
   VNode render() {
+    // Create an animated indicator without using transition property
     return View(
       props: ViewProps(
         style: ViewStyle(
-          height: 8,
+          height: 120,
           width: double.infinity,
-          backgroundColor: Color.fromHexString(state['color']),
+          backgroundColor: FlutterUtility.hexToColor(state['color']),
           borderRadius: BorderRadius.circular(4),
           boxShadow: state['active']
               ? [
                   BoxShadow(
-                    color: Color.fromHexString(state['color']).withOpacity(0.8),
+                    color:  FlutterUtility.hexToColor(state['color']).withOpacity(0.8),
                     blurRadius: 8,
                     spreadRadius: 2,
                   )
                 ]
               : [],
-          transition: 'all 0.3s ease',
+          // Remove the transition property since it's not supported
         ),
       ),
       children: [],
@@ -295,15 +297,7 @@ class App extends Component {
   }
 }
 
-// Extension method for Color to support hex string creation
-extension ColorExtension on Color {
-  static Color fromHexString(String hexString) {
-    final buffer = StringBuffer();
-    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-    buffer.write(hexString.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
-  }
-}
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
