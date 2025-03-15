@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
+import 'package:dc_test/templating/framework/hooks/low_level/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 
 /// UseReducer is similar to React's useReducer, for more complex state logic

@@ -1,5 +1,5 @@
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
+import 'package:dc_test/templating/framework/hooks/low_level/state_abstraction.dart';
 import 'package:dc_test/templating/framework/hooks/component_hooks.dart';
 import 'package:flutter/foundation.dart';
 
