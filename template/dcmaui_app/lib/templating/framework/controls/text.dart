@@ -29,6 +29,45 @@ class TextStyle implements StyleProps {
     this.letterSpacing,
   });
 
+  /// Create a TextStyle from a map of style properties
+  factory TextStyle.fromMap(Map<String, dynamic> map) {
+    Color? color;
+    if (map.containsKey('color')) {
+      if (map['color'] is Color) {
+        color = map['color'];
+      } else if (map['color'] is String && map['color'].startsWith('#')) {
+        color = _hexToColor(map['color']);
+      }
+    }
+
+    FontWeight? fontWeight;
+    if (map.containsKey('fontWeight')) {
+      if (map['fontWeight'] is FontWeight) {
+        fontWeight = map['fontWeight'];
+      } else if (map['fontWeight'] == 'bold') {
+        fontWeight = FontWeight.bold;
+      } else if (map['fontWeight'] == 'normal') {
+        fontWeight = FontWeight.normal;
+      }
+    }
+
+    return TextStyle(
+      fontSize: map['fontSize'] is double ? map['fontSize'] : null,
+      fontWeight: fontWeight,
+      color: color,
+      // Add more conversions as needed
+    );
+  }
+
+  // Helper method to convert hex string to Color
+  static Color _hexToColor(String hexString) {
+    hexString = hexString.replaceAll('#', '');
+    if (hexString.length == 6) {
+      hexString = 'FF' + hexString;
+    }
+    return Color(int.parse(hexString, radix: 16));
+  }
+
   @override
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{};

@@ -1,7 +1,10 @@
 import 'package:dc_test/templating/framework/controls/button.dart';
+import 'package:dc_test/templating/framework/controls/checkbox.dart';
 import 'package:dc_test/templating/framework/controls/component_adapter.dart';
 import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/switch.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
+import 'package:dc_test/templating/framework/controls/touchable.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/component.dart';
 import 'package:dc_test/templating/framework/core/context.dart';
@@ -9,337 +12,345 @@ import 'package:dc_test/templating/framework/core/core.dart';
 import 'package:dc_test/templating/framework/core/vdom/extensions/native_method_channels+vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/hooks/index.dart'; // Import our hooks
+import 'package:dc_test/templating/framework/hooks/index.dart';
+import 'package:dc_test/templating/framework/styling/stylesheet.dart';
 import 'package:dc_test/templating/framework/utility/flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide TextStyle, View, Text;
+import 'package:flutter/material.dart' hide TextStyle, View, Text,Checkbox, Switch, ;
 import 'dart:math' as math;
 import 'dart:async';
 
-// A theme context for app-wide styling
-final themeContext = Context<Map<String, dynamic>>({
-  'primaryColor': '#007bff',
-  'textColor': '#212529',
-  'backgroundColor': '#ffffff',
-});
+// Main component that demonstrates our hook-based state management
+class MainApp extends Component {
+  late final UseState<String> _themeState;
+  late final UseState<int> _counterState;
+  late final UseState<bool> _switchState;
+  late final UseState<bool> _checkboxState;
+  late final UseEffect _timerEffect;
 
-// New component for rebuild visualization using the hooks pattern
-class RebuildIndicator extends Component {
-  // Create hooks
-  final _indicatorState = UseState<bool>('active', false);
-  final _colorState = UseState<String>('color', '#ffffff');
-  final _animationEffect = UseEffect('animation');
-  Timer? _resetTimer;
+  @override
+  void componentWillMount() {
+    super.componentWillMount();
+
+    // Initialize hooks with proper types
+    _themeState = hooks.useState('theme', 'light');
+    _counterState = hooks.useState('counter', 0);
+    _switchState = hooks.useState('switchValue', false);
+    _checkboxState = hooks.useState('checkboxValue', false);
+    _timerEffect = hooks.useEffect('timer');
+  }
 
   @override
   void componentDidMount() {
     super.componentDidMount();
 
-    // Register a notification listener
-    ComponentEventBus.instance.onRebuild = () {
-      flash();
-    };
-  }
-
-  void flash() {
-    // Cancel existing timer if there is one
-    _resetTimer?.cancel();
-
-    // Generate a random color
-    final random = math.Random();
-    final color =
-        '#${(random.nextDouble() * 0xFFFFFF).toInt().toRadixString(16).padLeft(6, '0')}';
-
-    // Set state using our hooks
-    _colorState.value = color;
-    _indicatorState.value = true;
-
-    // Schedule reset back to inactive after animation
-    _resetTimer = Timer(Duration(milliseconds: 800), () {
-      _indicatorState.value = false;
-    });
-  }
-
-  @override
-  void componentWillUnmount() {
-    _resetTimer?.cancel();
-    ComponentEventBus.instance.onRebuild = null;
-
-    // Clean up hooks
-    _indicatorState.dispose();
-    _colorState.dispose();
-    _animationEffect.dispose();
-  }
-
-  @override
-  VNode render() {
-    // Create an animated indicator without using transition property
-    return View(
-      props: ViewProps(
-        style: ViewStyle(
-          height: 120,
-          width: double.infinity,
-          backgroundColor: FlutterUtility.hexToColor(_colorState.value),
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: _indicatorState.value
-              ? [
-                  BoxShadow(
-                    color: FlutterUtility.hexToColor(_colorState.value)
-                        .withOpacity(0.8),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  )
-                ]
-              : [],
-        ),
-      ),
-      children: [],
-    ).build();
-  }
-}
-
-// Event bus for component rebuild notifications
-class ComponentEventBus {
-  static final ComponentEventBus _instance = ComponentEventBus._internal();
-  static ComponentEventBus get instance => _instance;
-
-  ComponentEventBus._internal();
-
-  Function? onRebuild;
-
-  void notifyRebuild() {
-    onRebuild?.call();
-  }
-}
-
-// A counter component that demonstrates state management using hooks
-class Counter extends Component {
-  // Create hooks for state
-  final _counterState = UseState<int>('count', 0);
-  final _timerEffect = UseEffect('autoIncrement');
-
-  @override
-  void componentDidMount() {
     if (kDebugMode) {
-      print('Counter mounted');
+      print('MainApp mounted');
     }
 
-    // Demonstrate useEffect with a timer that increments every 30 seconds
+    // Set up timer effect as an example
     _timerEffect.run(() {
       if (kDebugMode) {
-        print('Setting up auto-increment timer');
+        print('Setting up background timer...');
       }
 
-      final timer = Timer.periodic(Duration(seconds: 30), (_) {
-        _counterState.value += 1;
+      // Create a timer that runs every 5 seconds
+      final timer = Timer.periodic(Duration(seconds: 5), (_) {
+        if (kDebugMode) {
+          print('Timer tick - current counter: ${_counterState.value}');
+        }
       });
 
       // Return cleanup function
       return () {
-        if (kDebugMode) {
-          print('Cleaning up auto-increment timer');
-        }
         timer.cancel();
+        if (kDebugMode) {
+          print('Timer cleaned up');
+        }
       };
-    }, []); // Empty dependency array means only run on mount
+    }, []); // Empty deps array = run only on mount
   }
 
-  void _increment() {
-    // Use the hook's setter
-    _counterState.value += 1;
-  }
-
-  @override
-  void componentDidUpdate(
-      Map<String, dynamic> prevProps, Map<String, dynamic> prevState) {
+  void _toggleTheme() {
+    final newTheme = _themeState.value == 'light' ? 'dark' : 'light';
     if (kDebugMode) {
-      final oldCount = prevState['count'] ?? 0;
-      print('Counter updated from $oldCount to ${_counterState.value}');
+      print('Switching theme from ${_themeState.value} to $newTheme');
     }
 
-    // Notify the rebuild indicator
-    ComponentEventBus.instance.notifyRebuild();
-  }
-
-  @override
-  void componentWillUnmount() {
-    if (kDebugMode) {
-      print('Counter unmounting');
-    }
-
-    // Clean up hooks
-    _counterState.dispose();
-    _timerEffect.dispose();
-  }
-
-  @override
-  Map<String, dynamic> getInitialState() {
-    // We still need to provide initial state for Component class compatibility
-    return {'count': _counterState.value};
-  }
-
-  @override
-  VNode render() {
-    if (kDebugMode) {
-      print('Counter rendering with count: ${_counterState.value}');
-    }
-
-    // Create controls
-    final counterView = View(
-      props: ViewProps(
-        style: ViewStyle(
-          padding: EdgeInsets.all(16),
-          borderRadius: BorderRadius.circular(8),
-          backgroundColor: Color(0xFFF8F9FA),
-        ),
-      ),
-      children: <Control>[
-        Text(
-          'Counter: ${_counterState.value}',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF212529),
-          ),
-        ),
-        Button(
-          title: 'Increment by 1',
-          onPress: (_) => _increment(),
-          style: {'backgroundColor': '#6c757d', 'marginTop': 8},
-        ),
-      ],
-    );
-
-    // Convert the View Control into a VNode
-    return counterView.build();
-  }
-}
-
-// App component that uses context and manages child components with hooks
-class App extends Component {
-  // Create hooks for app state
-  final _showCounterState = UseState<bool>('showCounter', true);
-  final _themeState = UseState<String>('theme', 'light');
-
-  // Use separate handler methods with distinct identifiers for each button
-  void _handleToggleCounter(Map<String, dynamic> _) {
-    final bool currentValue = _showCounterState.value;
-    debugPrint(
-        'App: Toggle counter button pressed, current=${currentValue}, new=${!currentValue}');
-    _showCounterState.value = !currentValue;
-
-    // Notify the rebuild indicator
-    ComponentEventBus.instance.notifyRebuild();
-  }
-
-  void _handleToggleTheme(Map<String, dynamic> _) {
-    final String currentTheme = _themeState.value;
-    final String newTheme = currentTheme == 'light' ? 'dark' : 'light';
-    debugPrint(
-        'App: Toggle theme button pressed, current=${currentTheme}, new=${newTheme}');
+    // Update theme state
     _themeState.value = newTheme;
-
-    // Notify the rebuild indicator
-    ComponentEventBus.instance.notifyRebuild();
+    setState({'theme': newTheme});
   }
 
-  @override
-  void componentWillUnmount() {
-    // Clean up hooks
-    _showCounterState.dispose();
-    _themeState.dispose();
+  void _incrementCounter() {
+    final newValue = _counterState.value + 1;
+    if (kDebugMode) {
+      print('Incrementing counter from ${_counterState.value} to $newValue');
+    }
+
+    // Update counter state
+    _counterState.value = newValue;
+    setState({'counter': newValue});
   }
 
-  @override
-  Map<String, dynamic> getInitialState() {
-    // We still need to provide initial state for Component class compatibility
-    return {'showCounter': _showCounterState.value, 'theme': _themeState.value};
+  void _decrementCounter() {
+    if (_counterState.value <= 0) return;
+
+    final newValue = _counterState.value - 1;
+    if (kDebugMode) {
+      print('Decrementing counter from ${_counterState.value} to $newValue');
+    }
+
+    // Update counter state
+    _counterState.value = newValue;
+    setState({'counter': newValue});
+  }
+
+  void _resetCounter() {
+    if (kDebugMode) {
+      print('Resetting counter from ${_counterState.value} to 0');
+    }
+
+    // Reset counter state
+    _counterState.value = 0;
+    setState({'counter': 0});
+  }
+
+  void _handleSwitchChange(bool value) {
+    if (kDebugMode) {
+      print('Switch toggled from ${_switchState.value} to $value');
+    }
+
+    // Update switch state
+    _switchState.value = value;
+    setState({'switchValue': value});
+  }
+
+  void _handleCheckboxChange(bool value) {
+    if (kDebugMode) {
+      print('Checkbox toggled from ${_checkboxState.value} to $value');
+    }
+
+    // Update checkbox state
+    _checkboxState.value = value;
+    setState({'checkboxValue': value});
   }
 
   @override
   VNode render() {
+    final isDarkTheme = _themeState.value == 'dark';
+
     if (kDebugMode) {
-      debugPrint(
-          'App rendering with theme: ${_themeState.value}, showCounter: ${_showCounterState.value}');
+      print(
+          'MainApp rendering - theme: ${_themeState.value}, counter: ${_counterState.value}');
     }
 
-    final Color backgroundColor =
-        _themeState.value == 'light' ? Color(0xFFFFFFFF) : Color(0xFF343A40);
-    final Color textColor =
-        _themeState.value == 'light' ? Color(0xFF212529) : Color(0xFFF8F9FA);
+    // Define colors based on theme
+    final backgroundColor = isDarkTheme ? Color(0xFF242424) : Color(0xFFFFFFFF);
+    final cardColor = isDarkTheme ? Color(0xFF3A3A3A) : Color(0xFFF8F9FA);
+    final textColor = isDarkTheme ? Color(0xFFF8F9FA) : Color(0xFF212529);
+    final accentColor = Color(0xFF007BFF);
+    final dangerColor = Color(0xFFDC3545);
+    final successColor = Color(0xFF28A745);
 
-    // Add our rebuild indicator at the bottom
-    final rebuildIndicator = ElementFactory.createComponent(
-        () => RebuildIndicator(), {'key': 'rebuild-indicator'});
-
-    final List<Control> viewControls = <Control>[
-      Text(
-        'DC MAUI Demo App',
-        style: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-      ),
-
-      // IMPORTANT FIX: Use unique identifiers in button titles to ensure proper event routing
-      Button(
-        title: _themeState.value == 'light'
-            ? '🌙 Switch to Dark Theme'
-            : '☀️ Switch to Light Theme',
-        onPress: _handleToggleTheme,
-        style: {
-          'marginBottom': 16,
-          'backgroundColor': '#007bff',
-          'id': 'theme-button',
-          'padding': 12,
-        },
-      ),
-
-      Button(
-        title: _showCounterState.value
-            ? '🙈 Hide Counter Component'
-            : '👁️ Show Counter Component',
-        onPress: _handleToggleCounter,
-        style: {
-          'marginBottom': 24,
-          'backgroundColor': '#28a745',
-          'id': 'counter-button',
-          'padding': 12,
-        },
-      ),
-    ];
-
-    // Conditionally add counter component
-    if (_showCounterState.value) {
-      // Create the counter component and wrap it in our adapter
-      final counterComponent = ElementFactory.createComponent(
-          () => Counter(), {'key': 'main-counter'});
-      viewControls.add(ComponentAdapter(counterComponent));
-    }
-
-    // Add rebuild indicator at the bottom
-    viewControls.add(ComponentAdapter(rebuildIndicator));
-
-    // Create the root view control
-    final rootView = View(
+    return View(
       props: ViewProps(
         style: ViewStyle(
           backgroundColor: backgroundColor,
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(16),
           height: double.infinity,
         ),
       ),
-      children: viewControls,
-    );
+      children: <Control>[
+        // Header
+        Text(
+          'DC MAUI Demo App',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+            lineHeight: 1.2,
+          ),
+        ),
 
-    // Convert the View Control into a VNode
-    return rootView.build();
+        // Counter Card
+        View(
+          props: ViewProps(
+            style: ViewStyle(
+              backgroundColor: cardColor,
+              padding: EdgeInsets.all(16),
+              borderRadius: BorderRadius.circular(8),
+              marginTop: EdgeInsets.only(top: 16),
+              marginBottom: EdgeInsets.only(bottom: 16),
+            ),
+          ),
+          children: <Control>[
+            Text(
+              'Counter: ${_counterState.value}',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            View(
+              props: ViewProps(
+                style: ViewStyle(
+                  marginTop: EdgeInsets.only(top: 16),
+                ),
+              ),
+              children: <Control>[
+                Button(
+                  title: 'Increment (+1)',
+                  onPress: (_) => _incrementCounter(),
+                  style: {
+                    'backgroundColor': '#007bff',
+                    'padding': 12.0,
+                    'marginTop': 8.0,
+                  },
+                ),
+                Button(
+                  title: 'Decrement (-1)',
+                  onPress: (_) => _decrementCounter(),
+                  style: {
+                    'backgroundColor': '#dc3545',
+                    'padding': 12.0,
+                    'marginTop': 8.0,
+                  },
+                ),
+                Button(
+                  title: 'Reset Counter',
+                  onPress: (_) => _resetCounter(),
+                  style: {
+                    'backgroundColor': '#28a745',
+                    'padding': 12.0,
+                    'marginTop': 8.0,
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Control Showcase Card
+        View(
+          props: ViewProps(
+            style: ViewStyle(
+              backgroundColor: cardColor,
+              padding: EdgeInsets.all(16),
+              borderRadius: BorderRadius.circular(8),
+              marginBottom: EdgeInsets.only(bottom: 16),
+            ),
+          ),
+          children: <Control>[
+            Text(
+              'Control Showcase',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+
+            // Switch Row
+            View(
+              props: ViewProps(
+                style: ViewStyle(
+                  marginTop: EdgeInsets.only(top: 16),
+                  marginBottom: EdgeInsets.only(bottom: 8),
+                ),
+              ),
+              children: <Control>[
+                Text(
+                  'Switch Control:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+                ),
+                Switch(
+                  value: _switchState.value,
+                  onValueChange: _handleSwitchChange,
+                  activeTrackColor: successColor,
+                ),
+              ],
+            ),
+
+            // Checkbox Row
+            View(
+              props: ViewProps(
+                style: ViewStyle(
+                  marginTop: EdgeInsets.only(top: 16),
+                  marginBottom: EdgeInsets.only(bottom: 8),
+                ),
+              ),
+              children: <Control>[
+                Text(
+                  'Checkbox Control:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+                ),
+                Checkbox(
+                  value: _checkboxState.value,
+                  onValueChange: _handleCheckboxChange,
+                  checkedColor: accentColor,
+                ),
+              ],
+            ),
+
+            // Touchable Demo
+            Touchable(
+              onPress: () {
+                if (kDebugMode) {
+                  print('Touchable area pressed!');
+                }
+              },
+              child: View(
+                props: ViewProps(
+                  style: ViewStyle(
+                    backgroundColor:
+                        isDarkTheme ? Color(0xFF343A40) : Color(0xFFE9ECEF),
+                    padding: EdgeInsets.all(12),
+                    borderRadius: BorderRadius.circular(6),
+                    marginTop: EdgeInsets.only(top: 8),
+                  ),
+                ),
+                children: <Control>[
+                  Text(
+                    'This is a touchable area - tap me!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Theme Toggle Button
+        Button(
+          title: _themeState.value == 'light'
+              ? 'Switch to Dark Theme'
+              : 'Switch to Light Theme',
+          onPress: (_) => _toggleTheme(),
+          style: {
+            'backgroundColor': '#6c757d',
+            'padding': 12,
+            'marginTop': 16,
+          },
+        ),
+      ],
+    ).build();
   }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   try {
     await MainViewCoordinatorInterface.initialize();
   } catch (e) {
@@ -348,11 +359,13 @@ void main() async {
     }
   }
 
-  // Create a VDOM instance with combined component and native capabilities
+  // Create a VDOM instance with native capabilities
   final vdom = NativeVDOM();
 
   // Create root app component
-  final app = ElementFactory.createComponent(() => App(), {'key': 'root-app'});
+  final app =
+      ElementFactory.createComponent(() => MainApp(), {'key': 'root-app'});
+
   try {
     vdom.render(app);
   } catch (e) {
@@ -360,5 +373,6 @@ void main() async {
       print('ERROR: Failed to render app: $e');
     }
   }
+
   MainViewCoordinatorInterface.logNativeViewTree();
 }

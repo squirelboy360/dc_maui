@@ -1,5 +1,6 @@
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
+import 'package:dc_test/templating/framework/hooks/component_hooks.dart';
 import 'package:flutter/foundation.dart';
 
 /// Base Component class providing lifecycle hooks similar to React components
@@ -28,9 +29,15 @@ abstract class Component {
   // Flag to prevent multiple state updates in rapid succession
   bool _isUpdating = false;
 
+  // Hooks integration
+  late final ComponentHooks hooks;
+
   Component() {
     // Generate a unique ID for this component instance
     _componentId = 'component_${identityHashCode(this)}';
+
+    // Initialize hooks
+    hooks = ComponentHooks(this);
   }
 
   // Set state and trigger a re-render
@@ -120,7 +127,10 @@ abstract class Component {
   // LIFECYCLE METHODS
 
   // Called before component mounts
-  void componentWillMount() {}
+  void componentWillMount() {
+    // Sync any hook state to component state
+    hooks.syncStateToComponent();
+  }
 
   // Called after component mounts
   void componentDidMount() {}
@@ -136,6 +146,9 @@ abstract class Component {
 
   // Called before component unmounts
   void componentWillUnmount() {
+    // Clean up hooks
+    hooks.dispose();
+
     // Clean up any state in the global state manager
     GlobalStateManager.instance.cleanupState(_componentId);
   }
