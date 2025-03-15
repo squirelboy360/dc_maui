@@ -74,10 +74,18 @@ class MainViewCoordinatorInterface {
       String viewId, Map<String, dynamic> props) async {
     try {
       final cleanProps = _cleanPropsForSerialization(props);
+
+      // Add enhanced debugging for state updates
+      debugPrint('Core: Updating view $viewId with props: $cleanProps');
+
       final result = await _channel.invokeMethod('updateView', {
         'viewId': viewId,
         'props': cleanProps,
       });
+
+      // Debug the result
+      debugPrint('Core: View update result: $result');
+
       return result == true;
     } catch (e) {
       debugPrint('Core: ERROR updating view: $e');

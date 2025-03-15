@@ -112,7 +112,7 @@ class ComponentVDOM extends VDOM {
         if (childViewIds.isNotEmpty) {
           debugPrint(
               'ComponentVDOM: Setting ${childViewIds.length} children for $viewId');
-          setChildren(viewId, childViewIds);
+          super.setChildren(viewId, childViewIds);
         } else {
           debugPrint('ComponentVDOM: No children to set for $viewId');
         }
@@ -140,7 +140,7 @@ class ComponentVDOM extends VDOM {
       super.updateView(oldNode, newNode, viewId);
     } else {
       // Component type changed, replace the entire view
-      deleteView(viewId);
+      super.deleteView(viewId);
       createView(newNode, viewId);
     }
   }
@@ -229,6 +229,8 @@ class ComponentVDOM extends VDOM {
     final component = _components[componentId];
     if (component == null || !component.mounted) return;
 
+    debugPrint('ComponentVDOM: Handling state update for $componentId');
+
     // Get previous rendered node
     final prevRenderedNode = _renderedNodes[componentId];
     if (prevRenderedNode == null) return;
@@ -237,7 +239,129 @@ class ComponentVDOM extends VDOM {
     final newRenderedNode = component.render();
     _renderedNodes[componentId] = newRenderedNode;
 
-    // Update the view by diffing
-    super.updateView(prevRenderedNode, newRenderedNode, componentId);
+    // Debug the update
+    debugPrint(
+        'ComponentVDOM: Component rendered new node: ${newRenderedNode.type}');
+
+    // Update the view by properly diffing
+    _diffNodeUpdate(prevRenderedNode, newRenderedNode, componentId);
+  }
+
+  // New method to handle diffing during state updates
+  void _diffNodeUpdate(VNode oldNode, VNode newNode, String viewId) {
+    debugPrint('ComponentVDOM: Diffing node update for $viewId');
+
+    // CRITICAL FIX: Force same viewId for the new node by using the old node's key
+    // Ensure stable view IDs across re-renders
+    final nodeKey = oldNode.key;
+    if (!nodeToViewId.containsKey(nodeKey)) {
+      nodeToViewId[nodeKey] = viewId;
+    }
+
+    if (oldNode.type != newNode.type) {
+      // If the types changed, we need to replace the entire view
+      // BUT keep the same viewId
+      debugPrint(
+          'ComponentVDOM: Node type changed from ${oldNode.type} to ${newNode.type} but keeping viewId: $viewId');
+      super.updateView(oldNode, newNode, viewId);
+      return;
+    }
+
+    // Update props only if they've changed
+    if (!_arePropsEqual(oldNode.props, newNode.props)) {
+      debugPrint('ComponentVDOM: Props changed, updating view');
+      super.updateView(oldNode, newNode, viewId);
+    } else {
+      debugPrint('ComponentVDOM: Props unchanged, skipping update');
+    }
+
+    // Process children using a more correct approach to maintain stable IDs
+    // Map children by their keys for efficient lookup
+    final oldChildrenByKey = {
+      for (var child in oldNode.children) child.key: child
+    };
+    final newChildrenByKey = {
+      for (var child in newNode.children) child.key: child
+    };
+
+    // Set of processed keys
+    final processedKeys = <String>{};
+
+    // Final list of child view IDs
+    final childIds = <String>[];
+
+    // Update existing children
+    for (final newChild in newNode.children) {
+      final key = newChild.key;
+
+      if (oldChildrenByKey.containsKey(key)) {
+        // This child exists in both old and new trees
+        final oldChild = oldChildrenByKey[key]!;
+        processedKeys.add(key);
+
+        // Get the view ID for this child
+        final childViewId = getViewId(oldChild);
+
+        // Force the same view ID for the new child
+        nodeToViewId[newChild.key] = childViewId;
+
+        // Now diff this child
+        _diffNodeUpdate(oldChild, newChild, childViewId);
+
+        // Add to our list of final child IDs
+        childIds.add(childViewId);
+      } else {
+        // This is a new child, need to create it
+        final childViewId = getViewId(newChild);
+        super.createView(newChild, childViewId);
+        childIds.add(childViewId);
+      }
+    }
+
+    // Remove any children that aren't in the new tree
+    for (final key in oldChildrenByKey.keys) {
+      if (!processedKeys.contains(key) && !newChildrenByKey.containsKey(key)) {
+        final oldChild = oldChildrenByKey[key]!;
+        final childViewId = getViewId(oldChild);
+        super.deleteView(childViewId);
+      }
+    }
+
+    // Only update children relationship if needed
+    if (childIds.isNotEmpty) {
+      final oldChildIds =
+          oldNode.children.map((child) => getViewId(child)).toList();
+      if (!_areListsEqual(oldChildIds, childIds)) {
+        debugPrint(
+            'ComponentVDOM: Children changed, updating children relationship for $viewId');
+        super.setChildren(viewId, childIds);
+      }
+    }
+  }
+
+  // Helper method to compare lists
+  bool _areListsEqual(List<dynamic> a, List<dynamic> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  // Add this helper method to compare props objects
+  bool _arePropsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a.length != b.length) return false;
+
+    for (final key in a.keys) {
+      // Skip component metadata fields in comparison
+      if (key.startsWith('_component')) continue;
+
+      // Skip function comparisons as they can't be reliably compared
+      if (a[key] is Function && b[key] is Function) continue;
+
+      if (!b.containsKey(key) || a[key] != b[key]) return false;
+    }
+
+    return true;
   }
 }

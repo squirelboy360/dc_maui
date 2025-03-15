@@ -236,4 +236,34 @@ extension DCViewCoordinator {
     private func requestLayoutForView(_ view: UIView) {
         view.setNeedsLayout()
     }
+
+    // Add a helper method to standardize event name format
+    private func standardizeEventName(_ eventName: String) -> String {
+        // Remove "on" prefix if it exists and lowercase the first letter
+        if eventName.hasPrefix("on") && eventName.count > 2 {
+            let startIndex = eventName.index(eventName.startIndex, offsetBy: 2)
+            let firstChar = eventName[startIndex].lowercased()
+            let restOfString = eventName[eventName.index(after: startIndex)...]
+            return firstChar + restOfString
+        }
+        return eventName
+    }
+
+    // Modify the handleSimulateEvent method to use standardized event names
+    private func handleSimulateEvent(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String,
+              let eventName = args["eventName"] as? String,
+              let data = args["data"] as? [String: Any] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing required parameters", details: nil))
+            return
+        }
+        
+        // Use standardized event name
+        let standardizedEventName = standardizeEventName(eventName)
+        
+        // Send the event to Flutter
+        sendEvent(viewId: viewId, eventName: standardizedEventName, params: data)
+        result(true)
+    }
 }

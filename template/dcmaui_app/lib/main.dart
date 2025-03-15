@@ -78,7 +78,39 @@ class Counter extends Component {
           ),
         ),
         Button(
-          title: 'Increment',
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
+          onPress: (_) => _increment(),
+        ),
+        Button(
+          title: 'Increment by 1',
           onPress: (_) => _increment(),
         ),
       ],
@@ -194,9 +226,9 @@ void main() async {
   // Log detailed VDOM tree before rendering
   _logElementTree(app);
 
-  // Render the app
+  // Render the app - fix the call to be explicit about the render method
   try {
-    vdom.render(app);
+    vdom.render(app); // Fixed to use the correct render method
   } catch (e) {
     if (kDebugMode) {
       print('ERROR: Failed to render app: $e');

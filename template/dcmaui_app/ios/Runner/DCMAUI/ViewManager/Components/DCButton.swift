@@ -114,7 +114,7 @@ class DCButton: DCBaseView {
         // Send event to Flutter
         DCViewCoordinator.shared?.sendEvent(
             viewId: viewId,
-            eventName: "onPress",
+            eventName: "press", // Changed from "onPress" to "press" to match Dart side
             params: [:]
         )
     }

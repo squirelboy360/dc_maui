@@ -4,16 +4,25 @@ import 'package:flutter/foundation.dart';
 
 class VDOM {
   VNode? _previousTree;
-  final Map<String, String> _nodeToViewId = {};
+  // Make this accessible to subclasses
+  final Map<String, String> nodeToViewId = {};
   int _viewIdCounter = 0;
 
   // Get a stable view ID for a node - changed to protected (no underscore)
   String getViewId(VNode node) {
-    final nodeKey = '${node.type}_${node.key}';
-    if (!_nodeToViewId.containsKey(nodeKey)) {
-      _nodeToViewId[nodeKey] = 'view_${_viewIdCounter++}';
+    // CRITICAL FIX: Use only the key for stable IDs, not type+key
+    final nodeKey = node.key;
+
+    if (!nodeToViewId.containsKey(nodeKey)) {
+      nodeToViewId[nodeKey] = 'view_${_viewIdCounter++}';
+      debugPrint(
+          'VDOM: Created new view ID ${nodeToViewId[nodeKey]} for node with key $nodeKey');
+    } else {
+      debugPrint(
+          'VDOM: Reusing view ID ${nodeToViewId[nodeKey]} for node with key $nodeKey');
     }
-    return _nodeToViewId[nodeKey]!;
+
+    return nodeToViewId[nodeKey]!;
   }
 
   void render(VNode newTree) {
@@ -56,7 +65,7 @@ class VDOM {
 
     // Same type, transfer the view ID
     final viewId = getViewId(oldNode);
-    _nodeToViewId['${newNode.type}_${newNode.key}'] = viewId;
+    nodeToViewId[newNode.key] = viewId;
 
     // Update props if needed
     if (!_arePropsEqual(oldNode.props, newNode.props)) {
@@ -80,7 +89,7 @@ class VDOM {
     final newChildren = newNode.children;
     final parentViewId = getViewId(oldNode);
 
-    // Create maps for O(1) lookups - removed unused variable
+    // Create maps for O(1) lookups
     final oldKeyToChild = {for (var child in oldChildren) child.key: child};
 
     // Track which old children have been processed
@@ -146,6 +155,12 @@ class VDOM {
     debugPrint(
         'VDOM: Update view: $viewId, type: ${newNode.type}, props: ${newNode.props}');
     MainViewCoordinatorInterface.updateView(viewId, newNode.props);
+  }
+
+  // Directly update props on a view without full diff
+  void updateViewProps(String viewId, Map<String, dynamic> props) {
+    debugPrint('VDOM: Directly updating props for $viewId');
+    MainViewCoordinatorInterface.updateView(viewId, props);
   }
 
   // Delete a view on the native side

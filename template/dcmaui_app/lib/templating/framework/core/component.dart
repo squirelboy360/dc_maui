@@ -31,11 +31,32 @@ abstract class Component {
       return;
     }
 
+    debugPrint('Component: Setting state: $partialState');
+
     final prevState = Map<String, dynamic>.from(_state);
     _state.addAll(partialState);
 
-    componentDidUpdate(props, prevState);
-    updateCallback?.call();
+    // Only trigger componentDidUpdate if something actually changed
+    bool stateChanged = false;
+    for (final key in partialState.keys) {
+      if (!prevState.containsKey(key) || prevState[key] != _state[key]) {
+        stateChanged = true;
+        break;
+      }
+    }
+
+    if (stateChanged) {
+      if (shouldComponentUpdate(props, _state)) {
+        debugPrint('Component: State changed, triggering update');
+        componentDidUpdate(props, prevState);
+        updateCallback?.call(); // Trigger VDOM update
+      } else {
+        debugPrint(
+            'Component: shouldComponentUpdate returned false, skipping update');
+      }
+    } else {
+      debugPrint('Component: No state changes detected, skipping update');
+    }
   }
 
   // Initialize state with values
