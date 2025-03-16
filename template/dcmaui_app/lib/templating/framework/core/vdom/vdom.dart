@@ -3,23 +3,26 @@ import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 
 class VDOM {
+  // Make previousTree protected for subclasses to access
   VNode? _previousTree;
+
   // Make this accessible to subclasses
   final Map<String, String> nodeToViewId = {};
   int _viewIdCounter = 0;
 
   // Get a stable view ID for a node - changed to protected (no underscore)
   String getViewId(VNode node) {
-    // CRITICAL FIX: Use only the key for stable IDs, not type+key
+    // CRITICAL FIX: Use only the key for stable IDs
+    // Using node key alone instead of combining with type gives more stable IDs across renders
     final nodeKey = node.key;
 
     if (!nodeToViewId.containsKey(nodeKey)) {
       nodeToViewId[nodeKey] = 'view_${_viewIdCounter++}';
       debugPrint(
-          'VDOM: Created new view ID ${nodeToViewId[nodeKey]} for node with key $nodeKey');
+          'VDOM: Created new view ID ${nodeToViewId[nodeKey]} for node key $nodeKey');
     } else {
       debugPrint(
-          'VDOM: Reusing view ID ${nodeToViewId[nodeKey]} for node with key $nodeKey');
+          'VDOM: Reusing view ID ${nodeToViewId[nodeKey]} for node key $nodeKey');
     }
 
     return nodeToViewId[nodeKey]!;

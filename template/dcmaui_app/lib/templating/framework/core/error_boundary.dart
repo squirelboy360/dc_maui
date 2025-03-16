@@ -58,7 +58,7 @@ class ErrorBoundary extends Component {
   }
 
   @override
-  VNode render() {
+  VNode buildRender() {
     if (state['hasError'] == true) {
       // Render fallback UI
       if (_props.fallback != null) {

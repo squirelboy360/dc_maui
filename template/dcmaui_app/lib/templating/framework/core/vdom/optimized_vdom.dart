@@ -1,4 +1,3 @@
-import 'package:dc_test/templating/framework/core/core.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/core/vdom/vdom.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +14,9 @@ class OptimizedVDOM extends VDOM {
   int _lastRenderTime = 0;
   int _diffCount = 0;
   int _mountCount = 0;
+
+  // Store our own copy of previous tree for diffing
+  VNode? _lastTreeRoot;
 
   // Constructor with optimizations enabled by default
   OptimizedVDOM({
@@ -36,29 +38,49 @@ class OptimizedVDOM extends VDOM {
     final startTime = DateTime.now().microsecondsSinceEpoch;
 
     try {
-      // Call the parent implementation
-      super.render(newTree);
+      if (_lastTreeRoot == null) {
+        debugPrint('OptimizedVDOM: First render - mounting tree');
+        mount(newTree);
+      } else {
+        debugPrint('OptimizedVDOM: Updating previous tree with diff');
+        diff(_lastTreeRoot!, newTree);
+      }
+      _lastTreeRoot = newTree;
+      super.render(newTree); // Ensure parent tracking is maintained
     } finally {
       final endTime = DateTime.now().microsecondsSinceEpoch;
       _lastRenderTime = endTime - startTime;
 
       if (kDebugMode && _lastRenderTime > 16000) {
-        // 16ms = 60fps frame time
-        print(
+        debugPrint(
             'OptimizedVDOM: Slow render detected: ${_lastRenderTime ~/ 1000}ms');
       }
     }
   }
 
-  @override
-  void _mount(VNode node) {
+  // Implementation of mounting for nodes
+  void mount(VNode node) {
     _mountCount++;
 
     // Use lazy mounting for deeply nested trees if enabled
     if (_enableLazyRendering && _shouldRenderLazily(node)) {
       _lazyMount(node);
     } else {
-      super._mount(node);
+      // Standard mounting logic
+      final viewId = getViewId(node);
+      createView(node, viewId);
+
+      // Track parent-child relationships
+      final childViewIds = <String>[];
+      for (var child in node.children) {
+        mount(child);
+        childViewIds.add(getViewId(child));
+      }
+
+      // Set children relationship
+      if (childViewIds.isNotEmpty) {
+        setChildren(viewId, childViewIds);
+      }
     }
   }
 
@@ -69,9 +91,11 @@ class OptimizedVDOM extends VDOM {
 
     // Check depth
     int depth = 0;
-    VNode current = node;
-    while (current.props.containsKey('_parentNode') && depth < 5) {
-      current = current.props['_parentNode'] as VNode;
+    VNode? current = node;
+    while (current != null &&
+        current.props.containsKey('_parentNode') &&
+        depth < 5) {
+      current = current.props['_parentNode'] as VNode?;
       depth++;
     }
 
@@ -90,7 +114,7 @@ class OptimizedVDOM extends VDOM {
         : node.children;
 
     for (var child in childrenToRender) {
-      _mount(child);
+      mount(child);
       childViewIds.add(getViewId(child));
     }
 
@@ -121,7 +145,7 @@ class OptimizedVDOM extends VDOM {
       // Mount the next batch
       for (int i = startIndex; i < endIndex; i++) {
         final child = node.children[i];
-        _mount(child);
+        mount(child);
         childViewIds.add(getViewId(child));
       }
 
@@ -135,8 +159,52 @@ class OptimizedVDOM extends VDOM {
     });
   }
 
-  @override
-  void _diffChildren(VNode oldNode, VNode newNode) {
+  // Diffing for nodes with enhanced performance
+  void diff(VNode oldNode, VNode newNode) {
+    // If node types are different, replace the entire subtree
+    if (oldNode.type != newNode.type) {
+      replaceView(oldNode, newNode);
+      return;
+    }
+
+    // Same type, transfer the view ID
+    final viewId = getViewId(oldNode);
+    nodeToViewId[newNode.key] = viewId;
+
+    // Update props if needed
+    if (!_arePropsEqual(oldNode.props, newNode.props)) {
+      updateView(oldNode, newNode, viewId);
+    }
+
+    // Diff children using key-based reconciliation
+    diffChildren(oldNode, newNode);
+  }
+
+  // Check if props are equal - needed for optimized diff
+  bool _arePropsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      // Skip function comparisons as they're not reliably comparable
+      if (a[key] is Function && b[key] is Function) continue;
+
+      if (!b.containsKey(key) || a[key] != b[key]) return false;
+    }
+    return true;
+  }
+
+  // Replace an old view with a completely new one
+  void replaceView(VNode oldNode, VNode newNode) {
+    final oldViewId = getViewId(oldNode);
+
+    // First delete the old view and all its children
+    deleteView(oldViewId);
+
+    // Then mount the new tree
+    mount(newNode);
+  }
+
+  // Diffing implementation for children with windowing optimization
+  void diffChildren(VNode oldNode, VNode newNode) {
     final startTime = DateTime.now().microsecondsSinceEpoch;
     _diffCount++;
 
@@ -147,7 +215,7 @@ class OptimizedVDOM extends VDOM {
           newNode.children.length > _diffWindowSize) {
         _windowedDiffChildren(oldNode, newNode);
       } else {
-        super._diffChildren(oldNode, newNode);
+        _standardDiffChildren(oldNode, newNode);
       }
     } finally {
       final endTime = DateTime.now().microsecondsSinceEpoch;
@@ -155,9 +223,57 @@ class OptimizedVDOM extends VDOM {
 
       if (kDebugMode && _lastDiffTime > 8000) {
         // 8ms = half a frame at 60fps
-        print(
+        debugPrint(
             'OptimizedVDOM: Slow diffing detected: ${_lastDiffTime ~/ 1000}ms');
       }
+    }
+  }
+
+  // Standard implementation of child diffing
+  void _standardDiffChildren(VNode oldNode, VNode newNode) {
+    final oldChildren = oldNode.children;
+    final newChildren = newNode.children;
+    final parentViewId = getViewId(oldNode);
+
+    // Create maps for O(1) lookups
+    final oldKeyToChild = {for (var child in oldChildren) child.key: child};
+
+    // Track which old children have been processed
+    final processed = <String>{};
+
+    // Final list of child view IDs to be set on the parent
+    final finalChildViewIds = <String>[];
+
+    // First pass: Update existing children and create new ones
+    for (final newChild in newChildren) {
+      final key = newChild.key;
+
+      if (oldKeyToChild.containsKey(key)) {
+        // Child exists in both old and new trees, update it
+        final oldChild = oldKeyToChild[key]!;
+        processed.add(key);
+        diff(oldChild, newChild);
+        finalChildViewIds.add(getViewId(newChild));
+      } else {
+        // New child, mount it
+        mount(newChild);
+        finalChildViewIds.add(getViewId(newChild));
+      }
+    }
+
+    // Second pass: Remove children that don't exist in the new tree
+    for (final oldChild in oldChildren) {
+      final key = oldChild.key;
+      if (!processed.contains(key)) {
+        // Child was removed, delete the view
+        final viewId = getViewId(oldChild);
+        deleteView(viewId);
+      }
+    }
+
+    // Update the parent's children
+    if (finalChildViewIds.isNotEmpty) {
+      setChildren(parentViewId, finalChildViewIds);
     }
   }
 
@@ -206,10 +322,10 @@ class OptimizedVDOM extends VDOM {
         // This is a new or modified node
         if (oldKeyToChild.containsKey(key)) {
           // Update existing
-          _diff(oldKeyToChild[key]!, newChild);
+          diff(oldKeyToChild[key]!, newChild);
         } else {
           // Mount new
-          _mount(newChild);
+          mount(newChild);
         }
         updatedCount++;
       }
@@ -245,10 +361,10 @@ class OptimizedVDOM extends VDOM {
         final newChild = newKeyToChild[key]!;
         if (oldKeyToChild.containsKey(key)) {
           // Update existing
-          _diff(oldKeyToChild[key]!, newChild);
+          diff(oldKeyToChild[key]!, newChild);
         } else {
           // Mount new
-          _mount(newChild);
+          mount(newChild);
         }
       }
 
