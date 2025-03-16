@@ -1,12 +1,12 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'dart:io' show Platform;
 
-/// Style properties for Switch
-class SwitchStyle implements StyleProps {
+/// Style properties for DCSwitch
+class DCSwitchStyle implements StyleProps {
   final Color? trackColor;
   final Color? thumbColor;
   final Color? activeTrackColor;
@@ -14,7 +14,7 @@ class SwitchStyle implements StyleProps {
   final EdgeInsets? margin;
   final double? scale;
 
-  const SwitchStyle({
+  const DCSwitchStyle({
     this.trackColor,
     this.thumbColor,
     this.activeTrackColor,
@@ -67,19 +67,19 @@ class SwitchStyle implements StyleProps {
     return map;
   }
 
-  /// Factory to convert a Map to a SwitchStyle
-  factory SwitchStyle.fromMap(Map<String, dynamic> map) {
+  /// Factory to convert a Map to a DCSwitchStyle
+  factory DCSwitchStyle.fromMap(Map<String, dynamic> map) {
     // Helper function to convert hex string to Color
     Color? hexToColor(String? hexString) {
       if (hexString == null || !hexString.startsWith('#')) return null;
       hexString = hexString.replaceAll('#', '');
       if (hexString.length == 6) {
-        hexString = 'FF' + hexString;
+        hexString = 'FF$hexString';
       }
       return Color(int.parse(hexString, radix: 16));
     }
 
-    return SwitchStyle(
+    return DCSwitchStyle(
       trackColor: map['trackColor'] is Color
           ? map['trackColor']
           : hexToColor(map['trackColor']),
@@ -101,7 +101,7 @@ class SwitchStyle implements StyleProps {
     );
   }
 
-  SwitchStyle copyWith({
+  DCSwitchStyle copyWith({
     Color? trackColor,
     Color? thumbColor,
     Color? activeTrackColor,
@@ -109,7 +109,7 @@ class SwitchStyle implements StyleProps {
     EdgeInsets? margin,
     double? scale,
   }) {
-    return SwitchStyle(
+    return DCSwitchStyle(
       trackColor: trackColor ?? this.trackColor,
       thumbColor: thumbColor ?? this.thumbColor,
       activeTrackColor: activeTrackColor ?? this.activeTrackColor,
@@ -120,16 +120,16 @@ class SwitchStyle implements StyleProps {
   }
 }
 
-/// Props for Switch component
-class SwitchProps implements ControlProps {
+/// Props for DCSwitch component
+class DCSwitchProps implements ControlProps {
   final bool value;
   final Function(bool)? onValueChange;
   final bool? disabled;
-  final SwitchStyle? style;
+  final DCSwitchStyle? style;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const SwitchProps({
+  const DCSwitchProps({
     required this.value,
     this.onValueChange,
     this.disabled,
@@ -179,15 +179,15 @@ class SwitchProps implements ControlProps {
     return map;
   }
 
-  SwitchProps copyWith({
+  DCSwitchProps copyWith({
     bool? value,
     Function(bool)? onValueChange,
     bool? disabled,
-    SwitchStyle? style,
+    DCSwitchStyle? style,
     String? testID,
     Map<String, dynamic>? additionalProps,
   }) {
-    return SwitchProps(
+    return DCSwitchProps(
       value: value ?? this.value,
       onValueChange: onValueChange ?? this.onValueChange,
       disabled: disabled ?? this.disabled,
@@ -198,11 +198,11 @@ class SwitchProps implements ControlProps {
   }
 }
 
-/// Switch component - Toggle switch control
-class Switch extends Control {
-  final SwitchProps props;
+/// DCSwitch component - Toggle switch control
+class DCSwitch extends Control {
+  final DCSwitchProps props;
 
-  Switch({
+  DCSwitch({
     required bool value,
     Function(bool)? onValueChange,
     Color? trackColor,
@@ -210,10 +210,10 @@ class Switch extends Control {
     Color? activeTrackColor,
     Color? activeThumbColor,
     bool? disabled,
-    SwitchStyle? style,
+    DCSwitchStyle? style,
     Map<String, dynamic>? styleMap,
     String? testID,
-  }) : props = SwitchProps(
+  }) : props = DCSwitchProps(
           value: value,
           onValueChange: onValueChange,
           disabled: disabled,
@@ -222,26 +222,26 @@ class Switch extends Control {
                       thumbColor != null ||
                       activeTrackColor != null ||
                       activeThumbColor != null
-                  ? SwitchStyle(
+                  ? DCSwitchStyle(
                       trackColor: trackColor,
                       thumbColor: thumbColor,
                       activeTrackColor: activeTrackColor,
                       activeThumbColor: activeThumbColor,
                     )
                   : styleMap != null
-                      ? SwitchStyle.fromMap(styleMap)
+                      ? DCSwitchStyle.fromMap(styleMap)
                       : null),
           testID: testID,
         );
 
-  Switch.custom({required this.props});
+  DCSwitch.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Switch',
+      'DCSwitch',
       props.toMap(),
-      [], // Switch doesn't have children
+      [], // DCSwitch doesn't have children
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' hide TextStyle;
 import 'dart:io' show Platform;
@@ -282,10 +282,10 @@ class TextProps implements ControlProps {
 }
 
 /// Text control
-class Text extends Control {
+class DCText extends Control {
   final TextProps props;
 
-  Text(
+  DCText(
     String text, {
     TextStyle? style,
     bool? selectable,
@@ -299,7 +299,7 @@ class Text extends Control {
           testID: testID,
         );
 
-  Text.custom({required this.props});
+  DCText.custom({required this.props});
 
   @override
   VNode build() {
@@ -311,14 +311,14 @@ class Text extends Control {
   }
 
   /// Create text with a style
-  static Text styled({
+  static DCText styled({
     required String text,
     required TextStyle style,
     bool? selectable,
     Function(String)? onPress,
     String? testID,
   }) {
-    return Text.custom(
+    return DCText.custom(
       props: TextProps(
         text: text,
         style: style,

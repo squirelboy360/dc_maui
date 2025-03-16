@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/painting.dart';
@@ -21,8 +21,8 @@ enum ResizeMode {
   repeat
 }
 
-/// Style properties for Image
-class ImageStyle implements StyleProps {
+/// Style properties for DCImage
+class DCImageStyle implements StyleProps {
   final double? width;
   final double? height;
   final BorderRadius? borderRadius;
@@ -31,7 +31,7 @@ class ImageStyle implements StyleProps {
   final BoxFit? objectFit; // In React Native this is resizeMode
   final Color? backgroundColor;
 
-  const ImageStyle({
+  const DCImageStyle({
     this.width,
     this.height,
     this.borderRadius,
@@ -107,7 +107,7 @@ class ImageStyle implements StyleProps {
     return map;
   }
 
-  ImageStyle copyWith({
+  DCImageStyle copyWith({
     double? width,
     double? height,
     BorderRadius? borderRadius,
@@ -116,7 +116,7 @@ class ImageStyle implements StyleProps {
     BoxFit? objectFit,
     Color? backgroundColor,
   }) {
-    return ImageStyle(
+    return DCImageStyle(
       width: width ?? this.width,
       height: height ?? this.height,
       borderRadius: borderRadius ?? this.borderRadius,
@@ -128,10 +128,10 @@ class ImageStyle implements StyleProps {
   }
 }
 
-/// Props for Image component
-class ImageProps implements ControlProps {
-  final ImageSource source;
-  final ImageStyle? style;
+/// Props for DCImage component
+class DCImageProps implements ControlProps {
+  final DCImageSource source;
+  final DCImageStyle? style;
   final bool? loadingIndicatorEnabled;
   final String? blurHash; // For advanced image loading (optional)
   final Function()? onLoad;
@@ -139,7 +139,7 @@ class ImageProps implements ControlProps {
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const ImageProps({
+  const DCImageProps({
     required this.source,
     this.style,
     this.loadingIndicatorEnabled,
@@ -171,18 +171,18 @@ class ImageProps implements ControlProps {
 }
 
 /// Represents an image source - either a remote URL or local asset
-class ImageSource {
+class DCImageSource {
   final String? uri;
   final String? assetName;
   final double? scale;
   final Map<String, String>? headers;
 
   /// Create a source from a URI/URL
-  const ImageSource.network(this.uri, {this.headers, this.scale})
+  const DCImageSource.network(this.uri, {this.headers, this.scale})
       : assetName = null;
 
   /// Create a source from a local asset
-  const ImageSource.asset(this.assetName, {this.scale})
+  const DCImageSource.asset(this.assetName, {this.scale})
       : uri = null,
         headers = null;
 
@@ -202,22 +202,22 @@ class ImageSource {
   }
 }
 
-/// Image component
-class Image extends Control {
-  final ImageProps props;
+/// DCImage component
+class DCImage extends Control {
+  final DCImageProps props;
 
   /// Create an image from a URI/URL
-  Image.network(
+  DCImage.network(
     String uri, {
     Map<String, String>? headers,
-    ImageStyle? style,
+    DCImageStyle? style,
     bool? loadingIndicatorEnabled,
     String? blurHash,
     Function()? onLoad,
     Function(String)? onError,
     String? testID,
-  }) : props = ImageProps(
-          source: ImageSource.network(uri, headers: headers),
+  }) : props = DCImageProps(
+          source: DCImageSource.network(uri, headers: headers),
           style: style,
           loadingIndicatorEnabled: loadingIndicatorEnabled,
           blurHash: blurHash,
@@ -227,17 +227,17 @@ class Image extends Control {
         );
 
   /// Create an image from a local asset
-  Image.asset(
+  DCImage.asset(
     String assetName, {
     double? scale,
-    ImageStyle? style,
+    DCImageStyle? style,
     bool? loadingIndicatorEnabled,
     String? blurHash,
     Function()? onLoad,
     Function(String)? onError,
     String? testID,
-  }) : props = ImageProps(
-          source: ImageSource.asset(assetName, scale: scale),
+  }) : props = DCImageProps(
+          source: DCImageSource.asset(assetName, scale: scale),
           style: style,
           loadingIndicatorEnabled: loadingIndicatorEnabled,
           blurHash: blurHash,
@@ -246,14 +246,14 @@ class Image extends Control {
           testID: testID,
         );
 
-  Image.custom({required this.props});
+  DCImage.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Image',
+      'DCImage',
       props.toMap(),
-      [], // Image doesn't have children
+      [], // DCImage doesn't have children
     );
   }
 }

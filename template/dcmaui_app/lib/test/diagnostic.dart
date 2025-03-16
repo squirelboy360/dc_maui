@@ -56,7 +56,7 @@ class DiagnosticComponent extends Component {
   VNode render() {
     // Create a list of text components for all messages
     final messageViews = state['messages']
-        .map<Text>((message) => Text(
+        .map<DCText>((message) => DCText(
               message,
               style: TextStyle(
                 fontSize: 12,
@@ -66,9 +66,9 @@ class DiagnosticComponent extends Component {
         .toList();
 
     // Create a container for the diagnostic info
-    return View(
-      props: ViewProps(
-        style: ViewStyle(
+    return DCView(
+      props: DCViewProps(
+        style: DCViewStyle(
           backgroundColor: Color(0x88000000),
           padding: EdgeInsets.all(8),
           // Remove position-related properties that aren't supported

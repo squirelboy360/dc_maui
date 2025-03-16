@@ -1,12 +1,12 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'dart:io' show Platform;
 
-/// Style properties for Touchable
-class TouchableStyle implements StyleProps {
+/// Style properties for DCTouchable
+class DCTouchableStyle implements StyleProps {
   final Color? highlightColor;
   final Color? rippleColor;
   final EdgeInsets? hitSlop;
@@ -14,7 +14,7 @@ class TouchableStyle implements StyleProps {
   final double? pressedOpacity;
   final Duration? pressedDuration;
 
-  const TouchableStyle({
+  const DCTouchableStyle({
     this.highlightColor,
     this.rippleColor,
     this.hitSlop,
@@ -55,7 +55,7 @@ class TouchableStyle implements StyleProps {
     return map;
   }
 
-  factory TouchableStyle.fromMap(Map<String, dynamic> map) {
+  factory DCTouchableStyle.fromMap(Map<String, dynamic> map) {
     // Helper function to convert hex string to Color
     Color? hexToColor(String? hexString) {
       if (hexString == null || !hexString.startsWith('#')) return null;
@@ -66,7 +66,7 @@ class TouchableStyle implements StyleProps {
       return Color(int.parse(hexString, radix: 16));
     }
 
-    return TouchableStyle(
+    return DCTouchableStyle(
       highlightColor: map['highlightColor'] is Color
           ? map['highlightColor']
           : hexToColor(map['highlightColor']),
@@ -93,7 +93,7 @@ class TouchableStyle implements StyleProps {
     );
   }
 
-  TouchableStyle copyWith({
+  DCTouchableStyle copyWith({
     Color? highlightColor,
     Color? rippleColor,
     EdgeInsets? hitSlop,
@@ -101,7 +101,7 @@ class TouchableStyle implements StyleProps {
     double? pressedOpacity,
     Duration? pressedDuration,
   }) {
-    return TouchableStyle(
+    return DCTouchableStyle(
       highlightColor: highlightColor ?? this.highlightColor,
       rippleColor: rippleColor ?? this.rippleColor,
       hitSlop: hitSlop ?? this.hitSlop,
@@ -112,19 +112,19 @@ class TouchableStyle implements StyleProps {
   }
 }
 
-/// Props for Touchable component
-class TouchableProps implements ControlProps {
+/// Props for DCTouchable component
+class DCTouchableProps implements ControlProps {
   final Function()? onPress;
   final Function()? onLongPress;
   final Function(bool)? onPressIn;
   final Function(bool)? onPressOut;
   final bool? disabled;
   final int? delayLongPress;
-  final TouchableStyle? style;
+  final DCTouchableStyle? style;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const TouchableProps({
+  const DCTouchableProps({
     this.onPress,
     this.onLongPress,
     this.onPressIn,
@@ -190,18 +190,18 @@ class TouchableProps implements ControlProps {
     return map;
   }
 
-  TouchableProps copyWith({
+  DCTouchableProps copyWith({
     Function()? onPress,
     Function()? onLongPress,
     Function(bool)? onPressIn,
     Function(bool)? onPressOut,
     bool? disabled,
     int? delayLongPress,
-    TouchableStyle? style,
+    DCTouchableStyle? style,
     String? testID,
     Map<String, dynamic>? additionalProps,
   }) {
-    return TouchableProps(
+    return DCTouchableProps(
       onPress: onPress ?? this.onPress,
       onLongPress: onLongPress ?? this.onLongPress,
       onPressIn: onPressIn ?? this.onPressIn,
@@ -215,12 +215,12 @@ class TouchableProps implements ControlProps {
   }
 }
 
-/// Touchable component
-class Touchable extends Control {
-  final TouchableProps props;
+/// DCTouchable component
+class DCTouchable extends Control {
+  final DCTouchableProps props;
   final Control child;
 
-  Touchable({
+  DCTouchable({
     required this.child,
     Function()? onPress,
     Function()? onLongPress,
@@ -228,10 +228,10 @@ class Touchable extends Control {
     Function(bool)? onPressOut,
     bool? disabled,
     int? delayLongPress,
-    TouchableStyle? style,
+    DCTouchableStyle? style,
     Map<String, dynamic>? styleMap,
     String? testID,
-  }) : props = TouchableProps(
+  }) : props = DCTouchableProps(
           onPress: onPress,
           onLongPress: onLongPress,
           onPressIn: onPressIn,
@@ -239,11 +239,11 @@ class Touchable extends Control {
           disabled: disabled,
           delayLongPress: delayLongPress,
           style: style ??
-              (styleMap != null ? TouchableStyle.fromMap(styleMap) : null),
+              (styleMap != null ? DCTouchableStyle.fromMap(styleMap) : null),
           testID: testID,
         );
 
-  Touchable.custom({
+  DCTouchable.custom({
     required this.child,
     required this.props,
   });
@@ -251,7 +251,7 @@ class Touchable extends Control {
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Touchable',
+      'DCTouchable',
       props.toMap(),
       [child.build()],
     );

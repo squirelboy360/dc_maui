@@ -1,12 +1,12 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'dart:io' show Platform;
 
-/// Style properties for View
-class ViewStyle implements StyleProps {
+/// Style properties for DCView
+class DCViewStyle implements StyleProps {
   final Color? backgroundColor;
   final EdgeInsets? padding;
   final EdgeInsets? margin;
@@ -18,7 +18,7 @@ class ViewStyle implements StyleProps {
   final BoxConstraints? constraints;
   final List<BoxShadow>? boxShadow;
 
-  const ViewStyle({
+  const DCViewStyle({
     this.backgroundColor,
     this.padding,
     this.margin,
@@ -31,9 +31,9 @@ class ViewStyle implements StyleProps {
     this.boxShadow,
   });
 
-  /// Create a ViewStyle from a map of style properties
+  /// Create a DCViewStyle from a map of style properties
   /// Useful for working with StyleSheet objects
-  factory ViewStyle.fromMap(Map<String, dynamic> map) {
+  factory DCViewStyle.fromMap(Map<String, dynamic> map) {
     // Convert padding if it exists
     EdgeInsets? padding;
     if (map.containsKey('padding')) {
@@ -75,7 +75,7 @@ class ViewStyle implements StyleProps {
       }
     }
 
-    return ViewStyle(
+    return DCViewStyle(
       backgroundColor: backgroundColor,
       padding: padding,
       margin: margin,
@@ -179,7 +179,7 @@ class ViewStyle implements StyleProps {
     return map;
   }
 
-  ViewStyle copyWith({
+  DCViewStyle copyWith({
     Color? backgroundColor,
     EdgeInsets? padding,
     EdgeInsets? margin,
@@ -191,7 +191,7 @@ class ViewStyle implements StyleProps {
     BoxConstraints? constraints,
     List<BoxShadow>? boxShadow,
   }) {
-    return ViewStyle(
+    return DCViewStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
       padding: padding ?? this.padding,
       margin: margin ?? this.margin,
@@ -206,17 +206,17 @@ class ViewStyle implements StyleProps {
   }
 }
 
-/// Props for View component
-class ViewProps implements ControlProps {
+/// Props for DCView component
+class DCViewProps implements ControlProps {
   final String? id;
-  final ViewStyle? style;
+  final DCViewStyle? style;
   final bool? pointerEvents;
   final Function()? onLayout;
   final double? opacity;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const ViewProps({
+  const DCViewProps({
     this.id,
     this.style,
     this.pointerEvents,
@@ -226,14 +226,14 @@ class ViewProps implements ControlProps {
     this.additionalProps = const {},
   });
 
-  /// Create ViewProps from a map
-  factory ViewProps.fromMap(Map<String, dynamic> map) {
-    return ViewProps(
+  /// Create DCViewProps from a map
+  factory DCViewProps.fromMap(Map<String, dynamic> map) {
+    return DCViewProps(
       id: map['id'],
-      style: map['style'] is ViewStyle
+      style: map['style'] is DCViewStyle
           ? map['style']
           : map['style'] is Map<String, dynamic>
-              ? ViewStyle.fromMap(map['style'])
+              ? DCViewStyle.fromMap(map['style'])
               : null,
       pointerEvents: map['pointerEvents'],
       opacity: map['opacity'] is double ? map['opacity'] : null,
@@ -278,16 +278,16 @@ class ViewProps implements ControlProps {
     return map;
   }
 
-  ViewProps copyWith({
+  DCViewProps copyWith({
     String? id,
-    ViewStyle? style,
+    DCViewStyle? style,
     bool? pointerEvents,
     Function()? onLayout,
     double? opacity,
     String? testID,
     Map<String, dynamic>? additionalProps,
   }) {
-    return ViewProps(
+    return DCViewProps(
       id: id ?? this.id,
       style: style ?? this.style,
       pointerEvents: pointerEvents ?? this.pointerEvents,
@@ -299,33 +299,33 @@ class ViewProps implements ControlProps {
   }
 }
 
-/// View component (container)
-class View extends Control {
-  final ViewProps props;
+/// DCView component (container)
+class DCView extends Control {
+  final DCViewProps props;
   final List<Control> children;
 
-  View({
-    ViewProps? props,
+  DCView({
+    DCViewProps? props,
     this.children = const [],
-  }) : props = props ?? const ViewProps();
+  }) : props = props ?? const DCViewProps();
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'View',
+      'DCView',
       props.toMap(),
       buildChildren(children),
     );
   }
 
-  /// Create a View with style
-  static View styled({
-    required ViewStyle style,
+  /// Create a DCView with style
+  static DCView styled({
+    required DCViewStyle style,
     List<Control> children = const [],
-    ViewProps? props,
+    DCViewProps? props,
   }) {
-    return View(
-      props: (props ?? const ViewProps()).copyWith(style: style),
+    return DCView(
+      props: (props ?? const DCViewProps()).copyWith(style: style),
       children: children,
     );
   }

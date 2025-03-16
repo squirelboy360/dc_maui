@@ -1,7 +1,7 @@
 import 'package:dc_test/templating/framework/controls/button.dart';
 import 'package:dc_test/templating/framework/controls/checkbox.dart';
-import 'package:dc_test/templating/framework/controls/component_adapter.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component_adapter.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/controls/switch.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
 import 'package:dc_test/templating/framework/controls/touchable.dart';
@@ -14,18 +14,14 @@ import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/hooks/index.dart';
 import 'package:dc_test/templating/framework/utility/flutter.dart';
+import 'package:dc_test/test/counter/main_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     hide TextStyle, View, Text, Checkbox, Switch;
 import 'dart:math' as math;
 import 'dart:async';
 
-class MainApp extends Component {
-  @override
-  VNode render() {
-    return View().build();
-  }
-}
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

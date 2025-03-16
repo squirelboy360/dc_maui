@@ -1,11 +1,11 @@
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:flutter/services.dart' hide TextInputType;
 
-/// Custom TextInputType enum
-enum TextInputType {
+/// Custom DCTextInputType enum
+enum DCTextInputType {
   text,
   number,
   phone,
@@ -15,15 +15,15 @@ enum TextInputType {
   none
 }
 
-/// Props for TextInput component
-class TextInputProps implements ControlProps {
+/// Props for DCTextInput component
+class DCTextInputProps implements ControlProps {
   final String? value;
   final String? placeholder;
   final TextStyle? style;
   final TextStyle? placeholderStyle;
   final bool? autoFocus;
   final bool? editable;
-  final TextInputType? keyboardType;
+  final DCTextInputType? keyboardType;
   final bool? multiline;
   final int? maxLength;
   final bool? secureTextEntry;
@@ -35,7 +35,7 @@ class TextInputProps implements ControlProps {
   final Function()? onBlur;
   final Map<String, dynamic> additionalProps;
 
-  const TextInputProps({
+  const DCTextInputProps({
     this.value,
     this.placeholder,
     this.style,
@@ -91,19 +91,19 @@ class TextInputProps implements ControlProps {
     return map;
   }
 
-  String _keyboardTypeToString(TextInputType type) {
+  String _keyboardTypeToString(DCTextInputType type) {
     switch (type) {
-      case TextInputType.number:
+      case DCTextInputType.number:
         return 'numeric';
-      case TextInputType.phone:
+      case DCTextInputType.phone:
         return 'phone-pad';
-      case TextInputType.emailAddress:
+      case DCTextInputType.emailAddress:
         return 'email-address';
-      case TextInputType.url:
+      case DCTextInputType.url:
         return 'url';
-      case TextInputType.visiblePassword:
+      case DCTextInputType.visiblePassword:
         return 'visible-password';
-      case TextInputType.none:
+      case DCTextInputType.none:
         return 'none';
       default:
         return 'default';
@@ -123,14 +123,14 @@ class TextInputProps implements ControlProps {
     }
   }
 
-  TextInputProps copyWith({
+  DCTextInputProps copyWith({
     String? value,
     String? placeholder,
     TextStyle? style,
     TextStyle? placeholderStyle,
     bool? autoFocus,
     bool? editable,
-    TextInputType? keyboardType,
+    DCTextInputType? keyboardType,
     bool? multiline,
     int? maxLength,
     bool? secureTextEntry,
@@ -142,7 +142,7 @@ class TextInputProps implements ControlProps {
     Function()? onBlur,
     Map<String, dynamic>? additionalProps,
   }) {
-    return TextInputProps(
+    return DCTextInputProps(
       value: value ?? this.value,
       placeholder: placeholder ?? this.placeholder,
       style: style ?? this.style,
@@ -164,18 +164,18 @@ class TextInputProps implements ControlProps {
   }
 }
 
-/// TextInput component
-class TextInput extends Control {
-  final TextInputProps props;
+/// DCTextInput component
+class DCTextInput extends Control {
+  final DCTextInputProps props;
 
-  TextInput({
+  DCTextInput({
     String? value,
     String? placeholder,
     TextStyle? style,
     TextStyle? placeholderStyle,
     bool? autoFocus,
     bool? editable,
-    TextInputType? keyboardType,
+    DCTextInputType? keyboardType,
     bool? multiline,
     int? maxLength,
     bool? secureTextEntry,
@@ -185,7 +185,7 @@ class TextInput extends Control {
     Function(String)? onSubmitEditing,
     Function()? onFocus,
     Function()? onBlur,
-  }) : props = TextInputProps(
+  }) : props = DCTextInputProps(
           value: value,
           placeholder: placeholder,
           style: style,
@@ -204,16 +204,16 @@ class TextInput extends Control {
           onBlur: onBlur,
         );
 
-  TextInput.custom({required this.props});
+  DCTextInput.custom({required this.props});
 
   @override
   VNode build() {
-    final nodeType = props.multiline == true ? 'TextArea' : 'TextInput';
+    final nodeType = props.multiline == true ? 'TextArea' : 'DCTextInput';
 
     return ElementFactory.createElement(
       nodeType,
       props.toMap(),
-      [], // TextInput doesn't have children
+      [], // DCTextInput doesn't have children
     );
   }
 }

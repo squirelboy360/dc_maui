@@ -1,9 +1,9 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 
-/// Modal presentation styles
-enum ModalPresentationStyle {
+/// DCModal presentation styles
+enum DCModalPresentationStyle {
   /// Full-screen presentation
   fullScreen,
 
@@ -18,7 +18,7 @@ enum ModalPresentationStyle {
 }
 
 /// Animation types for modal transitions
-enum ModalAnimationType {
+enum DCModalAnimationType {
   /// No animation
   none,
 
@@ -29,20 +29,20 @@ enum ModalAnimationType {
   fade,
 }
 
-/// Props for Modal component
-class ModalProps implements ControlProps {
+/// Props for DCModal component
+class DCModalProps implements ControlProps {
   final bool visible;
   final Function()? onRequestClose;
   final bool? transparent;
-  final ModalPresentationStyle? presentationStyle;
-  final ModalAnimationType? animationType;
+  final DCModalPresentationStyle? presentationStyle;
+  final DCModalAnimationType? animationType;
   final bool? hardwareAccelerated;
   final Function()? onShow;
   final Function()? onDismiss;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const ModalProps({
+  const DCModalProps({
     required this.visible,
     this.onRequestClose,
     this.transparent,
@@ -67,16 +67,16 @@ class ModalProps implements ControlProps {
 
     if (presentationStyle != null) {
       switch (presentationStyle) {
-        case ModalPresentationStyle.fullScreen:
+        case DCModalPresentationStyle.fullScreen:
           map['presentationStyle'] = 'fullScreen';
           break;
-        case ModalPresentationStyle.pageSheet:
+        case DCModalPresentationStyle.pageSheet:
           map['presentationStyle'] = 'pageSheet';
           break;
-        case ModalPresentationStyle.formSheet:
+        case DCModalPresentationStyle.formSheet:
           map['presentationStyle'] = 'formSheet';
           break;
-        case ModalPresentationStyle.overFullScreen:
+        case DCModalPresentationStyle.overFullScreen:
           map['presentationStyle'] = 'overFullScreen';
           break;
         default:
@@ -86,13 +86,13 @@ class ModalProps implements ControlProps {
 
     if (animationType != null) {
       switch (animationType) {
-        case ModalAnimationType.none:
+        case DCModalAnimationType.none:
           map['animationType'] = 'none';
           break;
-        case ModalAnimationType.slide:
+        case DCModalAnimationType.slide:
           map['animationType'] = 'slide';
           break;
-        case ModalAnimationType.fade:
+        case DCModalAnimationType.fade:
           map['animationType'] = 'fade';
           break;
         default:
@@ -111,23 +111,23 @@ class ModalProps implements ControlProps {
   }
 }
 
-/// Modal component
-class Modal extends Control {
-  final ModalProps props;
+/// DCModal component
+class DCModal extends Control {
+  final DCModalProps props;
   final List<Control> children;
 
-  Modal({
+  DCModal({
     required bool visible,
     Function()? onRequestClose,
     bool? transparent,
-    ModalPresentationStyle? presentationStyle,
-    ModalAnimationType? animationType = ModalAnimationType.slide,
+    DCModalPresentationStyle? presentationStyle,
+    DCModalAnimationType? animationType = DCModalAnimationType.slide,
     bool? hardwareAccelerated,
     Function()? onShow,
     Function()? onDismiss,
     String? testID,
     required this.children,
-  }) : props = ModalProps(
+  }) : props = DCModalProps(
           visible: visible,
           onRequestClose: onRequestClose,
           transparent: transparent,
@@ -139,7 +139,7 @@ class Modal extends Control {
           testID: testID,
         );
 
-  Modal.custom({
+  DCModal.custom({
     required this.props,
     required this.children,
   });
@@ -147,7 +147,7 @@ class Modal extends Control {
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Modal',
+      'DCModal',
       props.toMap(),
       buildChildren(children),
     );

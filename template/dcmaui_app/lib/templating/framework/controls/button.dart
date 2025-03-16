@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
@@ -6,8 +6,8 @@ import 'package:flutter/painting.dart' hide TextStyle;
 import 'package:dc_test/templating/framework/controls/text.dart';
 import 'dart:io' show Platform;
 
-/// Style properties for Button
-class ButtonStyle implements StyleProps {
+/// Style properties for DCButton
+class DCButtonStyle implements StyleProps {
   final Color? backgroundColor;
   final Color? textColor;
   final EdgeInsets? padding;
@@ -19,7 +19,7 @@ class ButtonStyle implements StyleProps {
   final double? minHeight;
   final double? elevation;
 
-  const ButtonStyle({
+  const DCButtonStyle({
     this.backgroundColor,
     this.textColor,
     this.padding,
@@ -88,8 +88,8 @@ class ButtonStyle implements StyleProps {
     return map;
   }
 
-  /// Factory to convert a Map to a ButtonStyle
-  factory ButtonStyle.fromMap(Map<String, dynamic> map) {
+  /// Factory to convert a Map to a DCButtonStyle
+  factory DCButtonStyle.fromMap(Map<String, dynamic> map) {
     // Helper function to convert hex string to Color
     Color? hexToColor(String? hexString) {
       if (hexString == null || !hexString.startsWith('#')) return null;
@@ -100,7 +100,7 @@ class ButtonStyle implements StyleProps {
       return Color(int.parse(hexString, radix: 16));
     }
 
-    return ButtonStyle(
+    return DCButtonStyle(
       backgroundColor: map['backgroundColor'] is Color
           ? map['backgroundColor']
           : hexToColor(map['backgroundColor']),
@@ -128,7 +128,7 @@ class ButtonStyle implements StyleProps {
     );
   }
 
-  ButtonStyle copyWith({
+  DCButtonStyle copyWith({
     Color? backgroundColor,
     Color? textColor,
     EdgeInsets? padding,
@@ -140,7 +140,7 @@ class ButtonStyle implements StyleProps {
     double? minHeight,
     double? elevation,
   }) {
-    return ButtonStyle(
+    return DCButtonStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
       textColor: textColor ?? this.textColor,
       padding: padding ?? this.padding,
@@ -155,19 +155,19 @@ class ButtonStyle implements StyleProps {
   }
 }
 
-/// Props for Button control
-class ButtonProps implements ControlProps {
+/// Props for DCButton control
+class DCButtonProps implements ControlProps {
   final String title;
   final Function(Map<String, dynamic>)? onPress;
   final bool? disabled;
-  final ButtonStyle? style;
+  final DCButtonStyle? style;
   final TextStyle? titleStyle;
   final String? testID;
   final String? accessibilityLabel;
   final bool? showsLoading;
   final Map<String, dynamic> additionalProps;
 
-  const ButtonProps({
+  const DCButtonProps({
     required this.title,
     this.onPress,
     this.disabled,
@@ -221,18 +221,18 @@ class ButtonProps implements ControlProps {
     return map;
   }
 
-  ButtonProps copyWith({
+  DCButtonProps copyWith({
     String? title,
     Function(Map<String, dynamic>)? onPress,
     bool? disabled,
-    ButtonStyle? style,
+    DCButtonStyle? style,
     TextStyle? titleStyle,
     String? testID,
     String? accessibilityLabel,
     bool? showsLoading,
     Map<String, dynamic>? additionalProps,
   }) {
-    return ButtonProps(
+    return DCButtonProps(
       title: title ?? this.title,
       onPress: onPress ?? this.onPress,
       disabled: disabled ?? this.disabled,
@@ -246,40 +246,40 @@ class ButtonProps implements ControlProps {
   }
 }
 
-/// Button control
-class Button extends Control {
-  final ButtonProps props;
+/// DCButton control
+class DCButton extends Control {
+  final DCButtonProps props;
 
-  Button({
+  DCButton({
     required String title,
     Function(Map<String, dynamic>)? onPress,
     bool? disabled,
-    ButtonStyle? style,
+    DCButtonStyle? style,
     Map<String, dynamic>? styleMap,
     TextStyle? titleStyle,
     String? testID,
     String? accessibilityLabel,
     bool? showsLoading,
-  }) : props = ButtonProps(
+  }) : props = DCButtonProps(
           title: title,
           onPress: onPress,
           disabled: disabled,
           style: style ??
-              (styleMap != null ? ButtonStyle.fromMap(styleMap) : null),
+              (styleMap != null ? DCButtonStyle.fromMap(styleMap) : null),
           titleStyle: titleStyle,
           testID: testID,
           accessibilityLabel: accessibilityLabel,
           showsLoading: showsLoading,
         );
 
-  Button.custom({required this.props});
+  DCButton.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Button',
+      'DCButton',
       props.toMap(),
-      [], // Button doesn't have children in the traditional sense
+      [], // DCButton doesn't have children in the traditional sense
     );
   }
 }

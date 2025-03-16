@@ -1,12 +1,12 @@
-import 'package:dc_test/templating/framework/controls/control.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'dart:io' show Platform;
 
-/// Style properties for Checkbox
-class CheckboxStyle implements StyleProps {
+/// Style properties for DCCheckbox
+class DCCheckboxStyle implements StyleProps {
   final Color? tintColor;
   final Color? checkedColor;
   final double? size;
@@ -14,7 +14,7 @@ class CheckboxStyle implements StyleProps {
   final EdgeInsets? margin;
   final double? borderRadius;
 
-  const CheckboxStyle({
+  const DCCheckboxStyle({
     this.tintColor,
     this.checkedColor,
     this.size,
@@ -57,8 +57,8 @@ class CheckboxStyle implements StyleProps {
     return map;
   }
 
-  /// Factory to convert a Map to a CheckboxStyle
-  factory CheckboxStyle.fromMap(Map<String, dynamic> map) {
+  /// Factory to convert a Map to a DCCheckboxStyle
+  factory DCCheckboxStyle.fromMap(Map<String, dynamic> map) {
     // Helper function to convert hex string to Color
     Color? hexToColor(String? hexString) {
       if (hexString == null || !hexString.startsWith('#')) return null;
@@ -69,7 +69,7 @@ class CheckboxStyle implements StyleProps {
       return Color(int.parse(hexString, radix: 16));
     }
 
-    return CheckboxStyle(
+    return DCCheckboxStyle(
       tintColor: map['tintColor'] is Color
           ? map['tintColor']
           : hexToColor(map['tintColor']),
@@ -87,7 +87,7 @@ class CheckboxStyle implements StyleProps {
     );
   }
 
-  CheckboxStyle copyWith({
+  DCCheckboxStyle copyWith({
     Color? tintColor,
     Color? checkedColor,
     double? size,
@@ -95,7 +95,7 @@ class CheckboxStyle implements StyleProps {
     EdgeInsets? margin,
     double? borderRadius,
   }) {
-    return CheckboxStyle(
+    return DCCheckboxStyle(
       tintColor: tintColor ?? this.tintColor,
       checkedColor: checkedColor ?? this.checkedColor,
       size: size ?? this.size,
@@ -106,16 +106,16 @@ class CheckboxStyle implements StyleProps {
   }
 }
 
-/// Props for Checkbox component
-class CheckboxProps implements ControlProps {
+/// Props for DCCheckbox component
+class DCCheckboxProps implements ControlProps {
   final bool value;
   final Function(bool)? onValueChange;
   final bool? disabled;
-  final CheckboxStyle? style;
+  final DCCheckboxStyle? style;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const CheckboxProps({
+  const DCCheckboxProps({
     required this.value,
     this.onValueChange,
     this.disabled,
@@ -166,15 +166,15 @@ class CheckboxProps implements ControlProps {
     return map;
   }
 
-  CheckboxProps copyWith({
+  DCCheckboxProps copyWith({
     bool? value,
     Function(bool)? onValueChange,
     bool? disabled,
-    CheckboxStyle? style,
+    DCCheckboxStyle? style,
     String? testID,
     Map<String, dynamic>? additionalProps,
   }) {
-    return CheckboxProps(
+    return DCCheckboxProps(
       value: value ?? this.value,
       onValueChange: onValueChange ?? this.onValueChange,
       disabled: disabled ?? this.disabled,
@@ -185,43 +185,43 @@ class CheckboxProps implements ControlProps {
   }
 }
 
-/// Checkbox component
-class Checkbox extends Control {
-  final CheckboxProps props;
+/// DCCheckbox component
+class DCCheckbox extends Control {
+  final DCCheckboxProps props;
 
-  Checkbox({
+  DCCheckbox({
     required bool value,
     Function(bool)? onValueChange,
     Color? tintColor,
     Color? checkedColor,
     bool? disabled,
-    CheckboxStyle? style,
+    DCCheckboxStyle? style,
     Map<String, dynamic>? styleMap,
     String? testID,
-  }) : props = CheckboxProps(
+  }) : props = DCCheckboxProps(
           value: value,
           onValueChange: onValueChange,
           disabled: disabled,
           style: style ??
               (tintColor != null || checkedColor != null
-                  ? CheckboxStyle(
+                  ? DCCheckboxStyle(
                       tintColor: tintColor,
                       checkedColor: checkedColor,
                     )
                   : styleMap != null
-                      ? CheckboxStyle.fromMap(styleMap)
+                      ? DCCheckboxStyle.fromMap(styleMap)
                       : null),
           testID: testID,
         );
 
-  Checkbox.custom({required this.props});
+  DCCheckbox.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Checkbox',
+      'DCCheckbox',
       props.toMap(),
-      [], // Checkbox doesn't have children
+      [], // DCCheckbox doesn't have children
     );
   }
 }
