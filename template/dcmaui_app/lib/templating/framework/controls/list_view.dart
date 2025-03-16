@@ -4,6 +4,8 @@ import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 
+import 'package:flutter/material.dart';
+
 /// Style properties for ListView
 class ListViewStyle implements StyleProps {
   final EdgeInsets? padding;
