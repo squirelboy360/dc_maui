@@ -7,7 +7,14 @@ import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
   @override
-  VNode render() {
+  Map<String, dynamic> getInitialState() {
+    return {'counter': 0};
+  }
+
+  @override
+  VNode buildRender() {
+    final counter = state['counter'] as int? ?? 0;
+
     return DCView(
       props: DCViewProps(
         style: DCViewStyle(
@@ -20,43 +27,30 @@ class MainApp extends Component {
           props: DCViewProps(
             style: DCViewStyle(
               backgroundColor: Colors.indigo,
+              padding: EdgeInsets.all(20),
             ),
           ),
           children: [
             DCButton(
-              title: "DCButton 1",
-              onPress: (p0) {
-                print('DCButton 1 pressed');
+              title: "Increment Counter",
+              onPress: (_) {
+                setState({'counter': counter + 1});
               },
             ),
-
-            
             DCText(
               style: TextStyle(
-                color: Colors.red,
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
-              'Hello, World!',
-            ),
-            DCText(
-              'Hello, World!',
+              'Counter: $counter',
             ),
             DCText(
               style: TextStyle(
-                color: Colors.red,
+                color: Colors.white,
+                fontSize: 16,
               ),
-              'Hello, World!',
-            ),
-            DCText(
-              'Hello, World!',
-            ),
-            DCText(
-              style: TextStyle(
-                color: Colors.red,
-              ),
-              'Hello, World!',
-            ),
-            DCText(
-              'Hello, World!',
+              'Using optimized DC framework',
             ),
           ],
         ),

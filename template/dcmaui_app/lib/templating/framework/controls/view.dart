@@ -90,7 +90,7 @@ class DCViewStyle implements StyleProps {
   static Color _hexToColor(String hexString) {
     hexString = hexString.replaceAll('#', '');
     if (hexString.length == 6) {
-      hexString = 'FF' + hexString;
+      hexString = 'FF$hexString';
     }
     return Color(int.parse(hexString, radix: 16));
   }
