@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Bootstrap the DC application
+  // Bootstrap the DC application - error boundary is now handled internally
   await dcBind(
     () => MainApp(),
     enableOptimizations: true,

@@ -1,21 +1,11 @@
-import 'package:dc_test/templating/framework/controls/button.dart';
-import 'package:dc_test/templating/framework/controls/text.dart';
-import 'package:dc_test/templating/framework/controls/view.dart';
-import 'package:dc_test/templating/framework/core/component.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/index.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
-// Add this import for hooks example
-// import 'package:dc_test/templating/framework/hooks/use_state.dart';
 
 class MainApp extends Component {
   @override
-  Map<String, dynamic> getInitialState() {
-    return {'counter': 0};
-  }
-
-  @override
   VNode buildRender() {
-    final counter = state['counter'] as int? ?? 0;
+    // Using hooks for state management
+    final counter = UseState<int>('counter', 0);
 
     return DCView(
       props: DCViewProps(
@@ -36,7 +26,8 @@ class MainApp extends Component {
             DCButton(
               title: "Increment Counter",
               onPress: (_) {
-                setState({'counter': counter + 1});
+                // Simpler state update with hooks
+                counter.value += 1;
               },
             ),
             DCText(
@@ -45,14 +36,15 @@ class MainApp extends Component {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
-              'Counter: $counter',
+              // Reference hook value directly
+              'Counter: ${counter.value}',
             ),
             DCText(
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
               ),
-              'Using optimized DC framework',
+              'Using DC framework with hooks',
             ),
           ],
         ),
@@ -61,15 +53,19 @@ class MainApp extends Component {
   }
 }
 
-/* ALTERNATIVE IMPLEMENTATION USING HOOKS:
+/* ALTERNATIVE IMPLEMENTATION USING CLASS-BASED STATE:
  * 
- * The above class-based component could alternatively be written using hooks:
+ * The above hooks-based component could alternatively be written using class state:
  * 
  * class MainApp extends Component {
  *   @override
+ *   Map<String, dynamic> getInitialState() {
+ *     return {'counter': 0};
+ *   }
+ * 
+ *   @override
  *   VNode buildRender() {
- *     // Using hooks for state management instead of getInitialState() + setState()
- *     final counter = UseState<int>('counter', 0);
+ *     final counter = state['counter'] as int? ?? 0;
  *     
  *     return DCView(
  *       props: DCViewProps(
@@ -90,8 +86,7 @@ class MainApp extends Component {
  *             DCButton(
  *               title: "Increment Counter",
  *               onPress: (_) {
- *                 // Simpler state update with hooks
- *                 counter.value += 1;
+ *                 setState({'counter': counter + 1});
  *               },
  *             ),
  *             DCText(
@@ -100,15 +95,14 @@ class MainApp extends Component {
  *                 fontSize: 24,
  *                 fontWeight: FontWeight.bold,
  *               ),
- *               // Reference hook value directly
- *               'Counter: ${counter.value}',
+ *               'Counter: $counter',
  *             ),
  *             DCText(
  *               style: TextStyle(
  *                 color: Colors.white,
  *                 fontSize: 16,
  *               ),
- *               'Using optimized DC framework with hooks',
+ *               'Using DC framework with class state',
  *             ),
  *           ],
  *         ),

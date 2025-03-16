@@ -1,4 +1,7 @@
+import 'package:dc_test/templating/framework/controls/button.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/component_adapter.dart';
+import 'package:dc_test/templating/framework/controls/text.dart';
+import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/component.dart';
 import 'package:dc_test/templating/framework/core/core.dart';
 import 'package:dc_test/templating/framework/core/error_boundary.dart';
@@ -8,6 +11,7 @@ import 'package:dc_test/templating/framework/core/vdom/optimized_vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/utility/performance_monitor.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' hide TextStyle;
 
 /// DC Framework bootstrap function - initializes the framework and renders the app
 ///
@@ -49,6 +53,29 @@ Future<void> dcBind(
   final errorProps = errorBoundaryProps ??
       ErrorBoundaryProps(
         id: 'root-error-boundary',
+        fallback: (error, reset) => DCView(
+          children: [
+            DCText(
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              'Something went wrong',
+            ),
+            DCText(
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 14,
+              ),
+              error.toString(),
+            ),
+            DCButton(
+              title: 'Try Again',
+              onPress: (_) => reset(),
+            ),
+          ],
+        ),
         onError: (error, stack) {
           if (kDebugMode) {
             print('DC Framework root error boundary caught error: $error');
@@ -57,8 +84,8 @@ Future<void> dcBind(
         },
       );
 
-  // Create root app component with error boundary
-  final errorBoundary = ElementFactory.createComponent(
+  // Always wrap app in error boundary for protection
+  final rootComponent = ElementFactory.createComponent(
     () => ErrorBoundary(
       errorProps,
       [
@@ -71,7 +98,7 @@ Future<void> dcBind(
 
   try {
     // Render the app
-    vdom.render(errorBoundary);
+    vdom.render(rootComponent);
 
     // Log debug information
     if (kDebugMode) {
