@@ -158,24 +158,45 @@ extension DCViewCoordinator {
             return
         }
         
-        // Remove existing children from superview
+        // FIXED: First safely remove all existing child views from their superview
         if let existingChildren = childViews[parentId] {
             for childId in existingChildren {
                 if let childView = views[childId] {
+                    // Safety check - make sure view is removed from its current parent
                     childView.removeFromSuperview()
                 }
             }
         }
         
         // Create a vertical stack layout for children
-        let parentPadding = CGFloat(parentView.tag)
+        let parentPadding = CGFloat(2) // Use a fixed small padding instead of the tag
         var previousView: UIView?
         
         // Add new children in specified order
+        var addedViewIds = [String]() // Track successfully added views
+        
         for childId in childrenIds {
-            if let childView = views[childId] {
+            guard let childView = views[childId] else {
+                print("DC MAUI: WARNING - Child view \(childId) not found for parent \(parentId)")
+                continue
+            }
+            
+            // FIXED: Prevent adding a view to itself (circular reference)
+            if childId == parentId {
+                print("DC MAUI: ERROR - Cannot add view as a child of itself: \(childId)")
+                continue
+            }
+            
+            // FIXED: Check if the view is already in another part of the hierarchy
+            if childView.superview != nil && childView.superview != parentView {
+                childView.removeFromSuperview()
+            }
+            
+            // Try to add the view to the parent
+            do {
                 // Add to parent
                 parentView.addSubview(childView)
+                addedViewIds.append(childId)
                 
                 // Set up constraints for vertical stacking
                 childView.translatesAutoresizingMaskIntoConstraints = false
@@ -210,13 +231,13 @@ extension DCViewCoordinator {
                 previousView = childView
                 
                 print("DC MAUI: Added child \(childId) to parent \(parentId) with constraints")
-            } else {
-                print("DC MAUI: WARNING - Child view \(childId) not found for parent \(parentId)")
+            } catch let error {
+                print("DC MAUI: ERROR - Failed to add child \(childId) to parent \(parentId): \(error)")
             }
         }
         
-        // Update our parent-child relationship
-        childViews[parentId] = childrenIds
+        // Update our parent-child relationship with only successfully added views
+        childViews[parentId] = addedViewIds
         
         // Force layout
         parentView.setNeedsLayout()
@@ -227,7 +248,7 @@ extension DCViewCoordinator {
             containerView.invalidateIntrinsicContentSize()
         }
         
-        print("DC MAUI: Set children complete for \(parentId) with children: \(childrenIds)")
+        print("DC MAUI: Set children complete for \(parentId) with children: \(addedViewIds)")
         
         result(true)
     }

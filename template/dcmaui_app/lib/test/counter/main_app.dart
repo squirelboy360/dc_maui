@@ -18,7 +18,7 @@ class MainApp extends Component {
         DCView(
           props: DCViewProps(
             style: DCViewStyle(
-              backgroundColor: Colors.indigo,
+              backgroundColor: Colors.red,
               padding: EdgeInsets.all(20),
             ),
           ),
