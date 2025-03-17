@@ -1,4 +1,4 @@
-# React Native-like Architecture in Dart using Method Channels
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
