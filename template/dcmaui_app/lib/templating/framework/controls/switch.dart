@@ -153,88 +153,45 @@ class DCSwitchProps implements ControlProps {
     // Add platform-specific props and defaults
     if (kIsWeb) {
       map['_platform'] = 'web';
-      // Web-specific styling
-      if (!map.containsKey('cursor')) {
-        map['cursor'] = 'pointer';
-      }
     } else if (Platform.isIOS) {
       map['_platform'] = 'ios';
-      // iOS switches have a different appearance
+      // iOS switches use system colors by default
       if (style?.activeTrackColor == null &&
           !map.containsKey('activeTrackColor')) {
-        map['activeTrackColor'] = '#34C759'; // iOS green color
+        map['activeTrackColor'] = '#007AFF'; // iOS blue
       }
     } else if (Platform.isAndroid) {
       map['_platform'] = 'android';
-      // Android Material design styling
+      // Android Material switches use different colors
       if (style?.activeTrackColor == null &&
           !map.containsKey('activeTrackColor')) {
         map['activeTrackColor'] = '#009688'; // Material teal
-      }
-      if (style?.thumbColor == null && !map.containsKey('thumbColor')) {
-        map['thumbColor'] = '#FFFFFF'; // White thumb
       }
     }
 
     return map;
   }
-
-  DCSwitchProps copyWith({
-    bool? value,
-    Function(bool)? onValueChange,
-    bool? disabled,
-    DCSwitchStyle? style,
-    String? testID,
-    Map<String, dynamic>? additionalProps,
-  }) {
-    return DCSwitchProps(
-      value: value ?? this.value,
-      onValueChange: onValueChange ?? this.onValueChange,
-      disabled: disabled ?? this.disabled,
-      style: style ?? this.style,
-      testID: testID ?? this.testID,
-      additionalProps: additionalProps ?? this.additionalProps,
-    );
-  }
 }
 
-/// DCSwitch component - Toggle switch control
+/// DCSwitch component
 class DCSwitch extends Control {
   final DCSwitchProps props;
 
   DCSwitch({
     required bool value,
     Function(bool)? onValueChange,
-    Color? trackColor,
-    Color? thumbColor,
-    Color? activeTrackColor,
-    Color? activeThumbColor,
     bool? disabled,
     DCSwitchStyle? style,
-    Map<String, dynamic>? styleMap,
     String? testID,
+    Map<String, dynamic>? additionalProps,
   }) : props = DCSwitchProps(
           value: value,
           onValueChange: onValueChange,
           disabled: disabled,
-          style: style ??
-              (trackColor != null ||
-                      thumbColor != null ||
-                      activeTrackColor != null ||
-                      activeThumbColor != null
-                  ? DCSwitchStyle(
-                      trackColor: trackColor,
-                      thumbColor: thumbColor,
-                      activeTrackColor: activeTrackColor,
-                      activeThumbColor: activeThumbColor,
-                    )
-                  : styleMap != null
-                      ? DCSwitchStyle.fromMap(styleMap)
-                      : null),
+          style: style,
           testID: testID,
+          additionalProps: additionalProps ?? const {},
         );
-
-  DCSwitch.custom({required this.props});
 
   @override
   VNode build() {
@@ -242,6 +199,42 @@ class DCSwitch extends Control {
       'DCSwitch',
       props.toMap(),
       [], // DCSwitch doesn't have children
+    );
+  }
+
+  /// Create a Switch with iOS-like styling
+  static DCSwitch iOS({
+    required bool value,
+    required Function(bool) onValueChange,
+    bool? disabled,
+    Color? activeColor,
+  }) {
+    return DCSwitch(
+      value: value,
+      onValueChange: onValueChange,
+      disabled: disabled,
+      style: DCSwitchStyle(
+        activeTrackColor: activeColor ?? const Color(0xFF007AFF), // iOS blue
+      ),
+    );
+  }
+
+  /// Create a Switch with Android/Material-like styling
+  static DCSwitch material({
+    required bool value,
+    required Function(bool) onValueChange,
+    bool? disabled,
+    Color? activeColor,
+  }) {
+    return DCSwitch(
+      value: value,
+      onValueChange: onValueChange,
+      disabled: disabled,
+      style: DCSwitchStyle(
+        activeTrackColor:
+            activeColor ?? const Color(0xFF009688), // Material teal
+        thumbColor: const Color(0xFFFFFFFF), // White thumb
+      ),
     );
   }
 }

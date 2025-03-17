@@ -9,16 +9,18 @@ class MainApp extends Component {
 
     return DCView(
       props: DCViewProps(
-        style: DCViewStyle(
-          padding: EdgeInsets.all(100),
+        style: ViewStyle(
+          padding: EdgeInsets.all(10),
           backgroundColor: Colors.amber,
         ),
       ),
       children: [
         DCView(
           props: DCViewProps(
-            style: DCViewStyle(
-              backgroundColor: Colors.red,
+            style: ViewStyle(
+              height: 500,
+              width: 20,
+              backgroundColor: Colors.green,
               padding: EdgeInsets.all(20),
             ),
           ),

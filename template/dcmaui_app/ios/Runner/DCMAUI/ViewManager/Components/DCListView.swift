@@ -119,29 +119,115 @@ class DCListView: DCBaseView, UIScrollViewDelegate {
     
     // MARK: - UIScrollViewDelegate
     
+    // Standard scroll event handling
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let offset = isHorizontal ? scrollView.contentOffset.x : scrollView.contentOffset.y
+        let contentOffset = scrollView.contentOffset
+        let contentSize = scrollView.contentSize
+        let layoutMeasurement = scrollView.bounds.size
         
-        // Send scroll event to Flutter
+        // Calculate metrics
+        let contentOffsetX = contentOffset.x
+        let contentOffsetY = contentOffset.y
+        let contentSizeWidth = contentSize.width
+        let contentSizeHeight = contentSize.height
+        let layoutMeasurementWidth = layoutMeasurement.width
+        let layoutMeasurementHeight = layoutMeasurement.height
+        
+        // Standard event payload format for DCMAUI
+        let scrollEvent: [String: Any] = [
+            "contentOffset": [
+                "x": contentOffsetX,
+                "y": contentOffsetY
+            ],
+            "contentSize": [
+                "width": contentSizeWidth,
+                "height": contentSizeHeight
+            ],
+            "layoutMeasurement": [
+                "width": layoutMeasurementWidth,
+                "height": layoutMeasurementHeight
+            ],
+            "zoomScale": scrollView.zoomScale,
+            "contentInset": [
+                "top": scrollView.contentInset.top,
+                "left": scrollView.contentInset.left,
+                "bottom": scrollView.contentInset.bottom,
+                "right": scrollView.contentInset.right
+            ],
+            "target": viewId,
+            "timestamp": Date().timeIntervalSince1970 * 1000
+        ]
+        
+        // Send scroll event
         DCViewCoordinator.shared?.sendEvent(
             viewId: viewId,
             eventName: "onScroll",
-            params: ["offset": offset]
+            params: scrollEvent
         )
         
-        // Check if we've reached the end for onEndReached
-        let contentSize = isHorizontal ? scrollView.contentSize.width : scrollView.contentSize.height
-        let visibleSize = isHorizontal ? scrollView.bounds.width : scrollView.bounds.height
-        let thresholdValue = props["onEndReachedThreshold"] as? CGFloat ?? 0.5
-        let threshold = visibleSize * thresholdValue
+        // Calculate end reached state
+        let threshold = props["onEndReachedThreshold"] as? CGFloat ?? 0.5
         
-        if offset + visibleSize + threshold >= contentSize {
+        if isHorizontal {
+            let visibleWidth = scrollView.bounds.width
+            let contentWidth = scrollView.contentSize.width
+            let distanceFromEnd = contentWidth - contentOffsetX - visibleWidth
+            
+            if distanceFromEnd < visibleWidth * threshold {
+                // Send onEndReached like React Native FlatList
+                DCViewCoordinator.shared?.sendEvent(
+                    viewId: viewId,
+                    eventName: "onEndReached",
+                    params: ["distanceFromEnd": distanceFromEnd]
+                )
+            }
+        } else {
+            let visibleHeight = scrollView.bounds.height
+            let contentHeight = scrollView.contentSize.height
+            let distanceFromEnd = contentHeight - contentOffsetY - visibleHeight
+            
+            if distanceFromEnd < visibleHeight * threshold {
+                // Send onEndReached like React Native FlatList
+                DCViewCoordinator.shared?.sendEvent(
+                    viewId: viewId,
+                    eventName: "onEndReached",
+                    params: ["distanceFromEnd": distanceFromEnd]
+                )
+            }
+        }
+    }
+    
+    // Standard momentum scroll events
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onScrollBeginDrag",
+            params: ["target": viewId]
+        )
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onScrollEndDrag",
+            params: ["target": viewId]
+        )
+        
+        if !decelerate {
             DCViewCoordinator.shared?.sendEvent(
                 viewId: viewId,
-                eventName: "onEndReached",
-                params: [:]
+                eventName: "onMomentumScrollEnd",
+                params: ["target": viewId]
             )
         }
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onMomentumScrollEnd",
+            params: ["target": viewId]
+        )
     }
     
     override func layoutSubviews() {

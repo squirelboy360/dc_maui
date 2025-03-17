@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'dart:io' show Platform;
 
 /// Style properties for DCView
-class DCViewStyle implements StyleProps {
+class ViewStyle implements StyleProps {
   final Color? backgroundColor;
   final EdgeInsets? padding;
   final EdgeInsets? margin;
@@ -18,7 +18,7 @@ class DCViewStyle implements StyleProps {
   final BoxConstraints? constraints;
   final List<BoxShadow>? boxShadow;
 
-  const DCViewStyle({
+  const ViewStyle({
     this.backgroundColor,
     this.padding,
     this.margin,
@@ -33,7 +33,7 @@ class DCViewStyle implements StyleProps {
 
   /// Create a DCViewStyle from a map of style properties
   /// Useful for working with StyleSheet objects
-  factory DCViewStyle.fromMap(Map<String, dynamic> map) {
+  factory ViewStyle.fromMap(Map<String, dynamic> map) {
     // Convert padding if it exists
     EdgeInsets? padding;
     if (map.containsKey('padding')) {
@@ -75,7 +75,7 @@ class DCViewStyle implements StyleProps {
       }
     }
 
-    return DCViewStyle(
+    return ViewStyle(
       backgroundColor: backgroundColor,
       padding: padding,
       margin: margin,
@@ -158,28 +158,30 @@ class DCViewStyle implements StyleProps {
     }
 
     if (alignment != null) {
-      // Convert Flutter alignment to flexbox alignment
+      // Convert Flutter alignment to our layout system instead of flexbox
       if (alignment == Alignment.center) {
-        map['justifyContent'] = 'center';
-        map['alignItems'] = 'center';
+        map["mainAxisAlignment"] = "center";
+        map["crossAxisAlignment"] = "center";
       } else if (alignment == Alignment.centerLeft) {
-        map['justifyContent'] = 'flex-start';
-        map['alignItems'] = 'center';
+        map["mainAxisAlignment"] = "start";
+        map["crossAxisAlignment"] = "center";
+      } else if (alignment == Alignment.centerRight) {
+        map["mainAxisAlignment"] = "end";
+        map["crossAxisAlignment"] = "center";
       }
       // Add more alignment mappings as needed
     }
 
     // Add platform-specific style properties
     if (kIsWeb) {
-      // Web-specific style properties (will be converted to CSS)
-      map['display'] = 'flex';
-      map['flexDirection'] = 'column';
+      // Web-specific style properties (will still be converted to CSS)
+      map['direction'] = 'vertical'; // Default to column/vertical layout
     }
 
     return map;
   }
 
-  DCViewStyle copyWith({
+  ViewStyle copyWith({
     Color? backgroundColor,
     EdgeInsets? padding,
     EdgeInsets? margin,
@@ -191,7 +193,7 @@ class DCViewStyle implements StyleProps {
     BoxConstraints? constraints,
     List<BoxShadow>? boxShadow,
   }) {
-    return DCViewStyle(
+    return ViewStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
       padding: padding ?? this.padding,
       margin: margin ?? this.margin,
@@ -209,7 +211,7 @@ class DCViewStyle implements StyleProps {
 /// Props for DCView component
 class DCViewProps implements ControlProps {
   final String? id;
-  final DCViewStyle? style;
+  final ViewStyle? style;
   final bool? pointerEvents;
   final Function()? onLayout;
   final double? opacity;
@@ -230,10 +232,10 @@ class DCViewProps implements ControlProps {
   factory DCViewProps.fromMap(Map<String, dynamic> map) {
     return DCViewProps(
       id: map['id'],
-      style: map['style'] is DCViewStyle
+      style: map['style'] is ViewStyle
           ? map['style']
           : map['style'] is Map<String, dynamic>
-              ? DCViewStyle.fromMap(map['style'])
+              ? ViewStyle.fromMap(map['style'])
               : null,
       pointerEvents: map['pointerEvents'],
       opacity: map['opacity'] is double ? map['opacity'] : null,
@@ -280,7 +282,7 @@ class DCViewProps implements ControlProps {
 
   DCViewProps copyWith({
     String? id,
-    DCViewStyle? style,
+    ViewStyle? style,
     bool? pointerEvents,
     Function()? onLayout,
     double? opacity,
@@ -320,7 +322,7 @@ class DCView extends Control {
 
   /// Create a DCView with style
   static DCView styled({
-    required DCViewStyle style,
+    required ViewStyle style,
     List<Control> children = const [],
     DCViewProps? props,
   }) {

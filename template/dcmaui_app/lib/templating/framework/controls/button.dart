@@ -2,34 +2,56 @@ import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' hide TextStyle;
-import 'package:dc_test/templating/framework/controls/text.dart';
-import 'dart:io' show Platform;
+import 'package:flutter/painting.dart';
 
 /// Style properties for DCButton
 class DCButtonStyle implements StyleProps {
   final Color? backgroundColor;
-  final Color? textColor;
-  final EdgeInsets? padding;
-  final EdgeInsets? margin;
+  final Color? color;
+  final double? fontSize;
+  final FontWeight? fontWeight;
   final double? borderRadius;
   final double? borderWidth;
   final Color? borderColor;
+  final EdgeInsets? padding;
+  final double? elevation; // Shadow depth
+  final double? width;
+  final double? height;
   final double? minWidth;
   final double? minHeight;
-  final double? elevation;
+  final TextAlign? textAlign;
+  final double? opacity;
+  final EdgeInsets? margin;
+
+  // New properties matching iOS implementation
+  final double? activeOpacity;
+  final double? shadowOpacity;
+  final double? shadowRadius;
+  final Offset? shadowOffset;
+  final Color? shadowColor;
 
   const DCButtonStyle({
     this.backgroundColor,
-    this.textColor,
-    this.padding,
-    this.margin,
+    this.color,
+    this.fontSize,
+    this.fontWeight,
     this.borderRadius,
     this.borderWidth,
     this.borderColor,
+    this.padding,
+    this.elevation,
+    this.width,
+    this.height,
     this.minWidth,
     this.minHeight,
-    this.elevation,
+    this.textAlign,
+    this.opacity,
+    this.margin,
+    this.activeOpacity,
+    this.shadowOpacity,
+    this.shadowRadius,
+    this.shadowOffset,
+    this.shadowColor,
   });
 
   @override
@@ -42,9 +64,19 @@ class DCButtonStyle implements StyleProps {
       map['backgroundColor'] = '#$colorValue';
     }
 
-    if (textColor != null) {
-      final colorValue = textColor!.value.toRadixString(16).padLeft(8, '0');
-      map['textColor'] = '#$colorValue';
+    if (color != null) {
+      final colorValue = color!.value.toRadixString(16).padLeft(8, '0');
+      map['color'] = '#$colorValue';
+    }
+
+    if (fontSize != null) map['fontSize'] = fontSize;
+    if (fontWeight != null) map['fontWeight'] = fontWeight.toString();
+    if (borderRadius != null) map['borderRadius'] = borderRadius;
+    if (borderWidth != null) map['borderWidth'] = borderWidth;
+
+    if (borderColor != null) {
+      final colorValue = borderColor!.value.toRadixString(16).padLeft(8, '0');
+      map['borderColor'] = '#$colorValue';
     }
 
     if (padding != null) {
@@ -60,6 +92,13 @@ class DCButtonStyle implements StyleProps {
       }
     }
 
+    if (elevation != null) map['elevation'] = elevation;
+    if (width != null) map['width'] = width;
+    if (height != null) map['height'] = height;
+    if (minWidth != null) map['minWidth'] = minWidth;
+    if (minHeight != null) map['minHeight'] = minHeight;
+    if (textAlign != null) map['textAlign'] = textAlign.toString();
+    if (opacity != null) map['opacity'] = opacity;
     if (margin != null) {
       if (margin!.left == margin!.right &&
           margin!.top == margin!.bottom &&
@@ -73,17 +112,21 @@ class DCButtonStyle implements StyleProps {
       }
     }
 
-    if (borderRadius != null) map['borderRadius'] = borderRadius;
-    if (borderWidth != null) map['borderWidth'] = borderWidth;
-
-    if (borderColor != null) {
-      final colorValue = borderColor!.value.toRadixString(16).padLeft(8, '0');
-      map['borderColor'] = '#$colorValue';
+    // Add new iOS-specific properties for shadows
+    if (shadowColor != null) {
+      final colorValue = shadowColor!.value.toRadixString(16).padLeft(8, '0');
+      map['shadowColor'] = '#$colorValue';
     }
 
-    if (minWidth != null) map['minWidth'] = minWidth;
-    if (minHeight != null) map['minHeight'] = minHeight;
-    if (elevation != null) map['elevation'] = elevation;
+    if (shadowOpacity != null) map['shadowOpacity'] = shadowOpacity;
+    if (shadowRadius != null) map['shadowRadius'] = shadowRadius;
+
+    if (shadowOffset != null) {
+      map['shadowOffsetWidth'] = shadowOffset!.dx;
+      map['shadowOffsetHeight'] = shadowOffset!.dy;
+    }
+
+    if (activeOpacity != null) map['activeOpacity'] = activeOpacity;
 
     return map;
   }
@@ -104,182 +147,220 @@ class DCButtonStyle implements StyleProps {
       backgroundColor: map['backgroundColor'] is Color
           ? map['backgroundColor']
           : hexToColor(map['backgroundColor']),
-      textColor: map['textColor'] is Color
-          ? map['textColor']
-          : hexToColor(map['textColor']),
-      padding: map['padding'] is EdgeInsets
-          ? map['padding']
-          : map['padding'] is double
-              ? EdgeInsets.all(map['padding'])
-              : null,
-      margin: map['margin'] is EdgeInsets
-          ? map['margin']
-          : map['margin'] is double
-              ? EdgeInsets.all(map['margin'])
-              : null,
+      color: map['color'] is Color ? map['color'] : hexToColor(map['color']),
+      fontSize: map['fontSize'] is double ? map['fontSize'] : null,
+      fontWeight: map['fontWeight'] is String
+          ? FontWeight.values.firstWhere(
+              (e) => e.toString() == map['fontWeight'],
+              orElse: () => FontWeight.normal,
+            )
+          : null,
       borderRadius: map['borderRadius'] is double ? map['borderRadius'] : null,
       borderWidth: map['borderWidth'] is double ? map['borderWidth'] : null,
       borderColor: map['borderColor'] is Color
           ? map['borderColor']
           : hexToColor(map['borderColor']),
+      padding: map['padding'] is EdgeInsets
+          ? map['padding']
+          : map['padding'] is double
+              ? EdgeInsets.all(map['padding'])
+              : null,
+      elevation: map['elevation'] is double ? map['elevation'] : null,
+      width: map['width'] is double ? map['width'] : null,
+      height: map['height'] is double ? map['height'] : null,
       minWidth: map['minWidth'] is double ? map['minWidth'] : null,
       minHeight: map['minHeight'] is double ? map['minHeight'] : null,
-      elevation: map['elevation'] is double ? map['elevation'] : null,
+      textAlign: map['textAlign'] is String
+          ? TextAlign.values.firstWhere(
+              (e) => e.toString() == map['textAlign'],
+              orElse: () => TextAlign.start,
+            )
+          : null,
+      opacity: map['opacity'] is double ? map['opacity'] : null,
+      margin: map['margin'] is EdgeInsets
+          ? map['margin']
+          : map['margin'] is double
+              ? EdgeInsets.all(map['margin'])
+              : null,
+      activeOpacity:
+          map['activeOpacity'] is double ? map['activeOpacity'] : null,
+      shadowOpacity:
+          map['shadowOpacity'] is double ? map['shadowOpacity'] : null,
+      shadowRadius: map['shadowRadius'] is double ? map['shadowRadius'] : null,
+      shadowOffset: map['shadowOffsetWidth'] is double &&
+              map['shadowOffsetHeight'] is double
+          ? Offset(map['shadowOffsetWidth'], map['shadowOffsetHeight'])
+          : null,
+      shadowColor: map['shadowColor'] is Color
+          ? map['shadowColor']
+          : hexToColor(map['shadowColor']),
     );
   }
 
   DCButtonStyle copyWith({
     Color? backgroundColor,
-    Color? textColor,
-    EdgeInsets? padding,
-    EdgeInsets? margin,
+    Color? color,
+    double? fontSize,
+    FontWeight? fontWeight,
     double? borderRadius,
     double? borderWidth,
     Color? borderColor,
+    EdgeInsets? padding,
+    double? elevation,
+    double? width,
+    double? height,
     double? minWidth,
     double? minHeight,
-    double? elevation,
+    TextAlign? textAlign,
+    double? opacity,
+    EdgeInsets? margin,
+    double? activeOpacity,
+    double? shadowOpacity,
+    double? shadowRadius,
+    Offset? shadowOffset,
+    Color? shadowColor,
   }) {
     return DCButtonStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
-      textColor: textColor ?? this.textColor,
-      padding: padding ?? this.padding,
-      margin: margin ?? this.margin,
+      color: color ?? this.color,
+      fontSize: fontSize ?? this.fontSize,
+      fontWeight: fontWeight ?? this.fontWeight,
       borderRadius: borderRadius ?? this.borderRadius,
       borderWidth: borderWidth ?? this.borderWidth,
       borderColor: borderColor ?? this.borderColor,
+      padding: padding ?? this.padding,
+      elevation: elevation ?? this.elevation,
+      width: width ?? this.width,
+      height: height ?? this.height,
       minWidth: minWidth ?? this.minWidth,
       minHeight: minHeight ?? this.minHeight,
-      elevation: elevation ?? this.elevation,
+      textAlign: textAlign ?? this.textAlign,
+      opacity: opacity ?? this.opacity,
+      margin: margin ?? this.margin,
+      activeOpacity: activeOpacity ?? this.activeOpacity,
+      shadowOpacity: shadowOpacity ?? this.shadowOpacity,
+      shadowRadius: shadowRadius ?? this.shadowRadius,
+      shadowOffset: shadowOffset ?? this.shadowOffset,
+      shadowColor: shadowColor ?? this.shadowColor,
     );
   }
 }
 
-/// Props for DCButton control
+/// Props for DCButton component
 class DCButtonProps implements ControlProps {
-  final String title;
-  final Function(Map<String, dynamic>)? onPress;
-  final bool? disabled;
+  final String? title;
+  final Function()? onPress;
   final DCButtonStyle? style;
-  final TextStyle? titleStyle;
+  final bool? disabled;
+  final double? delayLongPress; // Aligns with iOS implementation
+  final bool? loading; // Add loading state support
   final String? testID;
-  final String? accessibilityLabel;
-  final bool? showsLoading;
   final Map<String, dynamic> additionalProps;
 
+  // New props matching iOS implementation
+  final double? activeOpacity;
+  final double? delayPressIn;
+  final double? delayPressOut;
+
   const DCButtonProps({
-    required this.title,
+    this.title,
     this.onPress,
-    this.disabled,
     this.style,
-    this.titleStyle,
+    this.disabled,
+    this.delayLongPress,
+    this.loading,
     this.testID,
-    this.accessibilityLabel,
-    this.showsLoading,
     this.additionalProps = const {},
+    this.activeOpacity,
+    this.delayPressIn,
+    this.delayPressOut,
   });
 
   @override
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
-      'title': title,
       ...additionalProps,
     };
 
+    if (title != null) map['title'] = title;
     if (onPress != null) map['onPress'] = onPress;
-    if (disabled != null) map['disabled'] = disabled;
     if (style != null) map['style'] = style!.toMap();
-    if (titleStyle != null) map['titleStyle'] = titleStyle!.toMap();
+    if (disabled != null) map['disabled'] = disabled;
+    if (delayLongPress != null) map['delayLongPress'] = delayLongPress;
+    if (loading != null) map['loading'] = loading;
     if (testID != null) map['testID'] = testID;
-    if (accessibilityLabel != null)
-      map['accessibilityLabel'] = accessibilityLabel;
-    if (showsLoading != null) map['showsLoading'] = showsLoading;
 
-    // Add platform-specific props and behavior
-    if (kIsWeb) {
-      map['_platform'] = 'web';
-      // Web-specific defaults
-      if (!map.containsKey('cursor') &&
-          !additionalProps.containsKey('cursor')) {
-        map['cursor'] = 'pointer';
-      }
-    } else if (Platform.isIOS) {
-      map['_platform'] = 'ios';
-      // iOS-specific defaults for buttons
-      if (!map.containsKey('pressedOpacity')) {
-        map['pressedOpacity'] = 0.2;
-      }
-    } else if (Platform.isAndroid) {
-      map['_platform'] = 'android';
-      // Android-specific defaults
-      if (!map.containsKey('rippleColor') &&
-          !additionalProps.containsKey('rippleColor')) {
-        map['rippleColor'] = '#20FFFFFF'; // Semi-transparent white ripple
-      }
-    }
+    // Add new iOS-specific properties
+    if (activeOpacity != null) map['activeOpacity'] = activeOpacity;
+    if (delayPressIn != null) map['delayPressIn'] = delayPressIn;
+    if (delayPressOut != null) map['delayPressOut'] = delayPressOut;
 
     return map;
   }
 
   DCButtonProps copyWith({
     String? title,
-    Function(Map<String, dynamic>)? onPress,
-    bool? disabled,
+    Function()? onPress,
     DCButtonStyle? style,
-    TextStyle? titleStyle,
+    bool? disabled,
+    double? delayLongPress,
+    bool? loading,
     String? testID,
-    String? accessibilityLabel,
-    bool? showsLoading,
     Map<String, dynamic>? additionalProps,
+    double? activeOpacity,
+    double? delayPressIn,
+    double? delayPressOut,
   }) {
     return DCButtonProps(
       title: title ?? this.title,
       onPress: onPress ?? this.onPress,
-      disabled: disabled ?? this.disabled,
       style: style ?? this.style,
-      titleStyle: titleStyle ?? this.titleStyle,
+      disabled: disabled ?? this.disabled,
+      delayLongPress: delayLongPress ?? this.delayLongPress,
+      loading: loading ?? this.loading,
       testID: testID ?? this.testID,
-      accessibilityLabel: accessibilityLabel ?? this.accessibilityLabel,
-      showsLoading: showsLoading ?? this.showsLoading,
       additionalProps: additionalProps ?? this.additionalProps,
+      activeOpacity: activeOpacity ?? this.activeOpacity,
+      delayPressIn: delayPressIn ?? this.delayPressIn,
+      delayPressOut: delayPressOut ?? this.delayPressOut,
     );
   }
 }
 
-/// DCButton control
+/// Button component
 class DCButton extends Control {
   final DCButtonProps props;
 
   DCButton({
-    required String title,
-    Function(Map<String, dynamic>)? onPress,
-    bool? disabled,
+    String? title,
+    Function()? onPress,
     DCButtonStyle? style,
-    Map<String, dynamic>? styleMap,
-    TextStyle? titleStyle,
+    bool? disabled,
+    double? delayLongPress,
+    bool? loading,
     String? testID,
-    String? accessibilityLabel,
-    bool? showsLoading,
+    double? activeOpacity,
+    double? delayPressIn,
+    double? delayPressOut,
   }) : props = DCButtonProps(
           title: title,
           onPress: onPress,
+          style: style,
           disabled: disabled,
-          style: style ??
-              (styleMap != null ? DCButtonStyle.fromMap(styleMap) : null),
-          titleStyle: titleStyle,
+          delayLongPress: delayLongPress,
+          loading: loading,
           testID: testID,
-          accessibilityLabel: accessibilityLabel,
-          showsLoading: showsLoading,
+          activeOpacity: activeOpacity,
+          delayPressIn: delayPressIn,
+          delayPressOut: delayPressOut,
         );
-
-  DCButton.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'DCButton', // Ensure DC prefix is used
+      'DCButton',
       props.toMap(),
-      [], // DCButton doesn't have children in the traditional sense
+      [],
     );
   }
 }

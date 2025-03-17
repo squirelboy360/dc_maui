@@ -68,7 +68,7 @@ class DiagnosticComponent extends Component {
     // Create a container for the diagnostic info
     return DCView(
       props: DCViewProps(
-        style: DCViewStyle(
+        style: ViewStyle(
           backgroundColor: Color(0x88000000),
           padding: EdgeInsets.all(8),
           // Remove position-related properties that aren't supported

@@ -49,7 +49,10 @@ class DCSwitch: DCBaseView {
         // Handle thumb color (off state)
         if let thumbColorString = props["thumbColor"] as? String, thumbColorString.hasPrefix("#") {
             // Note: iOS doesn't allow customizing thumb color directly in standard UISwitch
-            // This would require a custom switch implementation
+            // For iOS 13+, we can use the thumbTintColor property
+            if #available(iOS 13.0, *) {
+                switchControl.thumbTintColor = UIColor(hexString: thumbColorString)
+            }
         }
         
         // Handle active track color (on state)
@@ -59,17 +62,50 @@ class DCSwitch: DCBaseView {
         
         // Apply any custom style
         if let style = props["style"] as? [String: Any] {
-            // iOS UISwitch has limited customization options
-            // For extensive styling, we would need a custom implementation
+            // Apply transform if specified
+            if let transform = style["transform"] as? [[String: Any]] {
+                var scaleX: CGFloat = 1.0
+                var scaleY: CGFloat = 1.0
+                
+                for transformItem in transform {
+                    if let scale = transformItem["scale"] as? CGFloat {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    
+                    if let scaleXValue = transformItem["scaleX"] as? CGFloat {
+                        scaleX = scaleXValue
+                    }
+                    
+                    if let scaleYValue = transformItem["scaleY"] as? CGFloat {
+                        scaleY = scaleYValue
+                    }
+                }
+                
+                switchControl.transform = CGAffineTransform(scaleX: scaleX, y: scaleY)
+            }
         }
     }
     
     @objc private func switchValueChanged() {
-        // Send event to Flutter
+        // Send event with React Native style parameters
         DCViewCoordinator.shared?.sendEvent(
             viewId: viewId,
-            eventName: "onValueChange",
-            params: ["value": switchControl.isOn]
+            eventName: "onChange",
+            params: [
+                "value": switchControl.isOn,
+                "target": viewId,
+                "timestamp": Date().timeIntervalSince1970 * 1000
+            ]
+        )
+    }
+    
+    override var intrinsicContentSize: CGSize {
+        // Add some padding around the switch
+        let switchSize = switchControl.intrinsicContentSize
+        return CGSize(
+            width: switchSize.width + 16,
+            height: switchSize.height + 16
         )
     }
 }

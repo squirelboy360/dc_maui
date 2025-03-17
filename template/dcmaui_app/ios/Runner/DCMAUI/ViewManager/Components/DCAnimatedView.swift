@@ -7,7 +7,7 @@
 
 import UIKit
 
-/// Component for handling animated properties
+/// Component for handling animated properties, similar to React Native's Animated.View
 class DCAnimatedView: DCBaseView {
     // Map of active animations by property name
     private var activeAnimations: [String: CAAnimation] = [:]
@@ -71,73 +71,112 @@ class DCAnimatedView: DCBaseView {
         // Apply easing function
         animation.timingFunction = getTimingFunction(easing)
         
-        // If an animation for this property already exists, remove it
+        // Remove any existing animation for this property
         if let existingAnimation = activeAnimations[property] {
-            layer.removeAnimation(forKey: property)
+            layer.removeAnimation(forKey: existingAnimation.description)
         }
         
-        // Store and apply the animation
+        // Add the new animation
+        let animationKey = "animation_\(property)_\(animationId)"
+        layer.add(animation, forKey: animationKey)
         activeAnimations[property] = animation
-        layer.add(animation, forKey: property)
         
-        // Also set the final value directly for when animation completes
-        switch property {
-            case "opacity":
-                alpha = toValue
-            case "translateX", "translateY":
-                // These are handled through transform
-                if let currentTransform = layer.presentation()?.transform {
-                    if property == "translateX" {
-                        layer.transform = CATransform3DTranslate(currentTransform, toValue, 0, 0)
-                    } else {
-                        layer.transform = CATransform3DTranslate(currentTransform, 0, toValue, 0)
-                    }
-                }
-            case "scale":
-                layer.transform = CATransform3DMakeScale(toValue, toValue, 1)
-            case "rotate":
-                layer.transform = CATransform3DMakeRotation(toValue * .pi / 180, 0, 0, 1)
-            default:
-                break
+        // Also update the model layer value for when animation completes
+        updateLayerProperty(keyPath, toValue: toValue)
+        
+        // Notify about animation start
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onAnimationStart",
+            params: [
+                "property": property,
+                "toValue": toValue,
+                "animationId": animationId
+            ]
+        )
+        
+        // Schedule completion notification
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + delay) { [weak self] in
+            guard let self = self else { return }
+            DCViewCoordinator.shared?.sendEvent(
+                viewId: self.viewId,
+                eventName: "onAnimationComplete",
+                params: [
+                    "property": property,
+                    "toValue": toValue,
+                    "animationId": animationId
+                ]
+            )
         }
     }
     
     private func mapPropertyToKeyPath(_ property: String) -> String {
         switch property {
-            case "opacity": return "opacity"
-            case "translateX": return "transform.translation.x"
-            case "translateY": return "transform.translation.y"
-            case "scale": return "transform.scale"
-            case "scaleX": return "transform.scale.x"
-            case "scaleY": return "transform.scale.y"
-            case "rotate": return "transform.rotation.z"
-            case "width": return "bounds.size.width"
-            case "height": return "bounds.size.height"
-            default: return ""
+        case "opacity":
+            return "opacity"
+        case "translateX":
+            return "transform.translation.x"
+        case "translateY":
+            return "transform.translation.y"
+        case "scale":
+            return "transform.scale"
+        case "scaleX":
+            return "transform.scale.x"
+        case "scaleY":
+            return "transform.scale.y"
+        case "rotation", "rotate":
+            return "transform.rotation"
+        case "backgroundColor":
+            return "backgroundColor"
+        case "borderColor":
+            return "borderColor"
+        case "borderWidth":
+            return "borderWidth"
+        case "borderRadius", "cornerRadius":
+            return "cornerRadius"
+        case "shadowOpacity":
+            return "shadowOpacity"
+        case "shadowRadius":
+            return "shadowRadius"
+        default:
+            print("DC MAUI: Unsupported animation property: \(property)")
+            return ""
         }
     }
     
     private func getTimingFunction(_ easing: String) -> CAMediaTimingFunction {
         switch easing {
-            case "linear":
-                return CAMediaTimingFunction(name: .linear)
-            case "easeIn":
-                return CAMediaTimingFunction(name: .easeIn)
-            case "easeOut":
-                return CAMediaTimingFunction(name: .easeOut)
-            case "easeInOut":
-                return CAMediaTimingFunction(name: .easeInEaseOut)
-            case "elastic":
-                // Custom timing function approximating elastic easing
-                return CAMediaTimingFunction(controlPoints: 0.5, 0.1, 0.1, 1.0)
-            case "bounce":
-                // Custom timing function approximating bounce easing
-                return CAMediaTimingFunction(controlPoints: 0.5, 0.9, 0.9, 0.95)
-            case "back":
-                // Custom timing function approximating back easing
-                return CAMediaTimingFunction(controlPoints: 0.7, -0.4, 0.7, 1.5)
-            default:
-                return CAMediaTimingFunction(name: .easeInEaseOut)
+        case "linear":
+            return CAMediaTimingFunction(name: .linear)
+        case "easeIn":
+            return CAMediaTimingFunction(name: .easeIn)
+        case "easeOut":
+            return CAMediaTimingFunction(name: .easeOut)
+        case "easeInOut":
+            return CAMediaTimingFunction(name: .easeInEaseOut)
+        case "spring":
+            // Approximation of spring using cubic bezier
+            return CAMediaTimingFunction(controlPoints: 0.5, 1.8, 0.9, 0.9)
+        default:
+            return CAMediaTimingFunction(name: .easeInEaseOut)
+        }
+    }
+    
+    private func updateLayerProperty(_ keyPath: String, toValue: CGFloat) {
+        // For properties that can be directly set
+        switch keyPath {
+        case "opacity":
+            layer.opacity = Float(toValue)
+        case "cornerRadius":
+            layer.cornerRadius = toValue
+        case "borderWidth":
+            layer.borderWidth = toValue
+        case "shadowOpacity":
+            layer.shadowOpacity = Float(toValue)
+        case "shadowRadius":
+            layer.shadowRadius = toValue
+        default:
+            break // Transform properties are handled by animations
         }
     }
 }

@@ -59,11 +59,15 @@ class DCListViewStyle implements StyleProps {
     }
 
     if (backgroundColor != null) {
-      final colorValue = backgroundColor!.value.toRadixString(16).padLeft(8, '0');
+      final colorValue =
+          backgroundColor!.value.toRadixString(16).padLeft(8, '0');
       map['backgroundColor'] = '#$colorValue';
     }
 
-    if (scrollIndicatorThickness != null) map['scrollIndicatorThickness'] = scrollIndicatorThickness;
+    if (scrollIndicatorThickness != null) {
+      map['scrollIndicatorThickness'] = scrollIndicatorThickness;
+    }
+
     if (height != null) map['height'] = height;
     if (width != null) map['width'] = width;
     if (contentSpacing != null) map['contentSpacing'] = contentSpacing;
@@ -71,236 +75,113 @@ class DCListViewStyle implements StyleProps {
 
     return map;
   }
-
-  factory DCListViewStyle.fromMap(Map<String, dynamic> map) {
-    // Helper function to convert hex to Color
-    Color? hexToColor(String? hexString) {
-      if (hexString == null || !hexString.startsWith('#')) return null;
-      hexString = hexString.replaceAll('#', '');
-      if (hexString.length == 6) {
-        hexString = 'FF' + hexString;
-      }
-      return Color(int.parse(hexString, radix: 16));
-    }
-
-    EdgeInsets? convertPadding(dynamic padding) {
-      if (padding is EdgeInsets) return padding;
-      if (padding is double) return EdgeInsets.all(padding);
-      return null;
-    }
-
-    // Convert map to DCListViewStyle
-    return DCListViewStyle(
-      padding: convertPadding(map['padding']),
-      margin: convertPadding(map['margin']),
-      backgroundColor: map['backgroundColor'] is Color
-          ? map['backgroundColor']
-          : hexToColor(map['backgroundColor']),
-      scrollIndicatorThickness: map['scrollIndicatorThickness'] is double
-          ? map['scrollIndicatorThickness']
-          : null,
-      height: map['height'] is double ? map['height'] : null,
-      width: map['width'] is double ? map['width'] : null,
-      contentSpacing: map['contentSpacing'] is double ? map['contentSpacing'] : null,
-      scrollPadding: map['scrollPadding'] is double ? map['scrollPadding'] : null,
-    );
-  }
-
-  DCListViewStyle copyWith({
-    EdgeInsets? padding,
-    EdgeInsets? margin,
-    Color? backgroundColor,
-    double? scrollIndicatorThickness,
-    double? height,
-    double? width,
-    double? contentSpacing,
-    double? scrollPadding,
-  }) {
-    return DCListViewStyle(
-      padding: padding ?? this.padding,
-      margin: margin ?? this.margin,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      scrollIndicatorThickness: scrollIndicatorThickness ?? this.scrollIndicatorThickness,
-      height: height ?? this.height,
-      width: width ?? this.width,
-      contentSpacing: contentSpacing ?? this.contentSpacing,
-      scrollPadding: scrollPadding ?? this.scrollPadding,
-    );
-  }
 }
 
-/// Props for DCListView control
+/// Props for ListView component
 class DCListViewProps implements ControlProps {
-  final bool horizontal;
+  final bool? horizontal;
   final bool? showsScrollIndicator;
-  final Function(double)? onScroll;
-  final Function()? onEndReached;
-  final double? onEndReachedThreshold;
   final bool? bounces;
-  final int? initialScrollIndex;
-  final String? testID;
+  final bool? pagingEnabled;
+  final double? initialScrollIndex;
+  final Function(Map<String, dynamic>)? onScroll;
+  final Function()? onScrollBeginDrag;
+  final Function()? onScrollEndDrag;
+  final Function()? onMomentumScrollBegin;
+  final Function()? onMomentumScrollEnd;
+  final double? onEndReachedThreshold;
+  final Function(Map<String, dynamic>)? onEndReached;
   final DCListViewStyle? style;
+  final String? testID;
   final Map<String, dynamic> additionalProps;
 
   const DCListViewProps({
-    this.horizontal = false,
+    this.horizontal,
     this.showsScrollIndicator,
-    this.onScroll,
-    this.onEndReached,
-    this.onEndReachedThreshold,
     this.bounces,
+    this.pagingEnabled,
     this.initialScrollIndex,
-    this.testID,
+    this.onScroll,
+    this.onScrollBeginDrag,
+    this.onScrollEndDrag,
+    this.onMomentumScrollBegin,
+    this.onMomentumScrollEnd,
+    this.onEndReachedThreshold,
+    this.onEndReached,
     this.style,
+    this.testID,
     this.additionalProps = const {},
   });
 
   @override
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
-      'horizontal': horizontal,
       ...additionalProps,
     };
 
-    if (showsScrollIndicator != null) {
+    if (horizontal != null) map['horizontal'] = horizontal;
+    if (showsScrollIndicator != null)
       map['showsScrollIndicator'] = showsScrollIndicator;
-    }
-
-    if (onScroll != null) {
-      map['onScroll'] = onScroll;
-    }
-
-    if (onEndReached != null) {
-      map['onEndReached'] = onEndReached;
-    }
-
-    if (onEndReachedThreshold != null) {
-      map['onEndReachedThreshold'] = onEndReachedThreshold;
-    }
-
-    if (bounces != null) {
-      map['bounces'] = bounces;
-    }
-
-    if (initialScrollIndex != null) {
+    if (bounces != null) map['bounces'] = bounces;
+    if (pagingEnabled != null) map['pagingEnabled'] = pagingEnabled;
+    if (initialScrollIndex != null)
       map['initialScrollIndex'] = initialScrollIndex;
-    }
-
-    if (testID != null) {
-      map['testID'] = testID;
-    }
-
-    if (style != null) {
-      map['style'] = style!.toMap();
-    }
-
-    // Add platform-specific props
-    if (kIsWeb) {
-      map['_platform'] = 'web';
-      // Web-specific DCListView properties
-      if (!map.containsKey('overflowY') && horizontal == false) {
-        map['overflowY'] = 'auto';
-      }
-      if (!map.containsKey('overflowX') && horizontal == true) {
-        map['overflowX'] = 'auto';
-      }
-      if (!map.containsKey('display')) {
-        map['display'] = 'flex';
-      }
-      if (!map.containsKey('flexDirection')) {
-        map['flexDirection'] = horizontal ? 'row' : 'column';
-      }
-    } else if (Platform.isIOS) {
-      map['_platform'] = 'ios';
-      // iOS-specific properties
-      if (bounces == null && !map.containsKey('bounces') && !additionalProps.containsKey('bounces')) {
-        map['bounces'] = true; // iOS usually allows bouncing
-      }
-      if (!map.containsKey('alwaysBounceVertical') && horizontal == false) {
-        map['alwaysBounceVertical'] = true;
-      }
-      if (!map.containsKey('decelerationRate')) {
-        map['decelerationRate'] = 'normal'; // iOS deceleration rate
-      }
-    } else if (Platform.isAndroid) {
-      map['_platform'] = 'android';
-      // Android-specific properties
-      if (bounces == null && !map.containsKey('bounces') && !additionalProps.containsKey('bounces')) {
-        map['bounces'] = false; // Android typically doesn't bounce
-      }
-      if (!map.containsKey('overScrollMode')) {
-        map['overScrollMode'] = 'never'; // Android over-scroll behavior
-      }
-      if (!map.containsKey('fadingEdgeLength') && !additionalProps.containsKey('fadingEdgeLength')) {
-        map['fadingEdgeLength'] = 16.0; // Fading edge for Android lists
-      }
-    }
+    if (onScroll != null) map['onScroll'] = onScroll;
+    if (onScrollBeginDrag != null) map['onScrollBeginDrag'] = onScrollBeginDrag;
+    if (onScrollEndDrag != null) map['onScrollEndDrag'] = onScrollEndDrag;
+    if (onMomentumScrollBegin != null)
+      map['onMomentumScrollBegin'] = onMomentumScrollBegin;
+    if (onMomentumScrollEnd != null)
+      map['onMomentumScrollEnd'] = onMomentumScrollEnd;
+    if (onEndReachedThreshold != null)
+      map['onEndReachedThreshold'] = onEndReachedThreshold;
+    if (onEndReached != null) map['onEndReached'] = onEndReached;
+    if (style != null) map['style'] = style!.toMap();
+    if (testID != null) map['testID'] = testID;
 
     return map;
   }
-
-  DCListViewProps copyWith({
-    bool? horizontal,
-    bool? showsScrollIndicator,
-    Function(double)? onScroll,
-    Function()? onEndReached,
-    double? onEndReachedThreshold,
-    bool? bounces,
-    int? initialScrollIndex,
-    String? testID,
-    DCListViewStyle? style,
-    Map<String, dynamic>? additionalProps,
-  }) {
-    return DCListViewProps(
-      horizontal: horizontal ?? this.horizontal,
-      showsScrollIndicator: showsScrollIndicator ?? this.showsScrollIndicator,
-      onScroll: onScroll ?? this.onScroll,
-      onEndReached: onEndReached ?? this.onEndReached,
-      onEndReachedThreshold:
-          onEndReachedThreshold ?? this.onEndReachedThreshold,
-      bounces: bounces ?? this.bounces,
-      initialScrollIndex: initialScrollIndex ?? this.initialScrollIndex,
-      testID: testID ?? this.testID,
-      style: style ?? this.style,
-      additionalProps: additionalProps ?? this.additionalProps,
-    );
-  }
 }
 
-/// DCListView control
+/// ListView component for displaying scrollable lists
 class DCListView extends Control {
   final DCListViewProps props;
   final List<Control> children;
 
   DCListView({
-    DCListViewProps? props,
-    required this.children,
     bool? horizontal,
     bool? showsScrollIndicator,
-    Function(double)? onScroll,
-    Function()? onEndReached,
-    double? onEndReachedThreshold,
     bool? bounces,
-    int? initialScrollIndex,
-    String? testID,
+    bool? pagingEnabled,
+    double? initialScrollIndex,
+    Function(Map<String, dynamic>)? onScroll,
+    Function()? onScrollBeginDrag,
+    Function()? onScrollEndDrag,
+    Function()? onMomentumScrollBegin,
+    Function()? onMomentumScrollEnd,
+    double? onEndReachedThreshold,
+    Function(Map<String, dynamic>)? onEndReached,
     DCListViewStyle? style,
-    Map<String, dynamic>? styleMap,
-  }) : props = props ?? DCListViewProps(
-          horizontal: horizontal ?? false,
+    String? testID,
+    Map<String, dynamic>? additionalProps,
+    this.children = const [],
+  }) : props = DCListViewProps(
+          horizontal: horizontal,
           showsScrollIndicator: showsScrollIndicator,
-          onScroll: onScroll,
-          onEndReached: onEndReached,
-          onEndReachedThreshold: onEndReachedThreshold,
           bounces: bounces,
+          pagingEnabled: pagingEnabled,
           initialScrollIndex: initialScrollIndex,
+          onScroll: onScroll,
+          onScrollBeginDrag: onScrollBeginDrag,
+          onScrollEndDrag: onScrollEndDrag,
+          onMomentumScrollBegin: onMomentumScrollBegin,
+          onMomentumScrollEnd: onMomentumScrollEnd,
+          onEndReachedThreshold: onEndReachedThreshold,
+          onEndReached: onEndReached,
+          style: style,
           testID: testID,
-          style: style ?? (styleMap != null ? DCListViewStyle.fromMap(styleMap) : null),
+          additionalProps: additionalProps ?? const {},
         );
-
-  DCListView.custom({
-    required this.props,
-    required this.children,
-  });
 
   @override
   VNode build() {
@@ -311,33 +192,42 @@ class DCListView extends Control {
     );
   }
 
-  /// Create a horizontal DCListView
-  static DCListView horizontal({
-    required List<Control> children,
-    DCListViewProps? props,
+  /// Convenience constructor for a vertical ListView
+  static DCListView vertical({
+    List<Control> children = const [],
     bool? showsScrollIndicator,
-    Function(double)? onScroll,
-    Function()? onEndReached,
-    double? onEndReachedThreshold,
-    bool? bounces,
-    int? initialScrollIndex,
-    String? testID,
     DCListViewStyle? style,
-    Map<String, dynamic>? styleMap,
+    Function(Map<String, dynamic>)? onScroll,
+    Function(Map<String, dynamic>)? onEndReached,
+    double? onEndReachedThreshold,
   }) {
     return DCListView(
-      props: props?.copyWith(horizontal: true) ?? 
-          DCListViewProps(
-            horizontal: true,
-            showsScrollIndicator: showsScrollIndicator,
-            onScroll: onScroll,
-            onEndReached: onEndReached,
-            onEndReachedThreshold: onEndReachedThreshold,
-            bounces: bounces,
-            initialScrollIndex: initialScrollIndex,
-            testID: testID,
-            style: style ?? (styleMap != null ? DCListViewStyle.fromMap(styleMap) : null),
-          ),
+      horizontal: false,
+      showsScrollIndicator: showsScrollIndicator,
+      style: style,
+      onScroll: onScroll,
+      onEndReached: onEndReached,
+      onEndReachedThreshold: onEndReachedThreshold,
+      children: children,
+    );
+  }
+
+  /// Convenience constructor for a horizontal ListView
+  static DCListView horizontal({
+    List<Control> children = const [],
+    bool? showsScrollIndicator,
+    DCListViewStyle? style,
+    Function(Map<String, dynamic>)? onScroll,
+    Function(Map<String, dynamic>)? onEndReached,
+    double? onEndReachedThreshold,
+  }) {
+    return DCListView(
+      horizontal: true,
+      showsScrollIndicator: showsScrollIndicator,
+      style: style,
+      onScroll: onScroll,
+      onEndReached: onEndReached,
+      onEndReachedThreshold: onEndReachedThreshold,
       children: children,
     );
   }

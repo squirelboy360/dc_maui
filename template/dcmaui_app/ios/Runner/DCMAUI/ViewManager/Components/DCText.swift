@@ -7,19 +7,22 @@
 
 import UIKit
 
-/// Text component
+/// Text component implementation that matches React Native's Text component
 class DCText: DCBaseView {
     private let label = UILabel()
     
     override func setupView() {
         super.setupView()
         
-        // Set up label
-        label.numberOfLines = 0  // Default to multiline
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.numberOfLines = 0 // Allow multiple lines by default
+        label.lineBreakMode = .byWordWrapping
+        label.textAlignment = .left
+        label.text = ""
+        
         addSubview(label)
         
-        // Add constraints to make label fill the view
-        label.translatesAutoresizingMaskIntoConstraints = false
+        // Constrain label to fill the view with respect to padding
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: topAnchor),
             label.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -31,159 +34,133 @@ class DCText: DCBaseView {
     override func updateProps(props: [String: Any]) {
         super.updateProps(props: props)
         
-        // Handle text
+        // Set text content
         if let text = props["text"] as? String {
             label.text = text
         }
         
-        // Handle style properties
-        if let style = props["style"] as? [String: Any] {
-            applyTextStyle(style)
-        }
-        
-        // Handle selectable text
+        // Set whether the text is selectable
         if let selectable = props["selectable"] as? Bool {
             label.isUserInteractionEnabled = selectable
         }
         
-        // Handle onPress callback
-        if props["onPress"] != nil {
-            // Add tap gesture recognizer if not already added
-            if gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer }) != true {
-                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-                addGestureRecognizer(tapGesture)
-                isUserInteractionEnabled = true
-            }
+        // Process style properties
+        if let style = props["style"] as? [String: Any] {
+            applyTextStyle(style)
         }
+        
+        // Handle number of lines
+        if let numberOfLines = props["numberOfLines"] as? Int {
+            label.numberOfLines = numberOfLines
+        }
+        
+        // Handle text alignment (directly on props or in style)
+        if let textAlign = props["textAlign"] as? String {
+            label.textAlignment = getTextAlignment(textAlign)
+        }
+        
+        setNeedsLayout()
     }
     
     private func applyTextStyle(_ style: [String: Any]) {
+        // Start with current font or system font
         var font = label.font ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
-        var textColor = label.textColor ?? .black
+        
+        // Text color
+        if let colorStr = style["color"] as? String, colorStr.hasPrefix("#") {
+            label.textColor = UIColor(hexString: colorStr)
+        }
         
         // Font size
         if let fontSize = style["fontSize"] as? CGFloat {
-            font = font.withSize(fontSize)
+            font = UIFont(name: font.fontName, size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
         }
         
         // Font weight
         if let fontWeight = style["fontWeight"] as? String {
+            var weight = UIFont.Weight.regular
+            
             switch fontWeight {
-                case "100": font = UIFont.systemFont(ofSize: font.pointSize, weight: .ultraLight)
-                case "200": font = UIFont.systemFont(ofSize: font.pointSize, weight: .thin)
-                case "300": font = UIFont.systemFont(ofSize: font.pointSize, weight: .light)
-                case "normal", "400": font = UIFont.systemFont(ofSize: font.pointSize, weight: .regular)
-                case "500": font = UIFont.systemFont(ofSize: font.pointSize, weight: .medium)
-                case "600": font = UIFont.systemFont(ofSize: font.pointSize, weight: .semibold)
-                case "bold", "700": font = UIFont.systemFont(ofSize: font.pointSize, weight: .bold)
-                case "800": font = UIFont.systemFont(ofSize: font.pointSize, weight: .heavy)
-                case "900": font = UIFont.systemFont(ofSize: font.pointSize, weight: .black)
-                default: break
+            case "bold": weight = .bold
+            case "normal": weight = .regular
+            case "100": weight = .ultraLight
+            case "200": weight = .thin
+            case "300": weight = .light
+            case "400": weight = .regular
+            case "500": weight = .medium
+            case "600": weight = .semibold
+            case "700": weight = .bold
+            case "800": weight = .heavy
+            case "900": weight = .black
+            default: break
             }
+            
+            font = UIFont.systemFont(ofSize: font.pointSize, weight: weight)
         }
         
         // Font family
         if let fontFamily = style["fontFamily"] as? String {
-            if let customFont = UIFont(name: fontFamily, size: font.pointSize) {
-                font = customFont
+            if let newFont = UIFont(name: fontFamily, size: font.pointSize) {
+                font = newFont
             }
-        }
-        
-        // Text color
-        if let colorString = style["color"] as? String, colorString.hasPrefix("#") {
-            textColor = UIColor(hexString: colorString)
         }
         
         // Text alignment
         if let textAlign = style["textAlign"] as? String {
-            switch textAlign {
-                case "left": label.textAlignment = .left
-                case "center": label.textAlignment = .center
-                case "right": label.textAlignment = .right
-                case "justify": label.textAlignment = .justified
-                default: label.textAlignment = .natural
-            }
-        }
-        
-        // Text decoration
-        if let decoration = style["textDecorationLine"] as? String {
-            var attributes: [NSAttributedString.Key: Any] = [:]
-            
-            switch decoration {
-                case "underline":
-                    attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
-                case "line-through":
-                    attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-                case "underline line-through":
-                    attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
-                    attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-                default:
-                    break
-            }
-            
-            if let text = label.text, !attributes.isEmpty {
-                let attributedString = NSAttributedString(string: text, attributes: attributes)
-                label.attributedText = attributedString
-            }
+            label.textAlignment = getTextAlignment(textAlign)
         }
         
         // Line height
         if let lineHeight = style["lineHeight"] as? CGFloat {
             let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.lineSpacing = lineHeight - font.lineHeight
+            paragraphStyle.minimumLineHeight = lineHeight
+            paragraphStyle.maximumLineHeight = lineHeight
             
-            if let text = label.text {
-                let attributedString = NSMutableAttributedString(string: text)
-                attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: text.count))
-                label.attributedText = attributedString
+            let attributedText = NSMutableAttributedString(string: label.text ?? "")
+            attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, 
+                                        range: NSRange(location: 0, length: attributedText.length))
+            
+            // Add baseline adjustment to center text vertically within line height
+            let baselineOffset = (lineHeight - font.lineHeight) / 4
+            attributedText.addAttribute(.baselineOffset, value: baselineOffset, 
+                                        range: NSRange(location: 0, length: attributedText.length))
+            
+            label.attributedText = attributedText
+        }
+        
+        // Text decoration
+        if let textDecoration = style["textDecorationLine"] as? String {
+            var attributes: [NSAttributedString.Key: Any] = [:]
+            
+            if textDecoration == "underline" {
+                attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
+            } else if textDecoration == "line-through" {
+                attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+            }
+            
+            if !attributes.isEmpty {
+                let attributedText = NSMutableAttributedString(string: label.text ?? "")
+                attributedText.addAttributes(attributes, range: NSRange(location: 0, length: attributedText.length))
+                label.attributedText = attributedText
             }
         }
         
-        // Max lines
-        if let maxLines = style["maxLines"] as? Int {
-            label.numberOfLines = maxLines
-        }
-        
-        // Text overflow
-        if let overflow = style["textOverflow"] as? String {
-            switch overflow {
-                case "ellipsis":
-                    label.lineBreakMode = .byTruncatingTail
-                case "clip":
-                    label.lineBreakMode = .byClipping
-                default:
-                    label.lineBreakMode = .byWordWrapping
-            }
-        }
-        
-        // Letter spacing
-        if let letterSpacing = style["letterSpacing"] as? CGFloat {
-            if let text = label.text {
-                let attributedString = NSMutableAttributedString(string: text)
-                attributedString.addAttribute(.kern, value: letterSpacing, range: NSRange(location: 0, length: text.count))
-                label.attributedText = attributedString
-            }
-        }
-        
-        // Apply font
+        // Apply the font
         label.font = font
-        
-        // Apply color (if not using attributed string)
-        if label.attributedText == nil {
-            label.textColor = textColor
+    }
+    
+    private func getTextAlignment(_ textAlign: String) -> NSTextAlignment {
+        switch textAlign {
+        case "auto": return .natural
+        case "left": return .left
+        case "right": return .right
+        case "center": return .center
+        case "justify": return .justified
+        default: return .natural
         }
     }
     
-    @objc private func handleTap() {
-        // Send event to Flutter
-        DCViewCoordinator.shared?.sendEvent(
-            viewId: viewId,
-            eventName: "onPress",
-            params: ["text": label.text ?? ""]
-        )
-    }
-    
-    override func sizeThatFits(_ size: CGSize) -> CGSize {
-        return label.sizeThatFits(size)
+    override var intrinsicContentSize: CGSize {
+        return label.intrinsicContentSize
     }
 }

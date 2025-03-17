@@ -22,78 +22,86 @@ class NativeVDOM extends ComponentVDOM {
     debugPrint('NativeVDOM: Initialized and listening for native events');
   }
 
-  // Handle events coming from native side - simplified approach
+  // Handle events coming from native side
   void _handleNativeEvent(Map<String, dynamic> event) {
     try {
       final String viewId = event['viewId'];
-      String eventName = event['eventName'];
-      final Map<String, dynamic> eventData =
-          Map<String, dynamic>.from(event['data'] ?? {});
+      final String eventName = event['eventName'];
+      final Map<String, dynamic> params =
+          Map<String, dynamic>.from(event['params'] ?? {});
 
-      // Normalize event name - handle both "press" and "onPress" formats
-      if (eventName.startsWith("on") && eventName.length > 2) {
-        eventName = eventName[2].toLowerCase() + eventName.substring(3);
+      // Convert event names to standard conventions
+      String standardEventName = eventName;
+      if (!eventName.startsWith("on")) {
+        final String capitalizedName =
+            eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
+        standardEventName = "on$capitalizedName";
+      }
+
+      // Ensure target is set in params
+      if (!params.containsKey('target')) {
+        params['target'] = viewId;
+      }
+
+      // Add timestamp if not present
+      if (!params.containsKey('timestamp')) {
+        params['timestamp'] = DateTime.now().millisecondsSinceEpoch;
       }
 
       debugPrint(
-          'NativeVDOM: Normalized event $eventName for view $viewId with data: $eventData');
+          'NativeVDOM: Processing $standardEventName event for view $viewId');
 
-      // IMPROVED HANDLER LOOKUP STRATEGY
-
-      // Step 1: Try direct handler lookup (fastest path)
+      // Look up the handler
       if (_eventHandlers.containsKey(viewId) &&
-          _eventHandlers[viewId]!.containsKey(eventName)) {
-        _eventHandlers[viewId]![eventName]!(eventData);
+          _eventHandlers[viewId]!.containsKey(standardEventName)) {
+        _eventHandlers[viewId]![standardEventName]!(params);
         return;
       }
 
-      // Step 2: Try to find via control key mapping (reliable path for recreated views)
-      final controlKey = _viewIdToControlKey[viewId];
-      if (controlKey != null && _stableHandlerMap.containsKey(controlKey)) {
-        final handlers = _stableHandlerMap[controlKey]!;
-        if (handlers.containsKey(eventName)) {
-          // Update the direct handler for faster future lookups
-          _eventHandlers.putIfAbsent(viewId, () => {});
-          _eventHandlers[viewId]![eventName] = handlers[eventName]!;
-
-          // Execute the handler
-          handlers[eventName]!(eventData);
+      // Try alternative event names
+      if (standardEventName == "onPress") {
+        // Check for other tap event handlers
+        if (_eventHandlers.containsKey(viewId) &&
+            _eventHandlers[viewId]!.containsKey("onClick")) {
+          _eventHandlers[viewId]!["onClick"]!(params);
           return;
         }
       }
 
-      // Step 3: Last resort - try to find by control attributes from event data
-      final buttonTitle = eventData['title'];
-      final controlId = eventData['id'];
-
-      // Generate possible control keys from event data
-      final possibleKeys = <String>[];
-      if (buttonTitle != null) possibleKeys.add('btn:$buttonTitle');
-      if (controlId != null) possibleKeys.add('id:$controlId');
-
-      for (final key in possibleKeys) {
-        if (_stableHandlerMap.containsKey(key) &&
-            _stableHandlerMap[key]!.containsKey(eventName)) {
-          // Link this view ID to the found control key for faster future lookups
-          _viewIdToControlKey[viewId] = key;
-          _controlKeyToViewId[key] = viewId;
-
-          // Update the direct handler
-          _eventHandlers.putIfAbsent(viewId, () => {});
-          _eventHandlers[viewId]![eventName] =
-              _stableHandlerMap[key]![eventName]!;
-
-          // Execute the handler
-          _stableHandlerMap[key]![eventName]!(eventData);
-          return;
-        }
+      // Handle ScrollView events
+      if (standardEventName == "onScroll" &&
+          _eventHandlers.containsKey(viewId) &&
+          _eventHandlers[viewId]!.containsKey("onScrolled")) {
+        // Convert to custom event format
+        _eventHandlers[viewId]!["onScrolled"]!(params);
+        return;
       }
 
-      debugPrint('NativeVDOM: No handler found for $eventName on view $viewId');
+      debugPrint(
+          'NativeVDOM: No handler found for $standardEventName on view $viewId');
     } catch (e, stack) {
-      debugPrint('NativeVDOM: ERROR handling native event - $e');
-      debugPrint('NativeVDOM: Stack trace: $stack');
+      debugPrint('NativeVDOM: Error handling event: $e\n$stack');
     }
+  }
+
+  // Register standard event handlers
+  void registerEventHandler(String viewId, String eventName, Function handler) {
+    // Ensure event names follow standard conventions
+    String standardEventName = eventName;
+    if (!eventName.startsWith("on")) {
+      final String capitalizedName =
+          eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
+      standardEventName = "on$capitalizedName";
+    }
+
+    debugPrint(
+        'NativeVDOM: Registering handler for $standardEventName on view $viewId');
+
+    _eventHandlers.putIfAbsent(viewId, () => {});
+    _eventHandlers[viewId]![standardEventName] = handler;
+
+    // Tell native side to track this event
+    MainViewCoordinatorInterface.addEventListeners(viewId, [standardEventName]);
   }
 
   // Register an event handler with improved tracking

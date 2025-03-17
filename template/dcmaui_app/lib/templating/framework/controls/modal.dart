@@ -1,148 +1,103 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
+import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
-/// DCModal presentation styles
-enum DCModalPresentationStyle {
-  /// Full-screen presentation
-  fullScreen,
-
-  /// Content appears as a card (partial screen)
-  pageSheet,
-
-  /// Content appears bottom-anchored
-  formSheet,
-
-  /// Semi-transparent background
-  overFullScreen,
-}
-
-/// Animation types for modal transitions
-enum DCModalAnimationType {
-  /// No animation
-  none,
-
-  /// Slide up from bottom
-  slide,
-
-  /// Fade in
-  fade,
-}
-
-/// Props for DCModal component
+/// Props for Modal component
 class DCModalProps implements ControlProps {
-  final bool visible;
-  final Function()? onRequestClose;
+  final bool? visible;
+  final String? animationType;
+  final String? presentationStyle;
   final bool? transparent;
-  final DCModalPresentationStyle? presentationStyle;
-  final DCModalAnimationType? animationType;
+  final bool? statusBarTranslucent;
   final bool? hardwareAccelerated;
+  final bool? closeByBackdrop;
+  final bool? shouldCloseOnOverlayTap;
   final Function()? onShow;
   final Function()? onDismiss;
-  final String? testID;
+  final Function(Map<String, dynamic>)? onRequestClose;
+  final ViewStyle? style;
   final Map<String, dynamic> additionalProps;
 
   const DCModalProps({
-    required this.visible,
-    this.onRequestClose,
-    this.transparent,
-    this.presentationStyle,
+    this.visible,
     this.animationType,
+    this.presentationStyle,
+    this.transparent,
+    this.statusBarTranslucent,
     this.hardwareAccelerated,
+    this.closeByBackdrop,
+    this.shouldCloseOnOverlayTap,
     this.onShow,
     this.onDismiss,
-    this.testID,
+    this.onRequestClose,
+    this.style,
     this.additionalProps = const {},
   });
 
   @override
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
-      'visible': visible,
       ...additionalProps,
     };
 
-    if (onRequestClose != null) map['onRequestClose'] = onRequestClose;
+    if (visible != null) map['visible'] = visible;
+    if (animationType != null) map['animationType'] = animationType;
+    if (presentationStyle != null) map['presentationStyle'] = presentationStyle;
     if (transparent != null) map['transparent'] = transparent;
-
-    if (presentationStyle != null) {
-      switch (presentationStyle) {
-        case DCModalPresentationStyle.fullScreen:
-          map['presentationStyle'] = 'fullScreen';
-          break;
-        case DCModalPresentationStyle.pageSheet:
-          map['presentationStyle'] = 'pageSheet';
-          break;
-        case DCModalPresentationStyle.formSheet:
-          map['presentationStyle'] = 'formSheet';
-          break;
-        case DCModalPresentationStyle.overFullScreen:
-          map['presentationStyle'] = 'overFullScreen';
-          break;
-        default:
-          map['presentationStyle'] = 'fullScreen';
-      }
-    }
-
-    if (animationType != null) {
-      switch (animationType) {
-        case DCModalAnimationType.none:
-          map['animationType'] = 'none';
-          break;
-        case DCModalAnimationType.slide:
-          map['animationType'] = 'slide';
-          break;
-        case DCModalAnimationType.fade:
-          map['animationType'] = 'fade';
-          break;
-        default:
-          map['animationType'] = 'none';
-      }
-    }
-
-    if (hardwareAccelerated != null) {
+    if (statusBarTranslucent != null)
+      map['statusBarTranslucent'] = statusBarTranslucent;
+    if (hardwareAccelerated != null)
       map['hardwareAccelerated'] = hardwareAccelerated;
-    }
+    if (closeByBackdrop != null) map['closeByBackdrop'] = closeByBackdrop;
+    if (shouldCloseOnOverlayTap != null)
+      map['shouldCloseOnOverlayTap'] = shouldCloseOnOverlayTap;
     if (onShow != null) map['onShow'] = onShow;
     if (onDismiss != null) map['onDismiss'] = onDismiss;
-    if (testID != null) map['testID'] = testID;
+    if (onRequestClose != null) map['onRequestClose'] = onRequestClose;
+    if (style != null) map['style'] = style!.toMap();
 
     return map;
   }
 }
 
-/// DCModal component
+/// Modal component
 class DCModal extends Control {
   final DCModalProps props;
   final List<Control> children;
 
   DCModal({
-    required bool visible,
-    Function()? onRequestClose,
+    bool? visible,
+    String? animationType,
+    String? presentationStyle,
     bool? transparent,
-    DCModalPresentationStyle? presentationStyle,
-    DCModalAnimationType? animationType = DCModalAnimationType.slide,
+    bool? statusBarTranslucent,
     bool? hardwareAccelerated,
+    bool? closeByBackdrop,
+    bool? shouldCloseOnOverlayTap,
     Function()? onShow,
     Function()? onDismiss,
-    String? testID,
-    required this.children,
+    Function(Map<String, dynamic>)? onRequestClose,
+    ViewStyle? style,
+    Map<String, dynamic>? additionalProps,
+    this.children = const [],
   }) : props = DCModalProps(
           visible: visible,
-          onRequestClose: onRequestClose,
-          transparent: transparent,
-          presentationStyle: presentationStyle,
           animationType: animationType,
+          presentationStyle: presentationStyle,
+          transparent: transparent,
+          statusBarTranslucent: statusBarTranslucent,
           hardwareAccelerated: hardwareAccelerated,
+          closeByBackdrop: closeByBackdrop,
+          shouldCloseOnOverlayTap: shouldCloseOnOverlayTap,
           onShow: onShow,
           onDismiss: onDismiss,
-          testID: testID,
+          onRequestClose: onRequestClose,
+          style: style,
+          additionalProps: additionalProps ?? const {},
         );
-
-  DCModal.custom({
-    required this.props,
-    required this.children,
-  });
 
   @override
   VNode build() {
@@ -150,6 +105,44 @@ class DCModal extends Control {
       'DCModal',
       props.toMap(),
       buildChildren(children),
+    );
+  }
+
+  /// Convenience constructor for a fullscreen fade modal
+  static DCModal fade({
+    required bool visible,
+    required List<Control> children,
+    Function()? onDismiss,
+    Function(Map<String, dynamic>)? onRequestClose,
+    bool? transparent,
+  }) {
+    return DCModal(
+      visible: visible,
+      animationType: 'fade',
+      presentationStyle: 'fullScreen',
+      transparent: transparent ?? true,
+      onDismiss: onDismiss,
+      onRequestClose: onRequestClose,
+      children: children,
+    );
+  }
+
+  /// Convenience constructor for a slide-up modal
+  static DCModal slideUp({
+    required bool visible,
+    required List<Control> children,
+    Function()? onDismiss,
+    Function(Map<String, dynamic>)? onRequestClose,
+    bool? transparent,
+  }) {
+    return DCModal(
+      visible: visible,
+      animationType: 'slide',
+      presentationStyle: 'pageSheet',
+      transparent: transparent ?? false,
+      onDismiss: onDismiss,
+      onRequestClose: onRequestClose,
+      children: children,
     );
   }
 }

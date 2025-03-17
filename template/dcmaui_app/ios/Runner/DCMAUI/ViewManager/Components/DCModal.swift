@@ -7,7 +7,6 @@
 
 import UIKit
 
-
 /// Modal component for presenting content modally
 class DCModal: DCBaseView {
     private var isVisible = false
@@ -62,6 +61,21 @@ class DCModal: DCBaseView {
         // Handle presentation style
         if let presStyle = props["presentationStyle"] as? String {
             presentationStyle = presStyle
+        }
+        
+        // Handle hardwareAccelerated property (iOS-specific)
+        if let hardwareAccelerated = props["hardwareAccelerated"] as? Bool {
+            // In iOS, most views are hardware accelerated by default
+            // We can explicitly set layer.shouldRasterize for optimization
+            layer.shouldRasterize = !hardwareAccelerated
+            if !hardwareAccelerated {
+                layer.rasterizationScale = UIScreen.main.scale
+            }
+        }
+        
+        // Handle statusBarTranslucent property
+        if let statusBarTranslucent = props["statusBarTranslucent"] as? Bool {
+            modalViewController?.modalPresentationCapturesStatusBarAppearance = !statusBarTranslucent
         }
     }
     
@@ -121,6 +135,7 @@ class DCModal: DCBaseView {
         switch animationType {
             case "none":
                 modalVC.modalTransitionStyle = .crossDissolve
+                modalVC.view.alpha = 0  // Will animate this manually
             case "slide":
                 modalVC.modalTransitionStyle = .coverVertical
             case "fade":
@@ -139,8 +154,16 @@ class DCModal: DCBaseView {
             }
         }
         
-        // Present the modal
-        rootViewController.present(modalVC, animated: animationType != "none", completion: nil)
+        // If animation is "none", we need to handle it manually
+        if animationType == "none" {
+            rootViewController.present(modalVC, animated: false) {
+                UIView.animate(withDuration: 0.1) {
+                    modalVC.view.alpha = 1.0
+                }
+            }
+        } else {
+            rootViewController.present(modalVC, animated: true, completion: nil)
+        }
     }
     
     private func presentDirectlyOverWindow() {
@@ -199,9 +222,20 @@ class DCModal: DCBaseView {
         
         // If using a view controller, dismiss it
         if let modalVC = modalViewController {
-            modalVC.dismiss(animated: animationType != "none", completion: {
-                self.modalViewController = nil
-            })
+            // Handle "none" animation type manually
+            if animationType == "none" {
+                UIView.animate(withDuration: 0.1, animations: {
+                    modalVC.view.alpha = 0.0
+                }, completion: { _ in
+                    modalVC.dismiss(animated: false, completion: {
+                        self.modalViewController = nil
+                    })
+                })
+            } else {
+                modalVC.dismiss(animated: true) {
+                    self.modalViewController = nil
+                }
+            }
             return
         }
         
@@ -234,20 +268,39 @@ class DCModal: DCBaseView {
     
     @objc private func handleBackgroundTap() {
         // Check if we should dismiss on background tap
-        if let onRequestClose = props["onRequestClose"] as? () -> Void {
-            onRequestClose()
-        } else {
-            // Default behavior - hide the modal
+        if let shouldCloseOnOverlayTap = props["shouldCloseOnOverlayTap"] as? Bool, !shouldCloseOnOverlayTap {
+            // Do not close if explicitly disabled
+            return
+        }
+        
+        // Trigger onRequestClose callback
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onRequestClose",
+            params: [
+                "target": viewId,
+                "reason": "backgroundTap"
+            ]
+        )
+        
+        // Default behavior - hide the modal if allowed
+        let closeByBackdrop = props["closeByBackdrop"] as? Bool ?? true
+        if closeByBackdrop {
             hideModal()
         }
     }
     
+    // Override add subview behavior to handle different presentation states
     override func addSubview(_ view: UIView) {
-        // If modal is visible, add to the content view
-        if isVisible, let contentView = contentView, view != backgroundView {
-            contentView.addSubview(view)
-        } else if let modalVC = modalViewController, view != backgroundView {
-            modalVC.view.addSubview(view)
+        // If modal is visible, add to the appropriate container
+        if isVisible {
+            if let contentView = contentView, view != backgroundView {
+                contentView.addSubview(view)
+            } else if let modalVC = modalViewController, view != backgroundView {
+                modalVC.view.addSubview(view)
+            } else {
+                super.addSubview(view)
+            }
         } else {
             super.addSubview(view)
         }
@@ -258,5 +311,22 @@ class DCModal: DCBaseView {
         modalViewController?.dismiss(animated: false, completion: nil)
         backgroundView.removeFromSuperview()
         contentView?.removeFromSuperview()
+    }
+    
+    // Handle hardware back button on Android (not applicable to iOS but included for API compatibility)
+    func handleBackPressed() -> Bool {
+        // Trigger onRequestClose callback
+        DCViewCoordinator.shared?.sendEvent(
+            viewId: viewId,
+            eventName: "onRequestClose",
+            params: [
+                "target": viewId,
+                "reason": "backButton"
+            ]
+        )
+        
+        // Default behavior - hide the modal
+        hideModal()
+        return true
     }
 }

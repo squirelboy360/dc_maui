@@ -1,7 +1,9 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 
 /// Enum defining how the image should resize to fit its container
 enum ResizeMode {
@@ -130,22 +132,28 @@ class DCImageStyle implements StyleProps {
 
 /// Props for DCImage component
 class DCImageProps implements ControlProps {
-  final DCImageSource source;
-  final DCImageStyle? style;
+  final DCImageSource? source;
+  final DCImageSource? defaultSource;
+  final String? resizeMode;
   final bool? loadingIndicatorEnabled;
-  final String? blurHash; // For advanced image loading (optional)
-  final Function()? onLoad;
-  final Function(String)? onError;
+  final Function(Map<String, dynamic>)? onLoad;
+  final Function(Map<String, dynamic>)? onError;
+  final Function()? onLoadStart;
+  final Function()? onLoadEnd;
+  final ViewStyle? style;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
   const DCImageProps({
-    required this.source,
-    this.style,
+    this.source,
+    this.defaultSource,
+    this.resizeMode,
     this.loadingIndicatorEnabled,
-    this.blurHash,
     this.onLoad,
     this.onError,
+    this.onLoadStart,
+    this.onLoadEnd,
+    this.style,
     this.testID,
     this.additionalProps = const {},
   });
@@ -153,52 +161,52 @@ class DCImageProps implements ControlProps {
   @override
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
-      'source': source.toMap(),
       ...additionalProps,
     };
 
-    if (style != null) map['style'] = style!.toMap();
-    if (loadingIndicatorEnabled != null) {
+    if (source != null) map['source'] = source!.toMap();
+    if (defaultSource != null) map['defaultSource'] = defaultSource!.toMap();
+    if (resizeMode != null) map['resizeMode'] = resizeMode;
+    if (loadingIndicatorEnabled != null)
       map['loadingIndicatorEnabled'] = loadingIndicatorEnabled;
-    }
-    if (blurHash != null) map['blurHash'] = blurHash;
     if (onLoad != null) map['onLoad'] = onLoad;
     if (onError != null) map['onError'] = onError;
+    if (onLoadStart != null) map['onLoadStart'] = onLoadStart;
+    if (onLoadEnd != null) map['onLoadEnd'] = onLoadEnd;
+    if (style != null) map['style'] = style!.toMap();
     if (testID != null) map['testID'] = testID;
 
     return map;
   }
 }
 
-/// Represents an image source - either a remote URL or local asset
+/// Image source properties
 class DCImageSource {
-  final String? uri;
-  final String? assetName;
-  final double? scale;
+  final String uri;
   final Map<String, String>? headers;
+  final double? width;
+  final double? height;
+  final double? scale;
 
-  /// Create a source from a URI/URL
-  const DCImageSource.network(this.uri, {this.headers, this.scale})
-      : assetName = null;
-
-  /// Create a source from a local asset
-  const DCImageSource.asset(this.assetName, {this.scale})
-      : uri = null,
-        headers = null;
+  const DCImageSource({
+    required this.uri,
+    this.headers,
+    this.width,
+    this.height,
+    this.scale,
+  });
 
   Map<String, dynamic> toMap() {
-    if (uri != null) {
-      final map = <String, dynamic>{'uri': uri};
-      if (headers != null) map['headers'] = headers;
-      if (scale != null) map['scale'] = scale;
-      return map;
-    } else if (assetName != null) {
-      final map = <String, dynamic>{'assetName': assetName};
-      if (scale != null) map['scale'] = scale;
-      return map;
-    } else {
-      return {};
-    }
+    final map = <String, dynamic>{
+      'uri': uri,
+    };
+
+    if (headers != null) map['headers'] = headers;
+    if (width != null) map['width'] = width;
+    if (height != null) map['height'] = height;
+    if (scale != null) map['scale'] = scale;
+
+    return map;
   }
 }
 
@@ -206,54 +214,94 @@ class DCImageSource {
 class DCImage extends Control {
   final DCImageProps props;
 
-  /// Create an image from a URI/URL
-  DCImage.network(
-    String uri, {
-    Map<String, String>? headers,
-    DCImageStyle? style,
+  DCImage({
+    DCImageSource? source,
+    DCImageSource? defaultSource,
+    String? resizeMode,
     bool? loadingIndicatorEnabled,
-    String? blurHash,
-    Function()? onLoad,
-    Function(String)? onError,
+    Function(Map<String, dynamic>)? onLoad,
+    Function(Map<String, dynamic>)? onError,
+    Function()? onLoadStart,
+    Function()? onLoadEnd,
+    ViewStyle? style,
     String? testID,
+    Map<String, dynamic>? additionalProps,
   }) : props = DCImageProps(
-          source: DCImageSource.network(uri, headers: headers),
-          style: style,
+          source: source,
+          defaultSource: defaultSource,
+          resizeMode: resizeMode,
           loadingIndicatorEnabled: loadingIndicatorEnabled,
-          blurHash: blurHash,
           onLoad: onLoad,
           onError: onError,
-          testID: testID,
-        );
-
-  /// Create an image from a local asset
-  DCImage.asset(
-    String assetName, {
-    double? scale,
-    DCImageStyle? style,
-    bool? loadingIndicatorEnabled,
-    String? blurHash,
-    Function()? onLoad,
-    Function(String)? onError,
-    String? testID,
-  }) : props = DCImageProps(
-          source: DCImageSource.asset(assetName, scale: scale),
+          onLoadStart: onLoadStart,
+          onLoadEnd: onLoadEnd,
           style: style,
-          loadingIndicatorEnabled: loadingIndicatorEnabled,
-          blurHash: blurHash,
-          onLoad: onLoad,
-          onError: onError,
           testID: testID,
+          additionalProps: additionalProps ?? const {},
         );
-
-  DCImage.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
       'DCImage',
       props.toMap(),
-      [], // DCImage doesn't have children
+      [],
+    );
+  }
+
+  /// Convenience constructor for a network image
+  static DCImage network(
+    String url, {
+    Map<String, String>? headers,
+    String? resizeMode,
+    ViewStyle? style,
+    bool? showLoadingIndicator,
+    Function(Map<String, dynamic>)? onLoad,
+    Function(Map<String, dynamic>)? onError,
+  }) {
+    return DCImage(
+      source: DCImageSource(
+        uri: url,
+        headers: headers,
+      ),
+      resizeMode: resizeMode ?? 'contain',
+      style: style,
+      loadingIndicatorEnabled: showLoadingIndicator,
+      onLoad: onLoad,
+      onError: onError,
+    );
+  }
+
+  /// Convenience constructor for a local image
+  static DCImage asset(
+    String name, {
+    String? resizeMode,
+    ViewStyle? style,
+    Function(Map<String, dynamic>)? onLoad,
+  }) {
+    return DCImage(
+      source: DCImageSource(
+        uri: 'resource:$name',
+      ),
+      resizeMode: resizeMode ?? 'contain',
+      style: style,
+      onLoad: onLoad,
+    );
+  }
+
+  /// Convenience constructor for a base64 image
+  static DCImage base64(
+    String base64String, {
+    String? mimeType = 'image/png',
+    String? resizeMode,
+    ViewStyle? style,
+  }) {
+    return DCImage(
+      source: DCImageSource(
+        uri: 'data:$mimeType;base64,$base64String',
+      ),
+      resizeMode: resizeMode ?? 'contain',
+      style: style,
     );
   }
 }

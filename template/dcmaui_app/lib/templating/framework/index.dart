@@ -1,34 +1,49 @@
-// DC Framework Main Index
-// Import this file to get access to the entire framework
+/// Main entry point for the DC MAUI Framework
+/// Exposes all components and utilities
 
-// Core modules
-import 'core/core.dart';
+// Core system
+export 'core/core.dart';
+export 'core/vdom/vdom.dart';
 
-export 'core/index.dart';
-export 'core/vdom/index.dart';
-export 'core/context.dart'; // Export context directly for easy access
-export 'core/error_boundary.dart'; // Export error boundary directly
-
-// UI Controls - with consistent DC prefixed naming
+// Controls/Components
 export 'controls/index.dart';
-export 'controls/view.dart'; // Export controls directly for convenience
+
+// Layout components
+export 'controls/view.dart';
+export 'controls/scrollview.dart';
+export 'controls/safe_area_view.dart';
+
+// Text components
 export 'controls/text.dart';
+export 'controls/textinput.dart';
+
+// Interactive components
 export 'controls/button.dart';
+export 'controls/checkbox.dart';
+export 'controls/switch.dart';
+export 'controls/gesture_detector.dart';
+export 'controls/touchable_highlight.dart';
+export 'controls/touchable_opacity.dart';
+export 'controls/touchable_without_feedback.dart';
+
+// Media components
+export 'controls/image.dart';
 export 'controls/modal.dart';
 
-// State and hooks
-export 'hooks/index.dart';
-export 'hooks/use_state.dart'; // Export commonly used hooks directly
-export 'hooks/use_effect.dart';
-export 'hooks/use_memo.dart';
+// List components
+export 'controls/list_view.dart';
+
+// Specialized components
+export 'controls/activity_indicator.dart';
+export 'controls/animated_view.dart';
+
+// Hooks system
+export 'hooks/use_state.dart';
 
 // Utilities
-export 'utility/index.dart';
-export 'utility/state_abstraction.dart'; // Export state management directly
+export 'utility/flutter.dart';
+export 'utility/native_extensions.dart';
 export 'utility/performance_monitor.dart';
-
-// Animation
-export 'animation/index.dart';
 
 /// DC Framework Version
 const String dcFrameworkVersion = '0.1.1'; // Updated version

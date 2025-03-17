@@ -19,8 +19,8 @@ enum DCTextInputType {
 class DCTextInputProps implements ControlProps {
   final String? value;
   final String? placeholder;
-  final TextStyle? style;
-  final TextStyle? placeholderStyle;
+  final DCTextStyle? style;
+  final DCTextStyle? placeholderStyle;
   final bool? autoFocus;
   final bool? editable;
   final DCTextInputType? keyboardType;
@@ -126,8 +126,8 @@ class DCTextInputProps implements ControlProps {
   DCTextInputProps copyWith({
     String? value,
     String? placeholder,
-    TextStyle? style,
-    TextStyle? placeholderStyle,
+    DCTextStyle? style,
+    DCTextStyle? placeholderStyle,
     bool? autoFocus,
     bool? editable,
     DCTextInputType? keyboardType,
@@ -171,8 +171,8 @@ class DCTextInput extends Control {
   DCTextInput({
     String? value,
     String? placeholder,
-    TextStyle? style,
-    TextStyle? placeholderStyle,
+    DCTextStyle? style,
+    DCTextStyle? placeholderStyle,
     bool? autoFocus,
     bool? editable,
     DCTextInputType? keyboardType,

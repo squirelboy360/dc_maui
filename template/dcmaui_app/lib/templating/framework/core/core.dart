@@ -195,43 +195,40 @@ class MainViewCoordinatorInterface {
 
     if (call.method == 'onNativeEvent') {
       final event = Map<String, dynamic>.from(call.arguments);
+      final String viewId = event['viewId'];
 
-      // ENHANCEMENT: Request additional information about the control
-      // This helps us track the control even when view IDs change
-      if (event['viewId'] != null && !event.containsKey('controlType')) {
-        try {
-          final viewInfo = await _channel.invokeMethod('getViewInfo', {
-            'viewId': event['viewId'],
-          });
+      // Standardize event name to React Native conventions
+      String eventName = event['eventName'] ?? '';
+      if (!eventName.startsWith('on')) {
+        final capitalizedFirst =
+            eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
+        eventName = 'on$capitalizedFirst';
+      }
 
-          if (viewInfo != null && viewInfo is Map) {
-            // Add control type and other properties to event data
-            if (viewInfo.containsKey('type')) {
-              event['controlType'] = viewInfo['type'];
-            }
+      // Ensure params match React Native format
+      Map<String, dynamic> params;
+      if (event['params'] is Map) {
+        params = Map<String, dynamic>.from(event['params']);
 
-            // Add control properties to event data if not already present
-            if (event['data'] == null) {
-              event['data'] = {};
-            } else if (event['data'] is! Map) {
-              event['data'] = {'value': event['data']};
-            }
-
-            // Add title, id, or other identifying information
-            if (viewInfo.containsKey('title')) {
-              event['data']['title'] = viewInfo['title'];
-            }
-            if (viewInfo.containsKey('id')) {
-              event['data']['id'] = viewInfo['id'];
-            }
-          }
-        } catch (e) {
-          debugPrint('DC MAUI: Error getting view info: $e');
+        // Make sure target is included
+        if (!params.containsKey('target')) {
+          params['target'] = viewId;
         }
+      } else {
+        // Default empty params with target
+        params = {'target': viewId};
       }
 
       debugPrint(
-          'DC MAUI: Received native event: ${event['eventName']} for view ${event['viewId']} with data: ${event['data']}');
+          'DC MAUI: Normalized event $eventName for view $viewId with data: $params');
+
+      // Dispatch the event
+      eventStream.add({
+        'viewId': viewId,
+        'eventName': eventName,
+        'params': params,
+      });
+
       return;
     } else if (call.method == 'logTree') {
       final treeData = call.arguments as String;

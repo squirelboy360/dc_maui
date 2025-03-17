@@ -1,74 +1,46 @@
+import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' hide TextStyle;
-import 'dart:io' show Platform;
+import 'package:flutter/widgets.dart';
 
-/// Style properties for Text
-class TextStyle implements StyleProps {
+/// Style properties for DCText
+class DCTextStyle implements StyleProps {
   final Color? color;
   final double? fontSize;
   final FontWeight? fontWeight;
   final String? fontFamily;
   final TextAlign? textAlign;
-  final TextDecoration? decoration;
   final double? lineHeight;
-  final int? maxLines;
-  final TextOverflow? overflow;
+  final TextDecorationLine? textDecorationLine;
+  final Color? textDecorationColor;
+  final FontStyle? fontStyle;
   final double? letterSpacing;
+  final double? textShadowRadius;
+  final Offset? textShadowOffset;
+  final Color? textShadowColor;
+  final bool? includeFontPadding;
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
 
-  const TextStyle({
+  const DCTextStyle({
     this.color,
     this.fontSize,
     this.fontWeight,
     this.fontFamily,
     this.textAlign,
-    this.decoration,
     this.lineHeight,
-    this.maxLines,
-    this.overflow,
+    this.textDecorationLine,
+    this.textDecorationColor,
+    this.fontStyle,
     this.letterSpacing,
+    this.textShadowRadius,
+    this.textShadowOffset,
+    this.textShadowColor,
+    this.includeFontPadding,
+    this.padding,
+    this.margin,
   });
-
-  /// Create a TextStyle from a map of style properties
-  factory TextStyle.fromMap(Map<String, dynamic> map) {
-    Color? color;
-    if (map.containsKey('color')) {
-      if (map['color'] is Color) {
-        color = map['color'];
-      } else if (map['color'] is String && map['color'].startsWith('#')) {
-        color = _hexToColor(map['color']);
-      }
-    }
-
-    FontWeight? fontWeight;
-    if (map.containsKey('fontWeight')) {
-      if (map['fontWeight'] is FontWeight) {
-        fontWeight = map['fontWeight'];
-      } else if (map['fontWeight'] == 'bold') {
-        fontWeight = FontWeight.bold;
-      } else if (map['fontWeight'] == 'normal') {
-        fontWeight = FontWeight.normal;
-      }
-    }
-
-    return TextStyle(
-      fontSize: map['fontSize'] is double ? map['fontSize'] : null,
-      fontWeight: fontWeight,
-      color: color,
-      // Add more conversions as needed
-    );
-  }
-
-  // Helper method to convert hex string to Color
-  static Color _hexToColor(String hexString) {
-    hexString = hexString.replaceAll('#', '');
-    if (hexString.length == 6) {
-      hexString = 'FF$hexString'; // Fixed string concatenation
-    }
-    return Color(int.parse(hexString, radix: 16));
-  }
 
   @override
   Map<String, dynamic> toMap() {
@@ -82,143 +54,217 @@ class TextStyle implements StyleProps {
     if (fontSize != null) map['fontSize'] = fontSize;
 
     if (fontWeight != null) {
-      map['fontWeight'] = _fontWeightToString(fontWeight!);
+      switch (fontWeight) {
+        case FontWeight.bold:
+          map['fontWeight'] = 'bold';
+          break;
+        case FontWeight.w100:
+          map['fontWeight'] = '100';
+          break;
+        case FontWeight.w200:
+          map['fontWeight'] = '200';
+          break;
+        case FontWeight.w300:
+          map['fontWeight'] = '300';
+          break;
+        case FontWeight.w400:
+          map['fontWeight'] = '400';
+          break;
+        case FontWeight.w500:
+          map['fontWeight'] = '500';
+          break;
+        case FontWeight.w600:
+          map['fontWeight'] = '600';
+          break;
+        case FontWeight.w700:
+          map['fontWeight'] = '700';
+          break;
+        case FontWeight.w800:
+          map['fontWeight'] = '800';
+          break;
+        case FontWeight.w900:
+          map['fontWeight'] = '900';
+          break;
+        default:
+          map['fontWeight'] = 'normal';
+          break;
+      }
     }
 
     if (fontFamily != null) map['fontFamily'] = fontFamily;
 
     if (textAlign != null) {
-      map['textAlign'] = _textAlignToString(textAlign!);
-    }
-
-    if (decoration != null) {
-      map['textDecorationLine'] = _textDecorationToString(decoration!);
+      switch (textAlign) {
+        case TextAlign.left:
+          map['textAlign'] = 'left';
+          break;
+        case TextAlign.right:
+          map['textAlign'] = 'right';
+          break;
+        case TextAlign.center:
+          map['textAlign'] = 'center';
+          break;
+        case TextAlign.justify:
+          map['textAlign'] = 'justify';
+          break;
+        default:
+          map['textAlign'] = 'auto';
+          break;
+      }
     }
 
     if (lineHeight != null) map['lineHeight'] = lineHeight;
-    if (maxLines != null) map['maxLines'] = maxLines;
 
-    if (overflow != null) {
-      map['textOverflow'] = _textOverflowToString(overflow!);
+    if (textDecorationLine != null) {
+      switch (textDecorationLine) {
+        case TextDecorationLine.underline:
+          map['textDecorationLine'] = 'underline';
+          break;
+        case TextDecorationLine.lineThrough:
+          map['textDecorationLine'] = 'line-through';
+          break;
+        case TextDecorationLine.overline:
+          map['textDecorationLine'] = 'overline';
+          break;
+        case TextDecorationLine.none:
+          map['textDecorationLine'] = 'none';
+          break;
+      }
+    }
+
+    if (textDecorationColor != null) {
+      final colorValue =
+          textDecorationColor!.value.toRadixString(16).padLeft(8, '0');
+      map['textDecorationColor'] = '#$colorValue';
+    }
+
+    if (fontStyle != null) {
+      switch (fontStyle) {
+        case FontStyle.italic:
+          map['fontStyle'] = 'italic';
+          break;
+        case FontStyle.normal:
+        default:
+          map['fontStyle'] = 'normal';
+          break;
+      }
     }
 
     if (letterSpacing != null) map['letterSpacing'] = letterSpacing;
 
-    // Add platform-specific style properties
-    if (kIsWeb) {
-      map['whiteSpace'] = 'pre-wrap'; // Better text wrapping for web
-    } else if (Platform.isIOS) {
-      // iOS-specific text properties
-      if (fontWeight == FontWeight.w600) {
-        // iOS uses semibold where Android might use bold
-        map['fontWeight'] = 'semibold';
+    if (textShadowRadius != null) map['textShadowRadius'] = textShadowRadius;
+
+    if (textShadowOffset != null) {
+      map['textShadowOffset'] = {
+        'width': textShadowOffset!.dx,
+        'height': textShadowOffset!.dy,
+      };
+    }
+
+    if (textShadowColor != null) {
+      final colorValue =
+          textShadowColor!.value.toRadixString(16).padLeft(8, '0');
+      map['textShadowColor'] = '#$colorValue';
+    }
+
+    if (includeFontPadding != null) {
+      map['includeFontPadding'] = includeFontPadding;
+    }
+
+    if (padding != null) {
+      if (padding!.left == padding!.right &&
+          padding!.top == padding!.bottom &&
+          padding!.left == padding!.top) {
+        map['padding'] = padding!.top;
+      } else {
+        map['paddingLeft'] = padding!.left;
+        map['paddingRight'] = padding!.right;
+        map['paddingTop'] = padding!.top;
+        map['paddingBottom'] = padding!.bottom;
       }
-    } else if (Platform.isAndroid) {
-      // Android-specific text properties
-      if (fontFamily == null && !map.containsKey('fontFamily')) {
-        map['fontFamily'] = 'Roboto'; // Default Android font
+    }
+
+    if (margin != null) {
+      if (margin!.left == margin!.right &&
+          margin!.top == margin!.bottom &&
+          margin!.left == margin!.top) {
+        map['margin'] = margin!.top;
+      } else {
+        map['marginLeft'] = margin!.left;
+        map['marginRight'] = margin!.right;
+        map['marginTop'] = margin!.top;
+        map['marginBottom'] = margin!.bottom;
       }
     }
 
     return map;
   }
 
-  // Helper methods to convert Flutter enums to string values
-  String _fontWeightToString(FontWeight weight) {
-    switch (weight) {
-      case FontWeight.w100:
-        return '100';
-      case FontWeight.w200:
-        return '200';
-      case FontWeight.w300:
-        return '300';
-      case FontWeight.w400:
-        return 'normal';
-      case FontWeight.w500:
-        return '500';
-      case FontWeight.w600:
-        return '600';
-      case FontWeight.w700:
-        return 'bold';
-      case FontWeight.w800:
-        return '800';
-      case FontWeight.w900:
-        return '900';
-      default:
-        return 'normal';
-    }
-  }
-
-  String _textAlignToString(TextAlign align) {
-    switch (align) {
-      case TextAlign.left:
-        return 'left';
-      case TextAlign.right:
-        return 'right';
-      case TextAlign.center:
-        return 'center';
-      case TextAlign.justify:
-        return 'justify';
-      default:
-        return 'auto';
-    }
-  }
-
-  String _textDecorationToString(TextDecoration decoration) {
-    if (decoration == TextDecoration.underline) return 'underline';
-    if (decoration == TextDecoration.lineThrough) return 'line-through';
-    if (decoration == TextDecoration.overline) return 'overline';
-    return 'none';
-  }
-
-  String _textOverflowToString(TextOverflow overflow) {
-    if (overflow == TextOverflow.ellipsis) return 'ellipsis';
-    if (overflow == TextOverflow.fade) return 'fade';
-    if (overflow == TextOverflow.visible) return 'visible';
-    return 'clip';
-  }
-
-  TextStyle copyWith({
+  DCTextStyle copyWith({
     Color? color,
     double? fontSize,
     FontWeight? fontWeight,
     String? fontFamily,
     TextAlign? textAlign,
-    TextDecoration? decoration,
     double? lineHeight,
-    int? maxLines,
-    TextOverflow? overflow,
+    TextDecorationLine? textDecorationLine,
+    Color? textDecorationColor,
+    FontStyle? fontStyle,
     double? letterSpacing,
+    double? textShadowRadius,
+    Offset? textShadowOffset,
+    Color? textShadowColor,
+    bool? includeFontPadding,
+    EdgeInsets? padding,
+    EdgeInsets? margin,
   }) {
-    return TextStyle(
+    return DCTextStyle(
       color: color ?? this.color,
       fontSize: fontSize ?? this.fontSize,
       fontWeight: fontWeight ?? this.fontWeight,
       fontFamily: fontFamily ?? this.fontFamily,
       textAlign: textAlign ?? this.textAlign,
-      decoration: decoration ?? this.decoration,
       lineHeight: lineHeight ?? this.lineHeight,
-      maxLines: maxLines ?? this.maxLines,
-      overflow: overflow ?? this.overflow,
+      textDecorationLine: textDecorationLine ?? this.textDecorationLine,
+      textDecorationColor: textDecorationColor ?? this.textDecorationColor,
+      fontStyle: fontStyle ?? this.fontStyle,
       letterSpacing: letterSpacing ?? this.letterSpacing,
+      textShadowRadius: textShadowRadius ?? this.textShadowRadius,
+      textShadowOffset: textShadowOffset ?? this.textShadowOffset,
+      textShadowColor: textShadowColor ?? this.textShadowColor,
+      includeFontPadding: includeFontPadding ?? this.includeFontPadding,
+      padding: padding ?? this.padding,
+      margin: margin ?? this.margin,
     );
   }
 }
 
-/// Props for Text component
-class TextProps implements ControlProps {
+/// Enum for text decoration line options
+enum TextDecorationLine {
+  none,
+  underline,
+  lineThrough,
+  overline,
+}
+
+/// Props for DCText component
+class DCTextProps implements ControlProps {
   final String text;
-  final TextStyle? style;
+  final int? numberOfLines;
   final bool? selectable;
-  final Function(String)? onPress;
+  final bool? adjustsFontSizeToFit;
+  final double? minimumFontScale;
+  final DCTextStyle? style;
   final String? testID;
   final Map<String, dynamic> additionalProps;
 
-  const TextProps({
+  const DCTextProps({
     required this.text,
-    this.style,
+    this.numberOfLines,
     this.selectable,
-    this.onPress,
+    this.adjustsFontSizeToFit,
+    this.minimumFontScale,
+    this.style,
     this.testID,
     this.additionalProps = const {},
   });
@@ -230,101 +276,105 @@ class TextProps implements ControlProps {
       ...additionalProps,
     };
 
-    if (style != null) map['style'] = style!.toMap();
+    if (numberOfLines != null) map['numberOfLines'] = numberOfLines;
     if (selectable != null) map['selectable'] = selectable;
-    if (onPress != null) map['onPress'] = onPress;
+    if (adjustsFontSizeToFit != null)
+      map['adjustsFontSizeToFit'] = adjustsFontSizeToFit;
+    if (minimumFontScale != null) map['minimumFontScale'] = minimumFontScale;
+    if (style != null) map['style'] = style!.toMap();
     if (testID != null) map['testID'] = testID;
-
-    // Add platform-specific props
-    if (kIsWeb) {
-      map['_platform'] = 'web';
-      // Web-specific text properties
-      if (!map.containsKey('selectable') &&
-          !additionalProps.containsKey('selectable')) {
-        map['selectable'] = true; // Better web experience with selectable text
-      }
-    } else if (Platform.isIOS) {
-      map['_platform'] = 'ios';
-      // iOS-specific text properties
-      if (!map.containsKey('allowsFontScaling') &&
-          !additionalProps.containsKey('allowsFontScaling')) {
-        map['allowsFontScaling'] = true; // iOS dynamic type
-      }
-    } else if (Platform.isAndroid) {
-      map['_platform'] = 'android';
-      // Android-specific text properties
-      if (!map.containsKey('includeFontPadding') &&
-          !additionalProps.containsKey('includeFontPadding')) {
-        map['includeFontPadding'] = false; // More consistent with iOS
-      }
-    }
 
     return map;
   }
-
-  TextProps copyWith({
-    String? text,
-    TextStyle? style,
-    bool? selectable,
-    Function(String)? onPress,
-    String? testID,
-    Map<String, dynamic>? additionalProps,
-  }) {
-    return TextProps(
-      text: text ?? this.text,
-      style: style ?? this.style,
-      selectable: selectable ?? this.selectable,
-      onPress: onPress ?? this.onPress,
-      testID: testID ?? this.testID,
-      additionalProps: additionalProps ?? this.additionalProps,
-    );
-  }
 }
 
-/// Text control
+/// Text component for displaying text
 class DCText extends Control {
-  final TextProps props;
+  final DCTextProps props;
 
-  DCText(
-    String text, {
-    TextStyle? style,
+  DCText({
+    required String text,
+    int? numberOfLines,
     bool? selectable,
-    Function(String)? onPress,
+    bool? adjustsFontSizeToFit,
+    double? minimumFontScale,
+    DCTextStyle? style,
     String? testID,
-  }) : props = TextProps(
+    Map<String, dynamic>? additionalProps,
+  }) : props = DCTextProps(
           text: text,
-          style: style,
+          numberOfLines: numberOfLines,
           selectable: selectable,
-          onPress: onPress,
+          adjustsFontSizeToFit: adjustsFontSizeToFit,
+          minimumFontScale: minimumFontScale,
+          style: style,
           testID: testID,
+          additionalProps: additionalProps ?? const {},
         );
-
-  DCText.custom({required this.props});
 
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'DCText', // Ensure DC prefix is used
+      'DCText',
       props.toMap(),
-      [], // Text doesn't have children
+      [], // DCText doesn't have children
     );
   }
 
-  /// Create text with a style
-  static DCText styled({
-    required String text,
-    required TextStyle style,
-    bool? selectable,
-    Function(String)? onPress,
-    String? testID,
+  /// Create a heading text
+  static DCText heading(
+    String text, {
+    TextAlign? textAlign,
+    Color? color,
+    FontWeight? fontWeight = FontWeight.bold,
+    double? fontSize = 24.0,
   }) {
-    return DCText.custom(
-      props: TextProps(
-        text: text,
-        style: style,
-        selectable: selectable,
-        onPress: onPress,
-        testID: testID,
+    return DCText(
+      text: text,
+      style: DCTextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        textAlign: textAlign,
+      ),
+    );
+  }
+
+  /// Create a body text
+  static DCText body(
+    String text, {
+    TextAlign? textAlign,
+    Color? color,
+    FontWeight? fontWeight,
+    double? fontSize = 16.0,
+    int? numberOfLines,
+  }) {
+    return DCText(
+      text: text,
+      numberOfLines: numberOfLines,
+      style: DCTextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        textAlign: textAlign,
+      ),
+    );
+  }
+
+  /// Create a caption text (small)
+  static DCText caption(
+    String text, {
+    TextAlign? textAlign,
+    Color? color,
+    FontWeight? fontWeight,
+  }) {
+    return DCText(
+      text: text,
+      style: DCTextStyle(
+        fontSize: 12.0,
+        fontWeight: fontWeight,
+        color: color,
+        textAlign: textAlign,
       ),
     );
   }

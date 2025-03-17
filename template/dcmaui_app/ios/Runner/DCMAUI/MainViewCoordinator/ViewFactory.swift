@@ -52,32 +52,30 @@ class ViewFactory {
         case "GestureDetector", "DCGestureDetector":
             view = DCGestureDetector(viewId: viewId, props: props)
             
-        case "DCSafeAreaView", "SafeAreaView":
+        case "SafeAreaView", "DCSafeAreaView":
             view = DCSafeAreaView(viewId: viewId, props: props)
             
-        case "DCCheckbox", "CheckBox":
+        case "CheckBox", "DCCheckbox":
             view = DCCheckbox(viewId: viewId, props: props)
             
-        case "DCActivityIndicator", "ActivityIndicator":
+        case "ActivityIndicator", "DCActivityIndicator":
             view = DCActivityIndicator(viewId: viewId, props: props)
             
-        case "DCAnimatedView", "Animated.View":
+        case "AnimatedView", "DCAnimatedView", "Animated.View":
             view = DCAnimatedView(viewId: viewId, props: props)
             
-        // Touchable components with proper aliases
-        case "DCTouchableOpacity", "TouchableOpacity":
+        case "TouchableOpacity", "DCTouchableOpacity":
             view = DCTouchableOpacity(viewId: viewId, props: props)
             
-        case "DCTouchableHighlight", "TouchableHighlight":
+        case "TouchableHighlight", "DCTouchableHighlight":
             view = DCTouchableHighlight(viewId: viewId, props: props)
             
-        case "DCTouchableWithoutFeedback", "TouchableWithoutFeedback":
+        case "TouchableWithoutFeedback", "DCTouchableWithoutFeedback":
             view = DCTouchableWithoutFeedback(viewId: viewId, props: props)
             
         case "ListView", "DCListView", "FlatList":
             view = DCListView(viewId: viewId, props: props)
             
-        // Add more view types here as needed
         default:
             // Default to base view for unknown types for graceful fallback
             print("DC MAUI: WARNING - Unknown view type: \(viewType), using default DCView")

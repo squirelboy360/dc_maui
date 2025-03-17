@@ -12,9 +12,8 @@ class VDOM {
 
   // Get a stable view ID for a node - changed to protected (no underscore)
   String getViewId(VNode node) {
-    // CRITICAL FIX: Use only the key for stable IDs
-    // Using node key alone instead of combining with type gives more stable IDs across renders
-    final nodeKey = node.key;
+    // CRITICAL FIX: Use both key AND type for more unique IDs
+    final nodeKey = "${node.type}_${node.key}";
 
     if (!nodeToViewId.containsKey(nodeKey)) {
       nodeToViewId[nodeKey] = 'view_${_viewIdCounter++}';

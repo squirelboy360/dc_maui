@@ -33,9 +33,7 @@ class AppDelegate: FlutterAppDelegate {
         // Register our native UI manager with proper registrar
         let registrar = flutterEngine.registrar(forPlugin: "com.dcmaui.framework")
         DCViewCoordinator.register(with: registrar!)
-        
-        // We still need a FlutterViewController for the Flutter engine to work properly,
-        // but we don't add it to the view hierarchy
+    
         let flutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
         flutterEngine.viewController = flutterViewController
         

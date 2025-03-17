@@ -18,5 +18,11 @@ export 'modal.dart';
 export 'list_view.dart';
 export 'optimized_list.dart';
 export 'gesture_detector.dart';
+export 'touchable_highlight.dart';
+export 'touchable_opacity.dart';
+export 'touchable_without_feedback.dart';
+export 'activity_indicator.dart';
+export 'animated_view.dart';
+export 'safe_area_view.dart';
+export 'scrollview.dart';
 
-// Common types and interfaces used across controls
