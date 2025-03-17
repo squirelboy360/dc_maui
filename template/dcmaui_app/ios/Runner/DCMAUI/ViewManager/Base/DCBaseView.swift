@@ -5,6 +5,7 @@
 //  Created for DC MAUI Framework
 //
 
+// i guess this is the base view for all the views inb other words the shadow treeor howerver its called
 import UIKit
 
 /// Base view component for the DCMAUI framework
