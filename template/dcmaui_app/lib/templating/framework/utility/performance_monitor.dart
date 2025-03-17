@@ -90,72 +90,95 @@ class PerformanceMonitor {
     if (!_trackingEnabled || !collectDetailedMetrics) return;
 
     // On web or in release mode, we can't get detailed memory info
-    _memorySnapshots.add(_MemoryRecord(
+    final record = _MemoryRecord(
       timestamp: DateTime.now(),
       label: label ?? 'snapshot_${_memorySnapshots.length}',
-    ));
+    );
 
-    if (_memorySnapshots.length > 50) _memorySnapshots.removeFirst();
+    _memorySnapshots.add(record);
+
+    if (enableLogging) {
+      debugPrint(
+          'Memory snapshot taken: ${record.label} at ${record.timestamp}');
+    }
   }
 
-  /// Get performance report
+  /// Get performance report as a map
   Map<String, dynamic> getPerformanceReport() {
-    final now = DateTime.now();
-
-    // Calculate averages
-    double avgRenderTime = 0;
-    if (_renderTimes.isNotEmpty) {
-      avgRenderTime =
-          _renderTimes.fold(0.0, (sum, record) => sum + record.durationMs) /
-              _renderTimes.length;
-    }
-
-    double avgDiffTime = 0;
-    if (_diffTimes.isNotEmpty) {
-      avgDiffTime =
-          _diffTimes.fold(0.0, (sum, record) => sum + record.durationMs) /
-              _diffTimes.length;
-    }
+    final renderStats = _getRenderStats();
+    final diffStats = _getDiffStats();
 
     return {
-      'timestamp': now.toString(),
-      'renders': {
-        'count': _renderTimes.length,
-        'averageMs': avgRenderTime,
-        'slowCount': _slowRenders.length,
-        'slowest': _slowRenders.isEmpty
-            ? null
-            : {
-                'componentType': _slowRenders
-                    .reduce((a, b) => a.durationMs > b.durationMs ? a : b)
-                    .componentType,
-                'durationMs': _slowRenders
-                    .reduce((a, b) => a.durationMs > b.durationMs ? a : b)
-                    .durationMs,
-              },
-        'recent': _renderTimes.isEmpty
-            ? []
-            : _renderTimes
-                .toList()
-                .sublist(_renderTimes.length > 5 ? _renderTimes.length - 5 : 0)
-                .map((r) => {
-                      'componentType': r.componentType,
-                      'durationMs': r.durationMs,
-                      'timestamp': r.timestamp.toString()
-                    })
-                .toList(),
-      },
-      'diffs': {
-        'count': _diffTimes.length,
-        'averageMs': avgDiffTime,
-        'slowCount': _slowDiffs.length,
-      },
+      'timestamp': DateTime.now().toString(),
+      'renders': renderStats,
+      'diffs': diffStats,
       'memorySnapshots': _memorySnapshots
-          .map((snapshot) => {
-                'timestamp': snapshot.timestamp.toString(),
-                'label': snapshot.label,
+          .map((record) => {
+                'timestamp': record.timestamp.toString(),
+                'label': record.label,
               })
           .toList(),
+    };
+  }
+
+  // Helper methods for stats
+  Map<String, dynamic> _getRenderStats() {
+    if (_renderTimes.isEmpty) {
+      return {
+        'count': 0,
+        'averageMs': 0.0,
+        'slowCount': _slowRenders.length,
+        'slowest': null,
+        'recent': [],
+      };
+    }
+
+    final total =
+        _renderTimes.fold<double>(0, (sum, record) => sum + record.durationMs);
+    final average = total / _renderTimes.length;
+
+    final slowest = _slowRenders.isNotEmpty
+        ? _slowRenders.reduce((a, b) => a.durationMs > b.durationMs ? a : b)
+        : null;
+
+    return {
+      'count': _renderTimes.length,
+      'averageMs': average,
+      'slowCount': _slowRenders.length,
+      'slowest': slowest != null
+          ? {
+              'componentType': slowest.componentType,
+              'durationMs': slowest.durationMs,
+              'timestamp': slowest.timestamp.toString(),
+            }
+          : null,
+      'recent': _renderTimes
+          .take(5)
+          .map((record) => {
+                'componentType': record.componentType,
+                'durationMs': record.durationMs,
+              })
+          .toList(),
+    };
+  }
+
+  Map<String, dynamic> _getDiffStats() {
+    if (_diffTimes.isEmpty) {
+      return {
+        'count': 0,
+        'averageMs': 0.0,
+        'slowCount': _slowDiffs.length,
+      };
+    }
+
+    final total =
+        _diffTimes.fold<double>(0, (sum, record) => sum + record.durationMs);
+    final average = total / _diffTimes.length;
+
+    return {
+      'count': _diffTimes.length,
+      'averageMs': average,
+      'slowCount': _slowDiffs.length,
     };
   }
 
@@ -169,8 +192,7 @@ class PerformanceMonitor {
   }
 }
 
-// Helper classes for data storage
-
+/// Record for a render operation
 class _RenderRecord {
   final DateTime timestamp;
   final String componentId;
@@ -185,6 +207,7 @@ class _RenderRecord {
   });
 }
 
+/// Record for a diff operation
 class _DiffRecord {
   final DateTime timestamp;
   final String nodeKey;
@@ -199,6 +222,7 @@ class _DiffRecord {
   });
 }
 
+/// Record for memory usage
 class _MemoryRecord {
   final DateTime timestamp;
   final String label;

@@ -27,13 +27,14 @@ class FlutterUtility {
     return Color(int.parse(hex, radix: 16));
   }
 
-  
-
   /// Logs information about the current platform and device
   static void logPlatformInfo() {
     debugPrint('Platform: ${defaultTargetPlatform.toString()}');
-    debugPrint('Device Pixel Ratio: ${window.devicePixelRatio}');
+
+    // Use FlutterView.of or PlatformDispatcher instead of deprecated window
+    final FlutterView view = PlatformDispatcher.instance.views.first;
+    debugPrint('Device Pixel Ratio: ${view.devicePixelRatio}');
     debugPrint(
-        'Screen Size: ${window.physicalSize.width}x${window.physicalSize.height}');
+        'Screen Size: ${view.physicalSize.width}x${view.physicalSize.height}');
   }
 }

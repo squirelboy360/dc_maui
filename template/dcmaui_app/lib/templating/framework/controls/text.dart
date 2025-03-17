@@ -65,7 +65,7 @@ class TextStyle implements StyleProps {
   static Color _hexToColor(String hexString) {
     hexString = hexString.replaceAll('#', '');
     if (hexString.length == 6) {
-      hexString = 'FF' + hexString;
+      hexString = 'FF$hexString'; // Fixed string concatenation
     }
     return Color(int.parse(hexString, radix: 16));
   }
@@ -304,7 +304,7 @@ class DCText extends Control {
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'Text',
+      'DCText', // Ensure DC prefix is used
       props.toMap(),
       [], // Text doesn't have children
     );

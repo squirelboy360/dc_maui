@@ -277,7 +277,7 @@ class DCButton extends Control {
   @override
   VNode build() {
     return ElementFactory.createElement(
-      'DCButton',
+      'DCButton', // Ensure DC prefix is used
       props.toMap(),
       [], // DCButton doesn't have children in the traditional sense
     );

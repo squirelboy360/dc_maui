@@ -93,6 +93,16 @@ class DCViewCoordinator: NSObject, FlutterPlugin, FlutterStreamHandler {
                 // New handler for simulating events
                 self.handleSimulateEvent(call, result: result)
                 
+            case "getViewInfo":
+                self.handleGetViewInfo(call, result: result)
+                
+            case "resetViewRegistry":
+                // Reset view registry for recovery after errors
+                self.views.removeAll()
+                self.childViews.removeAll()
+                self.setupRootView() // Recreate root view
+                result(true)
+                
             default:
                 result(FlutterMethodNotImplemented)
             }

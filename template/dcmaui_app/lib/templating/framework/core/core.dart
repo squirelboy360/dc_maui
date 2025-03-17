@@ -160,6 +160,34 @@ class MainViewCoordinatorInterface {
 
   // CRITICAL FIX: Removed simulate event method as it's not needed
 
+  // Get information about a view
+  static Future<Map<String, dynamic>?> getViewInfo(String viewId) async {
+    try {
+      final result = await _channel.invokeMethod('getViewInfo', {
+        'viewId': viewId,
+      });
+
+      if (result != null) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('DC MAUI: Error getting view info: $e');
+      return null;
+    }
+  }
+
+  // Reset the view registry (for recovery from errors)
+  static Future<bool> resetViewRegistry() async {
+    try {
+      final result = await _channel.invokeMethod('resetViewRegistry');
+      return result == true;
+    } catch (e) {
+      debugPrint('DC MAUI: ERROR resetting view registry - $e');
+      return false;
+    }
+  }
+
   // Make logging more verbose for debugging
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
     debugPrint(

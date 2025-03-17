@@ -1,5 +1,5 @@
-import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
 import 'package:dc_test/templating/framework/utility/event_bus.dart';
+import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 
 /// Hook-like state management for function components
@@ -29,7 +29,8 @@ class UseState<T> {
       {String? componentId, Function? onChange})
       : _stateKey = key,
         _initialValue = initialValue,
-        _componentId = componentId ?? 'global_${key}_${identityHashCode(key)}' {
+        _componentId = componentId ?? 'global_${key}_${identityHashCode(key)}',
+        _currentValue = initialValue {
     _updateCallback = onChange;
 
     // Initialize in the state manager

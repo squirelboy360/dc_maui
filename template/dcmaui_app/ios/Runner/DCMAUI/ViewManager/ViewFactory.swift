@@ -21,34 +21,34 @@ class ViewFactory {
         let view: UIView?
         
         switch viewType {
-        case "View":
+        case "DCView", "View":  // Accept both to maintain backward compatibility
             view = DCView(viewId: viewId, props: props)
             
-        case "Text":
+        case "DCText", "Text":
             view = DCText(viewId: viewId, props: props)
             
-        case "Image":
+        case "DCImage", "Image":
             view = DCImage(viewId: viewId, props: props)
             
-        case "Button":
+        case "DCButton", "Button":
             view = DCButton(viewId: viewId, props: props)
             
-        case "Switch":
+        case "DCSwitch", "Switch":
             view = DCSwitch(viewId: viewId, props: props)
             
-        case "Checkbox":
+        case "DCCheckbox", "Checkbox":
             view = DCCheckbox(viewId: viewId, props: props)
             
-        case "ListView":
+        case "DCListView", "ListView":
             view = DCListView(viewId: viewId, props: props)
             
-        case "GestureDetector":
+        case "DCGestureDetector", "GestureDetector":
             view = DCGestureDetector(viewId: viewId, props: props)
             
-        case "Modal":
+        case "DCModal", "Modal":
             view = DCModal(viewId: viewId, props: props)
             
-        case "AnimatedView":
+        case "DCAnimatedView", "AnimatedView":
             view = DCAnimatedView(viewId: viewId, props: props)
             
         default:

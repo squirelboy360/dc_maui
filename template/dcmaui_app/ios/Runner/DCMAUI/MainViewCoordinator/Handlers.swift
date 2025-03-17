@@ -266,4 +266,41 @@ extension DCViewCoordinator {
         sendEvent(viewId: viewId, eventName: standardizedEventName, params: data)
         result(true)
     }
+    
+    internal func handleGetViewInfo(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let viewId = args["viewId"] as? String else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing viewId", details: nil))
+            return
+        }
+        
+        guard let view = views[viewId] else {
+            result(FlutterError(code: "VIEW_NOT_FOUND", message: "View not found: \(viewId)", details: nil))
+            return
+        }
+        
+        var viewInfo: [String: Any] = [
+            "id": viewId
+        ]
+        
+        // Add type information
+        if let dcView = view as? DCBaseView {
+            let viewType = String(describing: type(of: dcView))
+            viewInfo["type"] = viewType
+            
+            // Add specific properties based on view type
+            if let button = view as? DCButton {
+                viewInfo["title"] = button.props["title"] as? String ?? ""
+            } else if let text = view as? DCText {
+                viewInfo["text"] = text.props["text"] as? String ?? ""
+            }
+            
+            // Add basic properties
+            if let style = dcView.props["style"] as? [String: Any] {
+                viewInfo["style"] = style
+            }
+        }
+        
+        result(viewInfo)
+    }
 }
