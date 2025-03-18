@@ -1,5 +1,5 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 
 /// ComponentAdapter bridges between VNode components and Controls
 /// This allows Components to be included in the Control tree

@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/core/component.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
 import 'package:flutter/foundation.dart';
 
 /// PureComponent implements shouldComponentUpdate with shallow comparison

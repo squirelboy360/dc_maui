@@ -1,6 +1,6 @@
-import 'package:dc_test/templating/framework/core/component.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
-import 'package:dc_test/templating/framework/core/vdom/vdom.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/vdom/vdom.dart';
 import 'package:flutter/foundation.dart';
 
 /// ComponentVDOM adds React-like component functionality to the VDOM renderer

@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 
 /// Base class for all UI controls
 abstract class Control {

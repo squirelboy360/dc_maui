@@ -1,5 +1,5 @@
-import 'package:dc_test/templating/framework/core/core.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/foundation.dart';
 
 class VDOM {

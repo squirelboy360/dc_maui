@@ -1,7 +1,7 @@
-import 'package:dc_test/templating/framework/hooks/use_state.dart';
-import 'package:dc_test/templating/framework/hooks/use_effect.dart';
-import 'package:dc_test/templating/framework/hooks/use_reducer.dart';
-import 'package:dc_test/templating/framework/core/component.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_state.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_effect.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_reducer.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
 
 /// Integrates hooks with the Component class
 class ComponentHooks {

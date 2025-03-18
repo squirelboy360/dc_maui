@@ -1,5 +1,5 @@
-import 'package:dc_test/templating/framework/utility/event_bus.dart';
-import 'package:dc_test/templating/framework/utility/state_abstraction.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/utility/event_bus.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/utility/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 
 /// Hook-like state management for function components

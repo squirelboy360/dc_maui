@@ -1,6 +1,7 @@
+import 'package:dc_test/templating/framework/controls/list_view.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
-import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -23,9 +24,10 @@ class DCSection<T> {
       'key': key,
       'data': data is List<Map<String, dynamic>>
           ? data
-          : data.map((item) => item is Map<String, dynamic>
-                ? item
-                : {'data': item}).toList(),
+          : data
+              .map((item) =>
+                  item is Map<String, dynamic> ? item : {'data': item})
+              .toList(),
     };
 
     if (renderSectionHeader != null) {
@@ -205,7 +207,7 @@ class DCSectionList extends Control {
         final item = params['item'] as Map<String, dynamic>;
         final index = params['index'] as int;
         final T typedItem;
-        
+
         if (T == Map<String, dynamic>) {
           typedItem = item as T;
         } else if (item.containsKey('data')) {
@@ -214,7 +216,7 @@ class DCSectionList extends Control {
           // This is a fallback conversion, might not always work
           typedItem = item as T;
         }
-        
+
         return itemBuilder(typedItem, index);
       },
       renderSectionHeader: headerBuilder != null
@@ -237,7 +239,7 @@ class DCSectionList extends Control {
           ? (itemData, index) {
               final item = itemData['item'] as Map<String, dynamic>;
               final T typedItem;
-              
+
               if (T == Map<String, dynamic>) {
                 typedItem = item as T;
               } else if (item.containsKey('data')) {
@@ -245,7 +247,7 @@ class DCSectionList extends Control {
               } else {
                 typedItem = item as T;
               }
-              
+
               return keyExtractor(typedItem, index);
             }
           : null,
@@ -286,9 +288,8 @@ class DCSectionListStyle extends DCListViewStyle {
     final map = super.toMap();
 
     if (sectionHeaderBackgroundColor != null) {
-      final colorValue = sectionHeaderBackgroundColor!.value
-          .toRadixString(16)
-          .padLeft(8, '0');
+      final colorValue =
+          sectionHeaderBackgroundColor!.value.toRadixString(16).padLeft(8, '0');
       map['sectionHeaderBackgroundColor'] = '#$colorValue';
     }
 

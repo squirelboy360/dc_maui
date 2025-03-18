@@ -1,9 +1,11 @@
+import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
+
 /// Main entry point for the DC MAUI Framework
 /// Exposes all components and utilities
 
 // Core system
-export 'core/core.dart';
-export 'core/vdom/vdom.dart';
+export 'core/main/main_view_coordinator.dart';
+export 'core/vdom/vdom/vdom.dart';
 
 // Controls/Components
 export 'controls/index.dart';
@@ -38,12 +40,16 @@ export 'controls/activity_indicator.dart';
 export 'controls/animated_view.dart';
 
 // Hooks system
-export 'hooks/use_state.dart';
+export 'core/main/abstractions/hooks/use_state.dart';
 
 // Utilities
-export 'utility/flutter.dart';
-export 'utility/native_extensions.dart';
-export 'utility/performance_monitor.dart';
+export 'core/main/abstractions/utility/flutter.dart';
+export 'core/main/abstractions/utility/native_extensions.dart';
+export 'core/main/abstractions/utility/performance_monitor.dart';
+
+
+
+
 
 /// DC Framework Version
 const String dcFrameworkVersion = '0.1.1'; // Updated version

@@ -1,7 +1,7 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
-import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -13,11 +13,11 @@ class DCPressableProps implements ControlProps {
   final Function(Map<String, dynamic>)? onPressOut;
   final Function(Map<String, dynamic>)? onPressMove;
   final Function(Map<String, dynamic>)? onLongPress;
-  
+
   // Styling functions
   final Function(Map<String, dynamic>)? style;
   final Function(bool)? android_ripple;
-  
+
   // Configuration options
   final bool? disabled;
   final EdgeInsets? hitSlop;
@@ -55,13 +55,13 @@ class DCPressableProps implements ControlProps {
     if (onPressOut != null) map['onPressOut'] = onPressOut;
     if (onPressMove != null) map['onPressMove'] = onPressMove;
     if (onLongPress != null) map['onLongPress'] = onLongPress;
-    
+
     // Style functions need to be handled specially
     if (style != null) map['style'] = style;
     if (android_ripple != null) map['android_ripple'] = android_ripple;
-    
+
     if (disabled != null) map['disabled'] = disabled;
-    
+
     // Convert EdgeInsets to maps
     if (hitSlop != null) {
       map['hitSlop'] = {
@@ -71,7 +71,7 @@ class DCPressableProps implements ControlProps {
         'right': hitSlop!.right,
       };
     }
-    
+
     if (pressRetentionOffset != null) {
       map['pressRetentionOffset'] = {
         'top': pressRetentionOffset!.top,
@@ -80,7 +80,7 @@ class DCPressableProps implements ControlProps {
         'right': pressRetentionOffset!.right,
       };
     }
-    
+
     if (delayLongPress != null) map['delayLongPress'] = delayLongPress;
     if (minPressDuration != null) map['minPressDuration'] = minPressDuration;
     if (testID != null) map['testID'] = testID;
@@ -135,7 +135,7 @@ class DCPressable extends Control {
       buildChildren(children),
     );
   }
-  
+
   /// Create a basic pressable with default touch feedback behavior
   static DCPressable basic({
     required Function(Map<String, dynamic>) onPress,
@@ -150,7 +150,7 @@ class DCPressable extends Control {
       style: (state) {
         // Determine if pressed
         bool isPressed = state['pressed'] == true;
-        
+
         // Return the appropriate style based on state
         if (isPressed && pressedStyle != null) {
           return pressedStyle.toMap();
@@ -162,7 +162,7 @@ class DCPressable extends Control {
       children: children,
     );
   }
-  
+
   /// Create a pressable that changes opacity when pressed
   static DCPressable withOpacity({
     required Function(Map<String, dynamic>) onPress,
@@ -177,12 +177,12 @@ class DCPressable extends Control {
       style: (state) {
         // Get base style
         final baseStyle = style?.toMap() ?? {};
-        
+
         // Apply opacity if pressed
         if (state['pressed'] == true) {
           baseStyle['opacity'] = activeOpacity;
         }
-        
+
         return baseStyle;
       },
       children: children,

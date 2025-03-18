@@ -1,7 +1,7 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
-import 'package:dc_test/templating/framework/core/component.dart';
-import 'package:dc_test/templating/framework/core/vdom/element_factory.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/foundation.dart';
 
 /// Interface for error reporting services

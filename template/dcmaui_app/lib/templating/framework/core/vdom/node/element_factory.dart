@@ -1,5 +1,5 @@
-import 'package:dc_test/templating/framework/core/component.dart';
-import 'package:dc_test/templating/framework/core/vdom/node.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/foundation.dart';
 
 /// Factory for creating VDOM elements (React-like)
