@@ -37,6 +37,20 @@ class DCBaseView: UIView, ViewUpdatable {
     var right: CGFloat? = nil
     var bottom: CGFloat? = nil
     
+    var viewWidth: CGFloat? {
+        if let width = props["style"] as? [String: Any], let widthValue = width["width"] as? CGFloat {
+            return widthValue
+        }
+        return nil
+    }
+
+    var viewHeight: CGFloat? {
+        if let style = props["style"] as? [String: Any], let heightValue = style["height"] as? CGFloat {
+            return heightValue
+        }
+        return nil
+    }
+    
     init(viewId: String, props: [String: Any]) {
         self.viewId = viewId
         self.props = props
@@ -848,6 +862,13 @@ class DCBaseView: UIView, ViewUpdatable {
             eventName: eventName,
             params: eventParams
         )
+    }
+
+    // Add this method to DCBaseView class
+    func setViewIdIfNeeded(_ viewId: String) {
+        // This is a no-op because viewId is already set in the initializer
+        // and cannot be changed, but we keep this method for compatibility
+        print("DC MAUI: Note - setViewIdIfNeeded called on view that already has ID: \(self.viewId)")
     }
 }
 

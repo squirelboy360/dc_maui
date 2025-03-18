@@ -111,7 +111,9 @@ class ViewFactory {
             
         case "DCStatusBar":
             // Update status bar settings
-            DCStatusBar.updateProps(props)
+            if let viewType = props["type"] as? String, viewType == "StatusBar" {
+                return DCStatusBar(viewId: viewId, props: props)
+            }
             return UIView() // Return empty view since StatusBar affects system UI
             
         default:

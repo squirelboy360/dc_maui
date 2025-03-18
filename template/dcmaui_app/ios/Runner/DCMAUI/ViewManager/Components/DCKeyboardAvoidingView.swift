@@ -17,7 +17,7 @@ class DCKeyboardAvoidingView: DCBaseView {
     
     // Keyboard tracking
     private var keyboardHeight: CGFloat = 0
-    private var viewHeight: CGFloat = 0
+    private var currentViewHeight: CGFloat = 0  // Renamed from viewHeight to avoid conflict
     private var initialFrameHeight: CGFloat = 0
     private var isKeyboardVisible = false
     
@@ -198,7 +198,7 @@ class DCKeyboardAvoidingView: DCBaseView {
             
         case "height":
             // Resize the view to make space for keyboard
-            viewHeight = frame.height
+            currentViewHeight = frame.height  // Fixed: removed ".height"
             frame.size.height = max(initialFrameHeight - adjustmentHeight, 0)
             
         case "position":
@@ -224,7 +224,7 @@ class DCKeyboardAvoidingView: DCBaseView {
             bottomConstraint?.constant = 0
             
         case "height":
-            frame.size.height = viewHeight > 0 ? viewHeight : initialFrameHeight
+            frame.size.height = currentViewHeight > 0 ? currentViewHeight : initialFrameHeight  // Fixed: removed "ialFrameHeight"
             
         case "position":
             transform = .identity

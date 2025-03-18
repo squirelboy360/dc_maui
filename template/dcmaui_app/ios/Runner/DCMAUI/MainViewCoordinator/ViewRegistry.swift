@@ -9,6 +9,9 @@ import UIKit
 
 /// Registry for tracking native views
 class ViewRegistry {
+    // Singleton instance
+    static let shared = ViewRegistry()
+    
     // Map of view ID to view
     private var viewMap = [String: UIView]()
     
@@ -25,10 +28,15 @@ class ViewRegistry {
         
         // Set view ID on DCBaseView if applicable
         if let dcView = view as? DCBaseView {
-            // Instead of directly assigning to viewId (which is a let constant),
-            // use an initializer method or another approach
+            // This method was added to DCBaseView already
             dcView.setViewIdIfNeeded(viewId)
         }
+    }
+    
+    /// Register a view (uses view's viewId)
+    func registerView(_ view: DCBaseView) {
+        // Add view to the registry using its own viewId
+        viewMap[view.viewId] = view
     }
     
     /// Get a view by its ID
