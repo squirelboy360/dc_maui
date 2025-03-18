@@ -73,15 +73,19 @@ class DCDrawerProps implements ControlProps {
       map['statusBarBackgroundColor'] = '#$colorValue';
     }
 
-    if (openDrawerThreshold != null)
+    if (openDrawerThreshold != null) {
       map['openDrawerThreshold'] = openDrawerThreshold;
-    if (closeDrawerThreshold != null)
+    }
+    if (closeDrawerThreshold != null) {
       map['closeDrawerThreshold'] = closeDrawerThreshold;
+    }
     if (drawerLockMode != null) map['drawerLockMode'] = drawerLockMode;
-    if (keyboardDismissMode != null)
+    if (keyboardDismissMode != null) {
       map['keyboardDismissMode'] = keyboardDismissMode;
-    if (enableGestureInteraction != null)
+    }
+    if (enableGestureInteraction != null) {
       map['enableGestureInteraction'] = enableGestureInteraction;
+    }
     if (hideStatusBar != null) map['hideStatusBar'] = hideStatusBar;
     if (onDrawerSlide != null) map['onDrawerSlide'] = onDrawerSlide;
     if (onDrawerOpen != null) map['onDrawerOpen'] = onDrawerOpen;

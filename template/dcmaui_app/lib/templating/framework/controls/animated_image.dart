@@ -3,7 +3,6 @@ import 'package:dc_test/templating/framework/controls/animated_view.dart';
 import 'package:dc_test/templating/framework/controls/image.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/widgets.dart';
 
 /// Props for AnimatedImage component
 class DCAnimatedImageProps extends DCImageProps {
@@ -12,31 +11,21 @@ class DCAnimatedImageProps extends DCImageProps {
   final Function(Map<String, dynamic>)? onAnimationComplete;
 
   const DCAnimatedImageProps({
-    DCImageSource? source,
-    DCImageSource? defaultSource,
-    String? resizeMode,
-    bool? loadingIndicatorEnabled,
-    Function(Map<String, dynamic>)? onLoad,
-    Function(Map<String, dynamic>)? onError,
-    Function()? onLoadStart,
-    Function()? onLoadEnd,
-    DCImageStyle? style,
-    String? testID,
+    super.source,
+    super.defaultSource,
+    super.resizeMode,
+    super.loadingIndicatorEnabled,
+    super.onLoad,
+    super.onError,
+    super.onLoadStart,
+    super.onLoadEnd,
+    super.style,
+    super.testID,
     Map<String, dynamic>? additionalProps,
     this.animatedStyles,
     this.onAnimationStart,
     this.onAnimationComplete,
   }) : super(
-          source: source,
-          defaultSource: defaultSource,
-          resizeMode: resizeMode,
-          loadingIndicatorEnabled: loadingIndicatorEnabled,
-          onLoad: onLoad,
-          onError: onError,
-          onLoadStart: onLoadStart,
-          onLoadEnd: onLoadEnd,
-          style: style,
-          testID: testID,
           additionalProps: additionalProps ?? const {},
         );
 

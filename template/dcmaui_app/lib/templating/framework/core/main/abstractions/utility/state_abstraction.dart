@@ -26,6 +26,9 @@ class GlobalStateManager {
   // Store memoized values with their dependencies
   final Map<String, _MemoizedValue> _memoCache = {};
 
+  // NEW: Registry for derivation functions
+  final Map<String, Function> _derivationFunctions = {};
+
   // Track pending updates for batching
   final Map<String, Map<String, dynamic>> _pendingUpdates = {};
   bool _batchingUpdates = false;
@@ -153,9 +156,57 @@ class GlobalStateManager {
           final derivedComponentId = parts[0];
           final derivedStateKey = parts[1];
 
-          // Recalculate derived state - this would need implementation
-          // of a derivation function registry
+          // IMPLEMENTATION: Recalculate derived state using registered derivation function
+          final derivationFunctionKey = "$derivedComponentId:$derivedStateKey";
+          if (_derivationFunctions.containsKey(derivationFunctionKey)) {
+            final derivationFn = _derivationFunctions[derivationFunctionKey]!;
+
+            try {
+              // Calculate new derived value and update state
+              final newValue = derivationFn();
+
+              if (kDebugMode) {
+                print(
+                    'GlobalStateManager: Recalculating derived state $derivedKey from dependency change');
+              }
+
+              // Update state with the new derived value (without triggering dependency checks again)
+              _updateDerivedState(
+                  derivedComponentId, derivedStateKey, newValue);
+            } catch (e) {
+              if (kDebugMode) {
+                print(
+                    'GlobalStateManager: Error calculating derived state: $e');
+              }
+            }
+          }
         }
+      }
+    }
+  }
+
+  // Update derived state without triggering dependency checks
+  void _updateDerivedState(String componentId, String key, dynamic value) {
+    if (!_stateStore.containsKey(componentId)) {
+      _stateStore[componentId] = {};
+    }
+
+    final currentValue = _stateStore[componentId]![key];
+    if (!_deepEquals(currentValue, value)) {
+      // Store the new value
+      _stateStore[componentId]![key] = value;
+
+      // Notify direct listeners on this state
+      final listenerKey = "$componentId:$key";
+      if (_stateListeners.containsKey(listenerKey)) {
+        for (final listener in _stateListeners[listenerKey]!) {
+          listener(value);
+        }
+      }
+
+      if (kDebugMode) {
+        print(
+            'GlobalStateManager: Derived state updated for $componentId.$key: $value');
       }
     }
   }
@@ -301,6 +352,14 @@ class GlobalStateManager {
       _stateDependencies.remove(key);
     }
 
+    // Also clean up derivation functions
+    final derivationKeysToRemove = _derivationFunctions.keys
+        .where((key) => key.startsWith("$componentId:"))
+        .toList();
+    for (final key in derivationKeysToRemove) {
+      _derivationFunctions.remove(key);
+    }
+
     // Clean up memoization cache
     clearMemos(componentId);
 
@@ -327,11 +386,37 @@ class GlobalStateManager {
     }
   }
 
+  // Register a derivation function for a derived state
+  void registerDerivationFunction(
+      String componentId, String derivedKey, Function derivationFn) {
+    final key = "$componentId:$derivedKey";
+    _derivationFunctions[key] = derivationFn;
+
+    // Calculate initial value
+    try {
+      final initialValue = derivationFn();
+      _updateDerivedState(componentId, derivedKey, initialValue);
+
+      if (kDebugMode) {
+        print(
+            'GlobalStateManager: Registered derivation function for $componentId.$derivedKey with initial value $initialValue');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+            'GlobalStateManager: Error calculating initial derived state: $e');
+      }
+    }
+  }
+
   // Create a selector function that efficiently computes derived state
   T Function() createSelector<T>(String componentId, String derivedKey,
       T Function() selectorFn, List<String> dependencies) {
     // Register dependencies for this derived state
     registerDerivedState(componentId, derivedKey, dependencies);
+
+    // Register the derivation function
+    registerDerivationFunction(componentId, derivedKey, selectorFn);
 
     // Cache for memoization
     T? lastResult;
@@ -346,17 +431,17 @@ class GlobalStateManager {
 
       // Check if any dependencies have changed
       bool dependenciesChanged = false;
-      
+
       // Implement dependency tracking
       for (final dep in dependencies) {
         final depParts = dep.split('.');
         if (depParts.length != 2) continue;
-        
+
         final depComponentId = depParts[0];
         final depStateKey = depParts[1];
-        
+
         // Check if this dependency has changed since last check
-        if (_lastStateValues.containsKey(depComponentId) && 
+        if (_lastStateValues.containsKey(depComponentId) &&
             _lastStateValues[depComponentId]!.containsKey(depStateKey)) {
           dependenciesChanged = true;
           break;

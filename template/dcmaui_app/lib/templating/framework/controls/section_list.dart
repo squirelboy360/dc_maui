@@ -2,7 +2,6 @@ import 'package:dc_test/templating/framework/controls/list_view.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// Represents a section in a SectionList
@@ -129,12 +128,15 @@ class DCSectionListProps implements ControlProps {
     if (onRefresh != null) map['onRefresh'] = onRefresh;
     if (refreshing != null) map['refreshing'] = refreshing;
     if (onEndReached != null) map['onEndReached'] = onEndReached;
-    if (onEndReachedThreshold != null)
+    if (onEndReachedThreshold != null) {
       map['onEndReachedThreshold'] = onEndReachedThreshold;
-    if (onViewableItemsChanged != null)
+    }
+    if (onViewableItemsChanged != null) {
       map['onViewableItemsChanged'] = onViewableItemsChanged;
-    if (stickySectionHeadersEnabled != null)
+    }
+    if (stickySectionHeadersEnabled != null) {
       map['stickySectionHeadersEnabled'] = stickySectionHeadersEnabled;
+    }
     if (style != null) map['style'] = style!.toMap();
     if (testID != null) map['testID'] = testID;
 

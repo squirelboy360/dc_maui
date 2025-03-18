@@ -48,8 +48,9 @@ class DCRefreshControlProps implements ControlProps {
       map['titleColor'] = '#$colorValue';
     }
 
-    if (progressViewOffset != null)
+    if (progressViewOffset != null) {
       map['progressViewOffset'] = progressViewOffset;
+    }
     if (size != null) map['size'] = size;
     if (testID != null) map['testID'] = testID;
 

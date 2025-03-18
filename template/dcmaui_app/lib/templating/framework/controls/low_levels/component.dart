@@ -14,7 +14,7 @@ abstract class Component {
   String get componentId => _componentId;
 
   // Component state with improved change tracking
-  late Map<String, dynamic> _state = {};
+  late final Map<String, dynamic> _state = {};
   final Map<String, dynamic> _previousState = {}; // Track previous state values
   Map<String, dynamic> get state => Map.unmodifiable(_state);
 
@@ -250,9 +250,7 @@ abstract class Component {
       // Warn if render is too slow
       if (showPerformanceWarnings &&
           renderTimeMs > _warnRenderTimeThresholdMs) {
-        debugPrint('PERFORMANCE WARNING: Component ${runtimeType.toString()} ' +
-            'render took ${renderTimeMs.toStringAsFixed(2)}ms ' +
-            '(threshold: ${_warnRenderTimeThresholdMs}ms)');
+        debugPrint('PERFORMANCE WARNING: Component ${runtimeType.toString()} ' 'render took ${renderTimeMs.toStringAsFixed(2)}ms ' '(threshold: ${_warnRenderTimeThresholdMs}ms)');
       }
     }
 

@@ -120,21 +120,26 @@ class DCListViewProps implements ControlProps {
     };
 
     if (horizontal != null) map['horizontal'] = horizontal;
-    if (showsScrollIndicator != null)
+    if (showsScrollIndicator != null) {
       map['showsScrollIndicator'] = showsScrollIndicator;
+    }
     if (bounces != null) map['bounces'] = bounces;
     if (pagingEnabled != null) map['pagingEnabled'] = pagingEnabled;
-    if (initialScrollIndex != null)
+    if (initialScrollIndex != null) {
       map['initialScrollIndex'] = initialScrollIndex;
+    }
     if (onScroll != null) map['onScroll'] = onScroll;
     if (onScrollBeginDrag != null) map['onScrollBeginDrag'] = onScrollBeginDrag;
     if (onScrollEndDrag != null) map['onScrollEndDrag'] = onScrollEndDrag;
-    if (onMomentumScrollBegin != null)
+    if (onMomentumScrollBegin != null) {
       map['onMomentumScrollBegin'] = onMomentumScrollBegin;
-    if (onMomentumScrollEnd != null)
+    }
+    if (onMomentumScrollEnd != null) {
       map['onMomentumScrollEnd'] = onMomentumScrollEnd;
-    if (onEndReachedThreshold != null)
+    }
+    if (onEndReachedThreshold != null) {
       map['onEndReachedThreshold'] = onEndReachedThreshold;
+    }
     if (onEndReached != null) map['onEndReached'] = onEndReached;
     if (style != null) map['style'] = style!.toMap();
     if (testID != null) map['testID'] = testID;

@@ -175,8 +175,9 @@ class DCImageProps implements ControlProps {
     if (source != null) map['source'] = source!.toMap();
     if (defaultSource != null) map['defaultSource'] = defaultSource!.toMap();
     if (resizeMode != null) map['resizeMode'] = resizeMode;
-    if (loadingIndicatorEnabled != null)
+    if (loadingIndicatorEnabled != null) {
       map['loadingIndicatorEnabled'] = loadingIndicatorEnabled;
+    }
     if (onLoad != null) map['onLoad'] = onLoad;
     if (onError != null) map['onError'] = onError;
     if (onLoadStart != null) map['onLoadStart'] = onLoadStart;

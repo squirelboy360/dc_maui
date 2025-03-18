@@ -2,8 +2,6 @@ import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 
 /// Props for Modal component
 class DCModalProps implements ControlProps {
@@ -49,13 +47,16 @@ class DCModalProps implements ControlProps {
     if (animationType != null) map['animationType'] = animationType;
     if (presentationStyle != null) map['presentationStyle'] = presentationStyle;
     if (transparent != null) map['transparent'] = transparent;
-    if (statusBarTranslucent != null)
+    if (statusBarTranslucent != null) {
       map['statusBarTranslucent'] = statusBarTranslucent;
-    if (hardwareAccelerated != null)
+    }
+    if (hardwareAccelerated != null) {
       map['hardwareAccelerated'] = hardwareAccelerated;
+    }
     if (closeByBackdrop != null) map['closeByBackdrop'] = closeByBackdrop;
-    if (shouldCloseOnOverlayTap != null)
+    if (shouldCloseOnOverlayTap != null) {
       map['shouldCloseOnOverlayTap'] = shouldCloseOnOverlayTap;
+    }
     if (onShow != null) map['onShow'] = onShow;
     if (onDismiss != null) map['onDismiss'] = onDismiss;
     if (onRequestClose != null) map['onRequestClose'] = onRequestClose;

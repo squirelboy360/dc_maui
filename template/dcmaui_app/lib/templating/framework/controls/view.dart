@@ -140,14 +140,18 @@ class ViewStyle implements StyleProps {
 
     // Border properties
     if (borderRadius != null) map['borderRadius'] = borderRadius;
-    if (borderTopLeftRadius != null)
+    if (borderTopLeftRadius != null) {
       map['borderTopLeftRadius'] = borderTopLeftRadius;
-    if (borderTopRightRadius != null)
+    }
+    if (borderTopRightRadius != null) {
       map['borderTopRightRadius'] = borderTopRightRadius;
-    if (borderBottomLeftRadius != null)
+    }
+    if (borderBottomLeftRadius != null) {
       map['borderBottomLeftRadius'] = borderBottomLeftRadius;
-    if (borderBottomRightRadius != null)
+    }
+    if (borderBottomRightRadius != null) {
       map['borderBottomRightRadius'] = borderBottomRightRadius;
+    }
     if (borderWidth != null) map['borderWidth'] = borderWidth;
 
     if (borderColor != null) {

@@ -1,7 +1,6 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/foundation.dart';
 
 /// Props for DCGestureDetector component
 class DCGestureDetectorProps implements ControlProps {
@@ -89,13 +88,16 @@ class DCGestureDetectorProps implements ControlProps {
     if (onTouchEnd != null) map['onTouchEnd'] = onTouchEnd;
     if (onTouchCancel != null) map['onTouchCancel'] = onTouchCancel;
 
-    if (onStartShouldSetResponder != null)
+    if (onStartShouldSetResponder != null) {
       map['onStartShouldSetResponder'] = onStartShouldSetResponder;
-    if (onMoveShouldSetResponder != null)
+    }
+    if (onMoveShouldSetResponder != null) {
       map['onMoveShouldSetResponder'] = onMoveShouldSetResponder;
+    }
 
-    if (touchMovementThreshold != null)
+    if (touchMovementThreshold != null) {
       map['touchMovementThreshold'] = touchMovementThreshold;
+    }
     if (enabled != null) map['enabled'] = enabled;
     if (longPressDuration != null) map['longPressDuration'] = longPressDuration;
 

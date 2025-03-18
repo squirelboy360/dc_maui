@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// A virtual DOM node
 class VNode {

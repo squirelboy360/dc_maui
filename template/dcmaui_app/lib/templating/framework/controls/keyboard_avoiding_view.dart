@@ -33,14 +33,16 @@ class DCKeyboardAvoidingViewProps implements ControlProps {
     };
 
     if (behavior != null) map['behavior'] = behavior;
-    if (keyboardVerticalOffset != null)
+    if (keyboardVerticalOffset != null) {
       map['keyboardVerticalOffset'] = keyboardVerticalOffset;
+    }
     if (enabled != null) map['enabled'] = enabled;
     if (onKeyboardShow != null) map['onKeyboardShow'] = onKeyboardShow;
     if (onKeyboardHide != null) map['onKeyboardHide'] = onKeyboardHide;
     if (style != null) map['style'] = style!.toMap();
-    if (contentContainerStyle != null)
+    if (contentContainerStyle != null) {
       map['contentContainerStyle'] = contentContainerStyle!.toMap();
+    }
 
     return map;
   }

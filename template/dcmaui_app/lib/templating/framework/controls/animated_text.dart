@@ -20,30 +20,22 @@ class DCAnimatedTextProps extends DCTextProps {
   final Function(Map<String, dynamic>)? onAnimationComplete;
 
   DCAnimatedTextProps({
-    String? text,
-    DCTextStyle? style,
-    int? numberOfLines,
+    super.text,
+    super.style,
+    super.numberOfLines,
     TextAlign? textAlign,
-    bool? selectable,
+    super.selectable,
     Color? selectionColor,
     DCTextDecorationLineType? textDecorationLine,
-    bool? adjustsFontSizeToFit,
-    double? minimumFontScale,
+    super.adjustsFontSizeToFit,
+    super.minimumFontScale,
     Function(Map<String, dynamic>)? onPress,
-    String? testID,
+    super.testID,
     Map<String, dynamic>? additionalProps,
     this.animatedStyles,
     this.onAnimationStart,
     this.onAnimationComplete,
   }) : super(
-          text: text,
-          style: style,
-          numberOfLines: numberOfLines,
-          // Pass parameters correctly to super constructor based on DCTextProps
-          selectable: selectable,
-          adjustsFontSizeToFit: adjustsFontSizeToFit,
-          minimumFontScale: minimumFontScale,
-          testID: testID,
           additionalProps: additionalProps ?? {},
         );
 
