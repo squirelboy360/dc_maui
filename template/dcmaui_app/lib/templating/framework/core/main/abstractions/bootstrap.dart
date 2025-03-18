@@ -82,27 +82,31 @@ Future<void> dcBind(
         },
       );
 
-  // CRITICAL FIX: Ensure app has proper keys to maintain the component chain
+  // CRITICAL FIX: Ensure both ErrorBoundary and MainApp have proper keys
   final appPropsWithKey = appProps ?? {};
   if (!appPropsWithKey.containsKey('key')) {
     appPropsWithKey['key'] = 'root-app';
   }
 
-  // Create the root element with proper component nesting
+  // Create the app component first
+  final appComponent =
+      ElementFactory.createComponent(appComponentConstructor, appPropsWithKey);
+
+  // Debug output for component creation
+  debugPrint(
+      'Bootstrap: Created app component with key ${appPropsWithKey["key"]}');
+
+  // Then wrap it in ErrorBoundary
   final rootComponent = ElementFactory.createComponent(
     () => ErrorBoundary(
-      errorProps,
-      [
-        ComponentAdapter(ElementFactory.createComponent(
-            appComponentConstructor, appPropsWithKey))
-      ],
-    ),
+        errorBoundaryProps ?? ErrorBoundaryProps(id: 'root-error-boundary'),
+        [ComponentAdapter(appComponent)]),
     {'key': 'root-error-boundary'},
   );
 
   try {
-    // Render the app
-    debugPrint('DC Bootstrap: Rendering root component');
+    // Render the app with extra debugging
+    debugPrint('DC Bootstrap: Rendering root component (ErrorBoundary)');
     vdom.render(rootComponent);
 
     // Log debug information

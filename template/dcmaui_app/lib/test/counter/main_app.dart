@@ -1,55 +1,52 @@
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/index.dart';
+import 'package:dc_test/templating/framework/controls/button.dart';
+import 'package:dc_test/templating/framework/controls/text.dart';
+import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
   @override
-  VNode render() {
-    // Using hooks for state management
-    final counter = UseState<int>('counter', 0);
+  Map<String, dynamic> getInitialState() {
+    return {'counter': 0};
+  }
 
-    // CRITICAL FIX: Add debug output
-    debugPrint('MainApp: Rendering with counter=${counter.value}');
+  void _incrementCounter() {
+    // Get the current counter value
+    final counter = state['counter'] as int? ?? 0;
+    // Update state with new counter value
+    setState({'counter': counter + 1});
 
-    // CRITICAL FIX: Don't call .build() here - the Component base class will do it
+    // Debug output to verify state update
+    debugPrint('MainApp: State updated, counter is now ${counter + 1}');
+  }
+
+  @override
+  VNode buildRender() {
+    // CRITICAL FIX: Add extensive debug output
+    debugPrint('MainApp: Building render with counter=${state["counter"]}');
+
+    // Return a simple UI to verify rendering is working
     return DCView(
       style: ViewStyle(
-        padding: EdgeInsets.all(10),
-        backgroundColor: Colors.amber,
+        backgroundColor: Colors.blue,
+        padding: EdgeInsets.all(20),
       ),
       children: [
-        DCView(
-          style: ViewStyle(
-            height: 500,
-            width: 20,
-            backgroundColor: Colors.green,
-            padding: EdgeInsets.all(20),
+        DCText(
+          text: 'Counter: ${state["counter"]}',
+          style: DCTextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: "bold",
           ),
-          children: [
-            DCButton(
-              title: "Increment Counter",
-              onPress: () {
-                // Simpler state update with hooks
-                counter.value += 1;
-              },
-            ),
-            DCText(
-              text: 'Counter: ${counter.value}',
-              style: DCTextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: "bold",
-              ),
-            ),
-            DCText(
-              text: 'Using DC framework with hooks',
-              style: DCTextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ],
+        ),
+        DCButton(
+          title: "Increment",
+          onPress: () {
+            debugPrint('Button pressed - incrementing counter');
+            _incrementCounter();
+          },
         ),
       ],
     ).build();

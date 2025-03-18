@@ -57,7 +57,9 @@ class ComponentVDOM extends VDOM {
       final componentInstance = componentConstructor();
       final componentId = viewId;
 
-      debugPrint('ComponentVDOM: Initializing component $componentId');
+      // CRITICAL FIX: Debug output
+      debugPrint(
+          'ComponentVDOM: Creating component ${componentInstance.runtimeType} with ID $componentId');
 
       // Store the component instance
       _components[componentId] = componentInstance;
@@ -70,9 +72,8 @@ class ComponentVDOM extends VDOM {
 
       componentInstance.props = cleanProps;
 
-      // Set up component's update mechanism using the public callback
+      // Set up component's update mechanism
       componentInstance.updateCallback = () {
-        // Re-render when setState is called
         _handleComponentUpdate(componentId);
       };
 
@@ -84,54 +85,46 @@ class ComponentVDOM extends VDOM {
       componentInstance.mounted = true;
 
       // Render the component
-      final renderedNode = componentInstance.render();
       debugPrint(
-          'ComponentVDOM: Component $componentId rendered node: ${renderedNode.type} with ${renderedNode.children.length} children');
+          'ComponentVDOM: Rendering component ${componentInstance.runtimeType}');
+      final renderedNode = componentInstance.render();
       _renderedNodes[componentId] = renderedNode;
 
-      // CRITICAL FIX: Handle component output based on type
-      if (_isComponent(renderedNode)) {
-        debugPrint('ComponentVDOM: Rendered node is another component');
-        // Create a new view ID for the nested component
-        final nestedViewId = getViewId(renderedNode);
+      // CRITICAL FIX: Log the rendered node type and key
+      debugPrint(
+          'ComponentVDOM: Component $componentId rendered node of type ${renderedNode.type} with key ${renderedNode.key}');
 
-        // Create the component view with the new ID
+      // CRITICAL FIX: Handle cases where component returns another component vs. a native view
+      if (_isComponent(renderedNode)) {
+        // This is where the chain gets broken - we need to create the nested component properly
+        debugPrint(
+            'ComponentVDOM: Component returned another component - creating nested component view');
+
+        // Create the nested component with its own view ID
+        final nestedViewId = getViewId(renderedNode);
         _createComponentView(renderedNode, nestedViewId);
 
-        // Create a parent-child relationship
+        // Set parent-child relationship to ensure proper view hierarchy
+        debugPrint(
+            'ComponentVDOM: Setting parent-child relationship: $viewId -> $nestedViewId');
         super.setChildren(viewId, [nestedViewId]);
-
-        debugPrint(
-            'ComponentVDOM: Created nested component with ID $nestedViewId as child of $viewId');
       } else {
-        // Regular view nodes are handled normally
+        // Component returned a regular view - create it directly
         debugPrint(
-            'ComponentVDOM: Creating view for rendered node ${renderedNode.type}');
+            'ComponentVDOM: Component returned a regular view - creating with ID $viewId');
         super.createView(renderedNode, viewId);
 
-        // CRITICAL FIX: Enhanced logging to debug the view hierarchy
-        debugPrint(
-            'ComponentVDOM: Rendered node structure: ${renderedNode.toTreeString()}');
-
-        // Explicitly handle children
+        // Process children
         final childViewIds = <String>[];
-        debugPrint(
-            'ComponentVDOM: Processing ${renderedNode.children.length} children of rendered node');
         for (var child in renderedNode.children) {
           final childViewId = getViewId(child);
-          debugPrint(
-              'ComponentVDOM: Child of $viewId -> $childViewId (${child.type})');
           createView(child, childViewId);
           childViewIds.add(childViewId);
         }
 
         // Set children relationship
         if (childViewIds.isNotEmpty) {
-          debugPrint(
-              'ComponentVDOM: Setting ${childViewIds.length} children for $viewId');
           super.setChildren(viewId, childViewIds);
-        } else {
-          debugPrint('ComponentVDOM: No children to set for $viewId');
         }
       }
 
