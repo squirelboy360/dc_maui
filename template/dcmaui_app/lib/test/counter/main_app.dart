@@ -1,11 +1,10 @@
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
-import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/index.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
   @override
-  VNode render() {
+  render() {
     // Using hooks for state management
     final counter = UseState<int>('counter', 0);
 

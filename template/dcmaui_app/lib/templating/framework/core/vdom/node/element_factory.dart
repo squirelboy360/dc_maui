@@ -73,7 +73,7 @@ class ElementFactory {
   }
 }
 
-// Add this extension at the end of the file
+
 extension VNodeExtension on VNode {
   // Helper to access the VNode directly
   VNode get vnode => this;
