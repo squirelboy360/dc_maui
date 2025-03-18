@@ -70,7 +70,7 @@ Future<void> dcBind(
             ),
             DCButton(
               title: 'Try Again',
-              onPress: () => reset(), 
+              onPress: () => reset(),
             ),
           ],
         ),
@@ -82,14 +82,19 @@ Future<void> dcBind(
         },
       );
 
-  // Always wrap app in error boundary for protection
-  // Fixed: Use positional arguments instead of named parameters for ErrorBoundary
+  // CRITICAL FIX: Ensure app has proper keys to maintain the component chain
+  final appPropsWithKey = appProps ?? {};
+  if (!appPropsWithKey.containsKey('key')) {
+    appPropsWithKey['key'] = 'root-app';
+  }
+
+  // Create the root element with proper component nesting
   final rootComponent = ElementFactory.createComponent(
     () => ErrorBoundary(
       errorProps,
       [
         ComponentAdapter(ElementFactory.createComponent(
-            appComponentConstructor, appProps ?? {'key': 'root-app'}))
+            appComponentConstructor, appPropsWithKey))
       ],
     ),
     {'key': 'root-error-boundary'},
@@ -97,6 +102,7 @@ Future<void> dcBind(
 
   try {
     // Render the app
+    debugPrint('DC Bootstrap: Rendering root component');
     vdom.render(rootComponent);
 
     // Log debug information

@@ -89,9 +89,22 @@ class ComponentVDOM extends VDOM {
           'ComponentVDOM: Component $componentId rendered node: ${renderedNode.type}');
       _renderedNodes[componentId] = renderedNode;
 
-      // Render to actual view - this is key!
-      if (renderedNode.type != 'component') {
-        // If it's a regular view node, create it directly
+      // CRITICAL FIX: Handle component chains correctly
+      if (_isComponent(renderedNode)) {
+        debugPrint('ComponentVDOM: Rendered node is another component');
+        // Create a new view ID for the nested component
+        final nestedViewId = getViewId(renderedNode);
+
+        // Create the component view with the new ID
+        _createComponentView(renderedNode, nestedViewId);
+
+        // Instead of setting the ViewId, create a parent-child relationship
+        super.setChildren(viewId, [nestedViewId]);
+
+        debugPrint(
+            'ComponentVDOM: Created nested component with ID $nestedViewId as child of $viewId');
+      } else {
+        // Regular view nodes are handled as before
         debugPrint(
             'ComponentVDOM: Creating view for rendered node ${renderedNode.type}');
         super.createView(renderedNode, viewId);
@@ -116,10 +129,6 @@ class ComponentVDOM extends VDOM {
         } else {
           debugPrint('ComponentVDOM: No children to set for $viewId');
         }
-      } else {
-        // Handle nested component
-        debugPrint('ComponentVDOM: Creating nested component');
-        createView(renderedNode, viewId);
       }
 
       // Call didMount callback
