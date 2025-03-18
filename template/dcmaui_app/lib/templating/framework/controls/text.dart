@@ -49,8 +49,9 @@ class DCTextStyle implements StyleProps {
     if (lineHeight != null) map['lineHeight'] = lineHeight;
     if (letterSpacing != null) map['letterSpacing'] = letterSpacing;
     if (textAlign != null) map['textAlign'] = textAlign;
-    if (textDecorationLine != null)
+    if (textDecorationLine != null) {
       map['textDecorationLine'] = textDecorationLine;
+    }
 
     if (textDecorationColor != null) {
       final colorValue =
@@ -58,8 +59,9 @@ class DCTextStyle implements StyleProps {
       map['textDecorationColor'] = '#$colorValue';
     }
 
-    if (textDecorationStyle != null)
+    if (textDecorationStyle != null) {
       map['textDecorationStyle'] = textDecorationStyle;
+    }
     if (numberOfLines != null) map['numberOfLines'] = numberOfLines;
 
     return map;

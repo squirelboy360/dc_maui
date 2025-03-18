@@ -1,10 +1,8 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
-import 'package:dc_test/templating/framework/controls/view.dart';
-import 'package:dc_test/templating/framework/core/core.dart';
+
 import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// Style properties for ScrollView component
@@ -132,16 +130,19 @@ class DCScrollViewProps implements ControlProps {
     };
 
     if (horizontal != null) map['horizontal'] = horizontal;
-    if (showsVerticalScrollIndicator != null)
+    if (showsVerticalScrollIndicator != null) {
       map['showsVerticalScrollIndicator'] = showsVerticalScrollIndicator;
-    if (showsHorizontalScrollIndicator != null)
+    }
+    if (showsHorizontalScrollIndicator != null) {
       map['showsHorizontalScrollIndicator'] = showsHorizontalScrollIndicator;
+    }
     if (pagingEnabled != null) map['pagingEnabled'] = pagingEnabled;
     if (bounces != null) map['bounces'] = bounces;
 
     if (contentOffset != null) map['contentOffset'] = contentOffset;
-    if (scrollToOffsetAnimated != null)
+    if (scrollToOffsetAnimated != null) {
       map['scrollToOffsetAnimated'] = scrollToOffsetAnimated;
+    }
 
     // Convert EdgeInsets to maps
     if (contentInset != null) {
@@ -162,19 +163,23 @@ class DCScrollViewProps implements ControlProps {
       };
     }
 
-    if (keyboardDismissMode != null)
+    if (keyboardDismissMode != null) {
       map['keyboardDismissMode'] = keyboardDismissMode;
+    }
     if (refreshing != null) map['refreshing'] = refreshing;
     if (onRefresh != null) map['onRefresh'] = onRefresh;
     if (onScroll != null) map['onScroll'] = onScroll;
-    if (onMomentumScrollBegin != null)
+    if (onMomentumScrollBegin != null) {
       map['onMomentumScrollBegin'] = onMomentumScrollBegin;
-    if (onMomentumScrollEnd != null)
+    }
+    if (onMomentumScrollEnd != null) {
       map['onMomentumScrollEnd'] = onMomentumScrollEnd;
+    }
     if (onScrollBeginDrag != null) map['onScrollBeginDrag'] = onScrollBeginDrag;
     if (onScrollEndDrag != null) map['onScrollEndDrag'] = onScrollEndDrag;
-    if (onEndReachedThreshold != null)
+    if (onEndReachedThreshold != null) {
       map['onEndReachedThreshold'] = onEndReachedThreshold;
+    }
     if (onEndReached != null) map['onEndReached'] = onEndReached;
     if (style != null) map['style'] = style!.toMap();
     if (testID != null) map['testID'] = testID;
@@ -285,16 +290,15 @@ class DCScrollView extends Control {
   /// Scroll to a specific offset
   static void scrollTo(String scrollViewId, double x, double y,
       {bool animated = true}) {
-    // Use the correct method based on the ElementFactory implementation
-    ElementFactory.callMethod(
-      'DCScrollView.scrollTo',
+    // Use MainViewCoordinatorInterface.updateView to send properties to the native side
+    MainViewCoordinatorInterface.updateView(
+      scrollViewId,
       {
-        'viewId': scrollViewId,
-        'contentOffset': {
+        'scrollToOffset': {
           'x': x,
           'y': y,
-        },
-        'animated': animated,
+          'animated': animated,
+        }
       },
     );
   }

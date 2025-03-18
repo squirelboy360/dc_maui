@@ -1,6 +1,7 @@
 import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
-import 'package:dc_test/templating/framework/core/vdom/vdom/component_vdom.dart';
+;
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
+import 'package:dc_test/templating/framework/core/vdom/vdom/extensions/component_vdom.dart';
 import 'package:flutter/foundation.dart';
 
 // NativeVDOM combines ComponentVDOM functionality with native event handling

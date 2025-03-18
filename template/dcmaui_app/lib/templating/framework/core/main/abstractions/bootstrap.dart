@@ -11,7 +11,7 @@ import 'package:dc_test/templating/framework/core/vdom/vdom/optimized_vdom.dart'
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/utility/performance_monitor.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide TextStyle;
+import 'package:flutter/material.dart' hide DCTextStyle;
 
 /// DC Framework bootstrap function - initializes the framework and renders the app
 ///
@@ -56,15 +56,15 @@ Future<void> dcBind(
         fallback: (error, reset) => DCView(
           children: [
             DCText(
-              style: TextStyle(
+              text: 'Something went wrong',
+              style: DCTextStyle(
                 color: Colors.red,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight,
               ),
-              'Something went wrong',
             ),
             DCText(
-              style: TextStyle(
+              style: DCTextStyle(
                 color: Colors.red,
                 fontSize: 14,
               ),
@@ -122,29 +122,4 @@ Future<void> dcBind(
   }
 
   return Future.value();
-}
-
-/// Combines OptimizedVDOM with NativeVDOM for performance
-class NativeOptimizedVDOM extends OptimizedVDOM {
-  final NativeVDOM _nativeVDOM = NativeVDOM();
-
-  @override
-  void createView(VNode node, String viewId) {
-    _nativeVDOM.createView(node, viewId);
-  }
-
-  @override
-  void updateView(VNode oldNode, VNode newNode, String viewId) {
-    _nativeVDOM.updateView(oldNode, newNode, viewId);
-  }
-
-  @override
-  void deleteView(String viewId) {
-    _nativeVDOM.deleteView(viewId);
-  }
-
-  @override
-  void setChildren(String parentId, List<String> childIds) {
-    _nativeVDOM.setChildren(parentId, childIds);
-  }
 }

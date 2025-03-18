@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-// Interface for communicating with the native UI layer
 class MainViewCoordinatorInterface {
-  // Correct channel names matching the actual Swift implementation
   static const MethodChannel _channel = MethodChannel('com.dcmaui.framework');
   static const EventChannel _eventChannel =
       EventChannel('com.dcmaui.framework/events');
