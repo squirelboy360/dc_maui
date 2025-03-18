@@ -21,13 +21,15 @@ class DCActionSheetIOS {
 
     // Set up a one-time listener for the selection event
     final completer = Completer<int>();
-    final subscription =
-        MainViewCoordinatorInterface.eventStream.listen((event) {
+
+    // Declare subscription variable before using it
+    StreamSubscription<Map<String, dynamic>>? subscription;
+    subscription = MainViewCoordinatorInterface.eventStream.listen((event) {
       if (event['viewId'] == viewId &&
           event['eventName'] == 'onActionSheetSelection') {
         final buttonIndex = event['params']['buttonIndex'] as int;
         completer.complete(buttonIndex);
-        subscription.cancel();
+        subscription?.cancel();
       }
     });
 
@@ -56,8 +58,10 @@ class DCActionSheetIOS {
 
     // Set up a one-time listener for the share result event
     final completer = Completer<Map<String, dynamic>>();
-    final subscription =
-        MainViewCoordinatorInterface.eventStream.listen((event) {
+
+    // Declare subscription variable before using it
+    StreamSubscription<Map<String, dynamic>>? subscription;
+    subscription = MainViewCoordinatorInterface.eventStream.listen((event) {
       if (event['viewId'] == viewId) {
         if (event['eventName'] == 'onShareSuccess') {
           final completed = event['params']['completed'] as bool;
@@ -67,7 +71,7 @@ class DCActionSheetIOS {
           failureCallback(event['params']);
         }
         completer.complete(event['params']);
-        subscription.cancel();
+        subscription?.cancel();
       }
     });
 

@@ -5,6 +5,14 @@ import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/widgets.dart';
 
+// Define the missing TextDecorationLineType enum
+enum DCTextDecorationLineType {
+  none,
+  underline,
+  lineThrough,
+  underlineLineThrough,
+}
+
 /// Props for AnimatedText component
 class DCAnimatedTextProps extends DCTextProps {
   final Map<String, AnimatedValue>? animatedStyles;
@@ -12,26 +20,30 @@ class DCAnimatedTextProps extends DCTextProps {
   final Function(Map<String, dynamic>)? onAnimationComplete;
 
   DCAnimatedTextProps({
-    super.text,
-    super.style,
-    super.numberOfLines,
+    String? text,
+    DCTextStyle? style,
+    int? numberOfLines,
     TextAlign? textAlign,
-    super.selectable,
-    String? selectionColor,
+    bool? selectable,
+    Color? selectionColor,
     DCTextDecorationLineType? textDecorationLine,
-    super.adjustsFontSizeToFit,
-    super.minimumFontScale,
+    bool? adjustsFontSizeToFit,
+    double? minimumFontScale,
     Function(Map<String, dynamic>)? onPress,
-    super.testID,
+    String? testID,
     Map<String, dynamic>? additionalProps,
     this.animatedStyles,
     this.onAnimationStart,
     this.onAnimationComplete,
   }) : super(
-          textAlign: textAlign,
-          selectionColor: selectionColor,
-          textDecorationLine: textDecorationLine,
-          onPress: onPress,
+          text: text,
+          style: style,
+          numberOfLines: numberOfLines,
+          // Pass parameters correctly to super constructor based on DCTextProps
+          selectable: selectable,
+          adjustsFontSizeToFit: adjustsFontSizeToFit,
+          minimumFontScale: minimumFontScale,
+          testID: testID,
           additionalProps: additionalProps ?? {},
         );
 
@@ -65,7 +77,7 @@ class DCAnimatedText extends Control {
     int? numberOfLines,
     TextAlign? textAlign,
     bool? selectable,
-    String? selectionColor,
+    Color? selectionColor,
     DCTextDecorationLineType? textDecorationLine,
     bool? adjustsFontSizeToFit,
     double? minimumFontScale,
@@ -79,13 +91,9 @@ class DCAnimatedText extends Control {
           text: text,
           style: style,
           numberOfLines: numberOfLines,
-          textAlign: textAlign,
           selectable: selectable,
-          selectionColor: selectionColor,
-          textDecorationLine: textDecorationLine,
           adjustsFontSizeToFit: adjustsFontSizeToFit,
           minimumFontScale: minimumFontScale,
-          onPress: onPress,
           testID: testID,
           additionalProps: additionalProps ?? const {},
           animatedStyles: animatedStyles,
