@@ -43,9 +43,7 @@ class ErrorBoundary extends Component {
   final ErrorBoundaryProps _props;
   final List<Control> _children;
 
-  bool _hasError = false;
   dynamic _error;
-  StackTrace? _stackTrace;
 
   ErrorBoundary(this._props, this._children);
 
@@ -156,9 +154,7 @@ class ErrorBoundary extends Component {
       'hasError': false,
       'error': null,
     });
-    _hasError = false;
     _error = null;
-    _stackTrace = null;
   }
 
   // This lifecycle method is called when an error is thrown in a descendant
@@ -170,9 +166,7 @@ class ErrorBoundary extends Component {
     }
 
     // Update state to render fallback UI
-    _hasError = true;
     _error = error;
-    _stackTrace = stackTrace;
 
     setState({
       'hasError': true,
