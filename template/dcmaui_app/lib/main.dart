@@ -8,8 +8,6 @@ void main() async {
   // Bootstrap the DC application - error boundary is now handled internally
   await dcBind(
     () => MainApp(),
-    
-    enableOptimizations: true,
     enablePerformanceTracking: true,
   );
 }

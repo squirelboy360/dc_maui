@@ -1,6 +1,4 @@
-
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/component_adapter.dart';
 import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/error_boundary.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
@@ -19,7 +17,6 @@ import 'package:flutter/foundation.dart';
 /// ```
 Future<void> dcBind(
   Component Function() appComponentConstructor, {
-  bool enableOptimizations = true,
   bool enablePerformanceTracking = kDebugMode,
   ErrorBoundaryProps? errorBoundaryProps,
   Map<String, dynamic>? appProps,
@@ -53,8 +50,8 @@ Future<void> dcBind(
   }
 
   // Create the app component first
-  final appComponent =
-      ElementFactory.createComponent(appComponentConstructor, appPropsWithKey);
+  // final appComponent =
+  //     ElementFactory.createComponent(appComponentConstructor, appPropsWithKey);
 
   // Debug output for component creation
   debugPrint(
@@ -62,10 +59,8 @@ Future<void> dcBind(
 
   // Then wrap it in ErrorBoundary
   final rootComponent = ElementFactory.createComponent(
-    () => ErrorBoundary(
-        errorBoundaryProps ?? ErrorBoundaryProps(id: 'root-error-boundary'),
-        [ComponentAdapter(appComponent)]),
-    {'key': 'root-error-boundary'},
+    () => appComponentConstructor(),
+    appPropsWithKey,
   );
 
   try {
