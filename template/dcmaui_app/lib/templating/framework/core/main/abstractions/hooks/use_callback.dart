@@ -7,7 +7,6 @@ class UseCallback<T extends Function> {
   final String _callbackKey;
   final T _callback;
   final List<String> _dependencies;
-  T? _cachedCallback;
 
   /// Create a memoized callback
   ///
@@ -35,9 +34,7 @@ class UseCallback<T extends Function> {
   })  : _callbackKey = key,
         _callback = callback,
         _dependencies = dependencies,
-        _componentId = componentId ?? 'global_${key}_${identityHashCode(key)}' {
-    _cachedCallback = callback;
-  }
+        _componentId = componentId ?? 'global_${key}_${identityHashCode(key)}';
 
   /// Get the memoized callback - returns the same function reference
   /// if dependencies haven't changed
@@ -52,7 +49,6 @@ class UseCallback<T extends Function> {
 
   /// Force callback recreation regardless of dependencies
   void invalidate() {
-    _cachedCallback = _callback;
     if (kDebugMode) {
       print('UseCallback: Invalidated $_callbackKey');
     }
