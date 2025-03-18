@@ -1,101 +1,141 @@
+//
+//  ViewRegistry.swift
+//  Runner
+//
+//  Created for DC MAUI Framework
+//
+
 import UIKit
 
-/// Class to manage view registry for DCViewCoordinator
+/// Registry for tracking native views
 class ViewRegistry {
-    // Map of view IDs to views
-    private var views: [String: UIView] = [:]
+    // Map of view ID to view
+    private var viewMap = [String: UIView]()
     
-    // Map of parent view IDs to child view IDs
-    private var childViews: [String: [String]] = [:]
+    // Map of parent ID to child IDs
+    private var parentChildMap = [String: [String]]()
     
-    // Register a view
+    // Map of child ID to parent ID
+    private var childParentMap = [String: String]()
+    
+    /// Register a view with an ID
     func registerView(_ view: UIView, withId viewId: String) {
-        views[viewId] = view
-        // Initialize empty children array
-        if childViews[viewId] == nil {
-            childViews[viewId] = []
+        // Add view to the registry
+        viewMap[viewId] = view
+        
+        // Set view ID on DCBaseView if applicable
+        if let dcView = view as? DCBaseView {
+            // Instead of directly assigning to viewId (which is a let constant),
+            // use an initializer method or another approach
+            dcView.setViewIdIfNeeded(viewId)
         }
     }
     
-    // Get a view by ID
+    /// Get a view by its ID
     func getView(_ viewId: String) -> UIView? {
-        return views[viewId]
+        return viewMap[viewId]
     }
     
-    // Add a child to a parent
-    func addChild(_ childId: String, toParent parentId: String) {
-        childViews[parentId] = childViews[parentId] ?? []
-        if !childViews[parentId]!.contains(childId) {
-            childViews[parentId]!.append(childId)
-        }
-    }
-    
-    // Set all children for a parent
-    func setChildren(_ childIds: [String], forParent parentId: String) {
-        childViews[parentId] = childIds
-    }
-    
-    // Get children for a parent
-    func getChildren(forParent parentId: String) -> [String] {
-        return childViews[parentId] ?? []
-    }
-    
-    // Remove a view and its children
+    /// Remove a view and its children
     func removeView(_ viewId: String) {
-        // Remove view and any references to it
-        views.removeValue(forKey: viewId)
+        // Remove all child views first
+        let childIds = parentChildMap[viewId] ?? []
+        for childId in childIds {
+            removeView(childId)
+        }
         
-        // Remove any children references
-        if let children = childViews[viewId] {
-            for childId in children {
-                removeView(childId)
+        // Remove this view from parent's children list
+        if let parentId = childParentMap[viewId] {
+            parentChildMap[parentId]?.removeAll { $0 == viewId }
+        }
+        
+        // Remove mappings
+        childParentMap.removeValue(forKey: viewId)
+        parentChildMap.removeValue(forKey: viewId)
+        viewMap.removeValue(forKey: viewId)
+    }
+    
+    /// Add a child view to a parent
+    func addChild(_ childId: String, toParent parentId: String) {
+        // Remove from previous parent if exists
+        if let oldParentId = childParentMap[childId], oldParentId != parentId {
+            parentChildMap[oldParentId]?.removeAll { $0 == childId }
+        }
+        
+        // Add to new parent
+        if parentChildMap[parentId] == nil {
+            parentChildMap[parentId] = [childId]
+        } else if !parentChildMap[parentId]!.contains(childId) {
+            parentChildMap[parentId]!.append(childId)
+        }
+        
+        // Update child->parent reference
+        childParentMap[childId] = parentId
+    }
+    
+    /// Set the children of a parent view
+    func setChildren(_ childIds: [String], forParent parentId: String) {
+        // Remove old parent references for current children
+        let currentChildren = parentChildMap[parentId] ?? []
+        for childId in currentChildren {
+            if !childIds.contains(childId) {
+                childParentMap.removeValue(forKey: childId)
             }
         }
-        childViews.removeValue(forKey: viewId)
         
-        // Remove from any parent's children list
-        for (parentId, children) in childViews {
-            if children.contains(viewId) {
-                childViews[parentId] = children.filter { $0 != viewId }
-            }
+        // Update parent->children map
+        parentChildMap[parentId] = childIds
+        
+        // Update children->parent map
+        for childId in childIds {
+            childParentMap[childId] = parentId
         }
     }
     
-    // Clear the entire registry
-    func clear() {
-        views.removeAll()
-        childViews.removeAll()
+    /// Get all registered views
+    func getAllViews() -> [String: UIView] {
+        return viewMap
     }
     
-    // Get a description of the view hierarchy
+    /// Get the children of a view
+    func getChildren(forParent parentId: String) -> [String] {
+        return parentChildMap[parentId] ?? []
+    }
+    
+    /// Get the parent of a view
+    func getParent(forChild childId: String) -> String? {
+        return childParentMap[childId]
+    }
+    
+    /// Get a string representation of the view hierarchy
     func describeViewHierarchy() -> String {
         var description = "View Hierarchy:\n"
         
-        // Find root views (those not in any children arrays)
-        let allChildIds = Set(childViews.values.flatMap { $0 })
-        let rootViewIds = Set(views.keys).subtracting(allChildIds)
+        // Find root views (those without parents)
+        let rootViewIds = viewMap.keys.filter { !childParentMap.keys.contains($0) }
         
         for rootId in rootViewIds {
-            description += describeView(rootId, depth: 0)
+            if let rootView = viewMap[rootId] {
+                description += describeView(rootView, viewId: rootId, depth: 0)
+            }
         }
         
         return description
     }
     
-    private func describeView(_ viewId: String, depth: Int) -> String {
-        guard let view = views[viewId] else {
-            return ""
-        }
-        
+    /// Describe a single view and its children
+    private func describeView(_ view: UIView, viewId: String, depth: Int) -> String {
         let indent = String(repeating: "  ", count: depth)
-        var result = "\(indent)- \(viewId): \(type(of: view))"
+        var description = "\(indent)- \(viewId): \(type(of: view))\n"
         
-        if let children = childViews[viewId] {
-            for childId in children {
-                result += "\n" + describeView(childId, depth: depth + 1)
+        // Add child descriptions
+        let childIds = parentChildMap[viewId] ?? []
+        for childId in childIds {
+            if let childView = viewMap[childId] {
+                description += describeView(childView, viewId: childId, depth: depth + 1)
             }
         }
         
-        return result
+        return description
     }
 }

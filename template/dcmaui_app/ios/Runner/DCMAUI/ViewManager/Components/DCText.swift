@@ -159,25 +159,25 @@ class DCText: DCBaseView {
     private func applyTextStyles(_ style: [String: Any]) {
         // Font family
         if let fontFamily = style["fontFamily"] as? String {
-            this.fontFamily = fontFamily
+            self.fontFamily = fontFamily
             updateFont()
         }
         
         // Font size
         if let fontSize = style["fontSize"] as? CGFloat {
-            this.fontSize = fontSize
+            self.fontSize = fontSize
             updateFont()
         }
         
         // Font weight
         if let fontWeight = style["fontWeight"] as? String {
-            this.fontWeight = fontWeight
+            self.fontWeight = fontWeight
             updateFont()
         }
         
         // Font style
         if let fontStyle = style["fontStyle"] as? String {
-            this.fontStyle = fontStyle
+            self.fontStyle = fontStyle
             updateFont()
         }
         
@@ -208,7 +208,7 @@ class DCText: DCBaseView {
         
         // Letter spacing
         if let letterSpacing = style["letterSpacing"] as? CGFloat {
-            this.letterSpacing = letterSpacing
+            self.letterSpacing = letterSpacing
             
             if let text = label.text {
                 let attributedString = NSMutableAttributedString(string: text)
@@ -221,24 +221,24 @@ class DCText: DCBaseView {
         if let textAlign = style["textAlign"] as? String {
             switch textAlign {
             case "auto":
-                this.textAlign = .natural
+                self.textAlign = .natural
             case "left":
-                this.textAlign = .left
+                self.textAlign = .left
             case "right":
-                this.textAlign = .right
+                self.textAlign = .right
             case "center":
-                this.textAlign = .center
+                self.textAlign = .center
             case "justify":
-                this.textAlign = .justified
+                self.textAlign = .justified
             default:
-                this.textAlign = .natural
+                self.textAlign = .natural
             }
-            label.textAlignment = this.textAlign
+            label.textAlignment = self.textAlign
         }
         
         // Text decoration
         if let textDecorationLine = style["textDecorationLine"] as? String {
-            this.textDecorationLine = textDecorationLine
+            self.textDecorationLine = textDecorationLine
             
             // Need to reapply text to update the decorations
             if let text = label.text {
@@ -247,7 +247,7 @@ class DCText: DCBaseView {
         }
         
         if let textDecorationColor = style["textDecorationColor"] as? String, textDecorationColor.hasPrefix("#") {
-            this.textDecorationColor = UIColor(hexString: textDecorationColor)
+            self.textDecorationColor = UIColor(hexString: textDecorationColor)
             
             // Need to reapply text to update the decoration color
             if let text = label.text {
@@ -274,7 +274,7 @@ class DCText: DCBaseView {
     private func updateFont() {
         var font: UIFont
         
-        if let fontFamily = this.fontFamily {
+        if let fontFamily = self.fontFamily {
             // Try to get the specified font family
             if let customFont = UIFont(name: fontFamily, size: fontSize) {
                 font = customFont
@@ -288,7 +288,7 @@ class DCText: DCBaseView {
         }
         
         // Apply font weight if specified
-        if let fontWeight = this.fontWeight {
+        if let fontWeight = self.fontWeight {
             var traits = font.fontDescriptor.symbolicTraits
             
             switch fontWeight {
@@ -308,7 +308,7 @@ class DCText: DCBaseView {
         }
         
         // Apply italic style if specified
-        if let fontStyle = this.fontStyle, fontStyle == "italic" {
+        if let fontStyle = self.fontStyle, fontStyle == "italic" {
             var traits = font.fontDescriptor.symbolicTraits
             traits.insert(.traitItalic)
             

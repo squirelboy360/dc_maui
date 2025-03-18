@@ -21,6 +21,11 @@ class DCSectionList: DCListView {
     private var sections: [DCSection] = []
     private var stickySectionHeadersEnabled: Bool = false
     
+    // Additional function references specific to sections
+    var renderSectionHeaderRef: [String: Any]?
+    var renderSectionFooterRef: [String: Any]?
+    var sectionKeyExtractorRef: [String: Any]?
+    
     // Reuse identifiers
     private let headerReuseIdentifier = "DCSectionHeaderIdentifier"
     private let footerReuseIdentifier = "DCSectionFooterIdentifier"
@@ -113,13 +118,13 @@ class DCSectionList: DCListView {
     
     // MARK: - UITableViewDataSource
     
-    override func numberOfSections(in tableView: UITableView) -> Int {
-        return sections.count
-    }
-    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         guard section < sections.count else { return 0 }
         return sections[section].data.count
+    }
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return sections.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -188,7 +193,7 @@ class DCSectionList: DCListView {
         let footerContentView = DCViewCoordinator.shared?.renderFunction(reference: renderSectionFooterRef, params: params)
         
         if let contentView = footerContentView {
-            footerView.configure(withContentView: contentView)
+            footerView.configure(withContentView: contentView)  // Fix: use footerView instead of headerView
         }
         
         return footerView
@@ -224,7 +229,8 @@ class DCSectionList: DCListView {
            let contentView = DCViewCoordinator.shared?.renderFunction(reference: renderItem, params: params) {
             cell.configure(withContentView: contentView, itemKey: itemKey)
         } else {
-            cell.configure(withEmptyContent(), itemKey: itemKey)
+            let emptyView = self.withEmptyContent()
+            cell.configure(withContentView: emptyView, itemKey: itemKey)
         }
     }
     
@@ -256,7 +262,7 @@ class DCSectionList: DCListView {
         return Array(Set(indexPaths.map { $0.section })).sorted()
     }
     
-    override func getViewableItems() -> [[String: Any]] {
+    func getViewableItems() -> [[String: Any]] {
         guard let indexPaths = tableView.indexPathsForVisibleRows else {
             return []
         }
@@ -291,7 +297,7 @@ class DCSectionList: DCListView {
 
 // Custom view for section headers and footers
 class DCSectionHeaderFooterView: UITableViewHeaderFooterView {
-    private var contentView: UIView?
+    private var sectionContentContainer: UIView?
     
     override init(reuseIdentifier: String?) {
         super.init(reuseIdentifier: reuseIdentifier)
@@ -315,10 +321,10 @@ class DCSectionHeaderFooterView: UITableViewHeaderFooterView {
     
     func configure(withContentView newContentView: UIView) {
         // Remove any existing content view
-        contentView?.removeFromSuperview()
+        sectionContentContainer?.removeFromSuperview()
         
         // Add the new content view
-        contentView = newContentView
+        sectionContentContainer = newContentView
         newContentView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(newContentView)
         

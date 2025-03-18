@@ -18,13 +18,27 @@ class DCButton: DCBaseView {
     private var titleText: String?
     private var titleColor: UIColor = .systemBlue
     private var disabledTitleColor: UIColor = .lightGray
-    private var backgroundColor: UIColor?
     private var disabledBackgroundColor: UIColor?
     private var borderRadius: CGFloat = 8.0
     private var fontWeight: UIFont.Weight = .regular
     private var fontSize: CGFloat = 17.0
     private var buttonType: String = "solid" // solid, outline, clear
     
+    // Change from stored property to computed property
+    private var buttonBackgroundColor: UIColor = .systemBlue
+
+    // Use a computed property to override backgroundColor
+    override var backgroundColor: UIColor? {
+        get {
+            return buttonBackgroundColor
+        }
+        set {
+            buttonBackgroundColor = newValue ?? .systemBlue
+            button.backgroundColor = buttonBackgroundColor
+            super.backgroundColor = .clear  // Keep container clear
+        }
+    }
+
     override func setupView() {
         super.setupView()
         

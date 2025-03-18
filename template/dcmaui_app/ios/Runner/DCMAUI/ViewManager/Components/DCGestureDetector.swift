@@ -79,7 +79,7 @@ class DCGestureDetector: DCBaseView {
         
         // Configure long press gesture
         if props["onLongPress"] != nil && longPressGesture == nil {
-            longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+            longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressGesture(_:)))
             
             // Allow customization of long press duration
             if let longPressDuration = props["longPressDuration"] as? TimeInterval {
@@ -252,9 +252,9 @@ class DCGestureDetector: DCBaseView {
         }
     }
     
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        if gesture.state == .began {
-            let location = gesture.location(in: self)
+    @objc func handleLongPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            let location = gestureRecognizer.location(in: self)
             
             DCViewCoordinator.shared?.sendEvent(
                 viewId: viewId,
@@ -392,6 +392,9 @@ class DCGestureDetector: DCBaseView {
     
     // Helper method to check if an event is registered
     func hasEventListener(_ eventName: String) -> Bool {
-        return eventListeners[eventName] == true
+        if self.responds(to: NSSelectorFromString(eventName)) {
+            return true
+        }
+        return false
     }
 }

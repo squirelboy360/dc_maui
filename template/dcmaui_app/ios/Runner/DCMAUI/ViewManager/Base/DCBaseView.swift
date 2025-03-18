@@ -812,13 +812,15 @@ class DCBaseView: UIView, ViewUpdatable {
     }
 
     // Add this utility method to DCBaseView, making it available to all components
-    func getPadding() -> CGFloat {
-        return max(padding.left, max(padding.right, max(padding.top, padding.bottom)))
-    }
-    
-    // Utility method that can be used by all components
-    func getPadding() -> CGFloat {
-        return max(padding.left, max(padding.right, max(padding.top, padding.bottom)))
+    func getPadding() -> UIEdgeInsets {
+        let padding = UIEdgeInsets(
+            top: padding.top,
+            left: padding.left,
+            bottom: padding.bottom,
+            right: padding.right
+        )
+        
+        return padding
     }
     
     // Helper to convert hex color strings to UIColor

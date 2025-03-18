@@ -514,4 +514,10 @@ class DCTextInput: DCBaseView, UITextFieldDelegate, UITextViewDelegate {
             default: return .sentences
         }
     }
+
+    // Public method to set input accessory view
+    func setInputAccessoryView(_ accessoryView: UIView?) {
+        textField?.inputAccessoryView = accessoryView
+        textView?.inputAccessoryView = accessoryView
+    }
 }

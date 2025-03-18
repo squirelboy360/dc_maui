@@ -76,6 +76,44 @@ class ViewFactory {
         case "ListView", "DCListView", "FlatList":
             view = DCListView(viewId: viewId, props: props)
             
+        case "DCSectionList":
+            view = DCSectionList(viewId: viewId, props: props)
+            
+        case "DCPressable":
+            view = DCPressable(viewId: viewId, props: props)
+            
+        case "DCDrawer":
+            view = DCDrawer(viewId: viewId, props: props)
+            
+        case "DCKeyboardAvoidingView":
+            view = DCKeyboardAvoidingView(viewId: viewId, props: props)
+            
+        case "DCInputAccessoryView":
+            view = DCInputAccessoryView(viewId: viewId, props: props)
+            
+        case "DCRefreshControl":
+            let refreshControl = DCRefreshControl(viewId: viewId, props: props)
+            // Note: RefreshControl is typically attached to a scroll view, not added directly to view hierarchy
+            return refreshControl
+            
+        case "DCImageBackground":
+            view = DCImageBackground(viewId: viewId, props: props)
+            
+        // Static/Utility components that don't create views directly
+        case "DCActionSheetIOS":
+            // Show action sheet with the provided options
+            DCActionSheetIOS.showActionSheet(viewId: viewId, options: props)
+            return UIView() // Return empty view since this is more of an action than a view
+            
+        case "DCShareActionSheet":
+            // Handle share sheet (implementation would be similar to ActionSheetIOS)
+            return UIView() // Return empty view 
+            
+        case "DCStatusBar":
+            // Update status bar settings
+            DCStatusBar.updateProps(props)
+            return UIView() // Return empty view since StatusBar affects system UI
+            
         default:
             // Default to base view for unknown types for graceful fallback
             print("DC MAUI: WARNING - Unknown view type: \(viewType), using default DCView")
@@ -122,5 +160,21 @@ class ViewFactory {
             print("DC MAUI DEBUG: View ID: \(viewId), Type: \(viewType)")
         }
         print("DC MAUI DEBUG: ---- END CREATED VIEWS ----")
+    }
+    
+    /// Create an empty view with a placeholder
+    static func createEmptyView(message: String = "Empty View") -> UIView {
+        let view = UIView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        view.backgroundColor = UIColor.lightGray
+        
+        // Add a label to show it's an empty view
+        let label = UILabel(frame: view.bounds)
+        label.text = message
+        label.textAlignment = .center
+        label.textColor = UIColor.white
+        
+        view.addSubview(label)
+        
+        return view
     }
 }

@@ -2,7 +2,7 @@
 //  Handlers.swift
 //  Runner
 //
-//  Created by Tahiru Agbanwa on 3/13/25.
+//  Created for DC MAUI Framework
 //
 
 import UIKit
@@ -214,13 +214,13 @@ extension DCViewCoordinator {
     }
     
     // Helper function to describe the view hierarchy
-    private func describeViewHierarchy(_ view: UIView, depth: Int) -> String {
+    private func describeViewHierarchy(_ view: UIView, depth: Int = 0) -> String {
         let indent = String(repeating: "  ", count: depth)
         let viewId = (view as? DCBaseView)?.viewId ?? "unknown"
         var description = "\(indent)- \(viewId): \(type(of: view))"
         
         for subview in view.subviews {
-            description += "\n" + describeViewHierarchy(subview, depth + 1)
+            description += "\n" + describeViewHierarchy(subview, depth: depth + 1)
         }
         
         return description

@@ -73,15 +73,17 @@ class DCStatusBar: NSObject {
                 
                 // Set the style by forcing view controller to refresh status bar
                 if let controller = topController as? StatusBarStyleController {
-                    controller.statusBarStyle = style
-                    controller.setNeedsStatusBarAppearanceUpdate()
+                    // Don't try to modify the controller directly
+                    controller.statusBarStyle = style // This line should work if StatusBarStyleController is implemented correctly
+                    topController?.setNeedsStatusBarAppearanceUpdate()
                 } else {
-                    // If the controller doesn't conform to our protocol, we can try to swizzle or use other techniques
-                    // For simplicity, we'll just attempt to create a global override
-                    let keyWindow = UIApplication.shared.windows.first { $0.isKeyWindow }
-                    keyWindow?.windowScene?.statusBarManager?.statusBarStyle = style
+                    // If the controller doesn't conform to our protocol, use UIApplication directly
+                    UIApplication.shared.statusBarStyle = style
                 }
             }
+        } else {
+            // Direct assignment for older iOS versions
+            UIApplication.shared.statusBarStyle = style
         }
     }
     

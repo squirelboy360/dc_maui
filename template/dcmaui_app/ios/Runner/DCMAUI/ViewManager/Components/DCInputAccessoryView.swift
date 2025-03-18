@@ -14,8 +14,19 @@ class DCInputAccessoryView: DCBaseView {
     
     // Properties
     private var nativeID: String?
-    private var backgroundColor: UIColor = UIColor.systemBackground
+    private var accessoryBackgroundColor: UIColor = UIColor.systemBackground
     
+    // Use a computed property with the same type as superclass (UIColor?)
+    override var backgroundColor: UIColor? {
+        get {
+            return accessoryBackgroundColor
+        }
+        set {
+            accessoryBackgroundColor = newValue ?? UIColor.systemBackground
+            super.backgroundColor = accessoryBackgroundColor
+        }
+    }
+
     override func setupView() {
         super.setupView()
         
@@ -89,14 +100,17 @@ extension DCTextInput {
     /// Set an input accessory view by native ID
     func setInputAccessoryViewNativeID(_ nativeID: String?) {
         guard let nativeID = nativeID else {
-            textField.inputAccessoryView = nil
-            textView.inputAccessoryView = nil
+            // Use a public method instead of direct property access
+            self.setInputAccessoryView(nil)
             return
         }
         
         if let accessoryView = DCInputAccessoryView.getInputAccessoryViewWithNativeID(nativeID) {
-            textField.inputAccessoryView = accessoryView
-            textView.inputAccessoryView = accessoryView
+            // Use a public method instead of direct property access
+            self.setInputAccessoryView(accessoryView)
         }
     }
 }
+
+// Important: Add this method to DCTextInput.swift
+// This comment is to remind you to implement this method in DCTextInput.swift
