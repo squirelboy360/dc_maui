@@ -137,22 +137,23 @@ class ViewFactory {
     
     // Separate method for cleaner root view setup (React Native style)
     private static func setupRootView(_ rootView: UIView) {
-        // Find the root view controller
-        guard let rootVC = UIApplication.shared.keyWindow?.rootViewController else {
-            return
+        // CRITICAL FIX: Don't add root view directly - DCViewCoordinator will handle it
+        print("DC MAUI: Root view created with ID view_0 - it will be added to the root container")
+        
+        // Set accessibility identifier for debugging
+        rootView.accessibilityIdentifier = "DCMAUIRootComponentView"
+        
+        // Make sure it will size correctly when added to container
+        rootView.translatesAutoresizingMaskIntoConstraints = true
+        rootView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Register with coordinator to add to root container
+        if let container = DCViewCoordinator.shared?.viewRegistry.getView("root") {
+            container.addSubview(rootView)
+            rootView.frame = container.bounds
+        } else {
+            print("DC MAUI: WARNING - Root container not found, view_0 will need to be added later")
         }
-        
-        // Add view to hierarchy
-        rootVC.view.addSubview(rootView)
-        
-        // Configure constraints
-        rootView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            rootView.leadingAnchor.constraint(equalTo: rootVC.view.leadingAnchor),
-            rootView.trailingAnchor.constraint(equalTo: rootVC.view.trailingAnchor),
-            rootView.topAnchor.constraint(equalTo: rootVC.view.topAnchor),
-            rootView.bottomAnchor.constraint(equalTo: rootVC.view.bottomAnchor)
-        ])
     }
     
     // Add a debug method to print all created views

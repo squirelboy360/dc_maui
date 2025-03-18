@@ -116,22 +116,6 @@ class ViewRegistry {
     }
     
     /// Get a string representation of the view hierarchy
-    func describeViewHierarchy() -> String {
-        var description = "View Hierarchy:\n"
-        
-        // Find root views (those without parents)
-        let rootViewIds = viewMap.keys.filter { !childParentMap.keys.contains($0) }
-        
-        for rootId in rootViewIds {
-            if let rootView = viewMap[rootId] {
-                description += describeView(rootView, viewId: rootId, depth: 0)
-            }
-        }
-        
-        return description
-    }
-    
-    /// Describe a single view and its children
     private func describeView(_ view: UIView, viewId: String, depth: Int) -> String {
         let indent = String(repeating: "  ", count: depth)
         var description = "\(indent)- \(viewId): \(type(of: view))\n"
@@ -145,5 +129,79 @@ class ViewRegistry {
         }
         
         return description
+    }
+    
+    // Debug method to log the entire view hierarchy
+    func logViewHierarchy() -> String {
+        var output = "View Registry Contents:\n"
+        
+        // Log all views
+        output += "Registered Views:\n"
+        for (viewId, _) in viewMap {
+            output += "- \(viewId)\n"
+        }
+        
+        // Log parent-child relationships
+        output += "\nParent-Child Relationships:\n"
+        for (parentId, childIds) in parentChildMap {
+            output += "Parent \(parentId) -> Children: \(childIds.joined(separator: ", "))\n"
+        }
+        
+        // Check for orphaned views (those without parents, excluding root)
+        let orphanedViews = viewMap.keys.filter { viewId in
+            return viewId != "root" && viewId != "window" && !childParentMap.keys.contains(viewId)
+        }
+        
+        if !orphanedViews.isEmpty {
+            output += "\nOrphaned Views (no parent):\n"
+            for viewId in orphanedViews {
+                output += "- \(viewId)\n"
+            }
+        }
+        
+        // Add detailed view tree
+        output += "\nDetailed View Tree:\n"
+        if let rootView = getView("root") {
+            output += describeViewRecursively(rootView, viewId: "root", depth: 0)
+        } else {
+            output += "No root view found!\n"
+        }
+        
+        return output
+    }
+    
+    // Helper for recursively describing views
+    private func describeViewRecursively(_ view: UIView, viewId: String, depth: Int) -> String {
+        let indent = String(repeating: "  ", count: depth)
+        let className = type(of: view)
+        var output = "\(indent)- \(viewId): \(className)"
+        
+        // Add frame info
+        output += " [frame: \(view.frame.origin.x),\(view.frame.origin.y),\(view.frame.size.width),\(view.frame.size.height)]"
+        
+        // Add hidden status
+        if view.isHidden {
+            output += " [HIDDEN]"
+        }
+        
+        // Add alpha
+        if view.alpha < 1.0 {
+            output += " [alpha: \(view.alpha)]"
+        }
+        
+        output += "\n"
+        
+        // Add children
+        if let childIds = parentChildMap[viewId] {
+            for childId in childIds {
+                if let childView = getView(childId) {
+                    output += describeViewRecursively(childView, viewId: childId, depth: depth + 1)
+                } else {
+                    output += "\(indent)  - \(childId): MISSING VIEW REFERENCE\n"
+                }
+            }
+        }
+        
+        return output
     }
 }

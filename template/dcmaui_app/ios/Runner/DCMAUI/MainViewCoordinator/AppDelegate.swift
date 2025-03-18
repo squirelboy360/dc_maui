@@ -26,14 +26,10 @@ class AppDelegate: FlutterAppDelegate {
         self.window.rootViewController = nativeRootVC
         self.window.makeKeyAndVisible()
         
-        // Print the view controller and window details for debugging
-        print("DC MAUI: Root view controller set to: \(type(of: nativeRootVC))")
-        print("DC MAUI: Window bounds: \(self.window.bounds)")
-        
         // Register our native UI manager with proper registrar
         let registrar = flutterEngine.registrar(forPlugin: "com.dcmaui.framework")
         DCViewCoordinator.register(with: registrar!)
-    
+
         let flutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
         flutterEngine.viewController = flutterViewController
         

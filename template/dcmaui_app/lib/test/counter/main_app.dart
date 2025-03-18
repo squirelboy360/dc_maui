@@ -5,7 +5,7 @@ import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
   @override
-  VNode buildRender() {
+  VNode render() {
     // Using hooks for state management
     final counter = UseState<int>('counter', 0);
 

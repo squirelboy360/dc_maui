@@ -22,6 +22,9 @@ extension DCViewCoordinator {
             return
         }
         
+        // CRITICAL FIX: Add extra logging
+        debugPrint("DC MAUI: Creating view with ID \(viewId) of type \(viewType)")
+        
         // Create the view
         guard let view = ViewFactory.createView(viewType: viewType, viewId: viewId, props: props) else {
             result(FlutterError(code: "VIEW_CREATION_FAILED", message: "Failed to create view of type: \(viewType)", details: nil))
@@ -30,6 +33,21 @@ extension DCViewCoordinator {
         
         // Store the view in our registry
         viewRegistry.registerView(view, withId: viewId)
+        
+        // CRITICAL FIX: Add special handling for the first (root) view
+        if viewId == "view_0" {
+            // Find root container
+            if let rootContainer = viewRegistry.getView("root") {
+                if view.superview == nil {
+                    rootContainer.addSubview(view)
+                    view.frame = rootContainer.bounds
+                    view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    debugPrint("DC MAUI: Added root view (view_0) to container with frame: \(view.frame)")
+                }
+            } else {
+                debugPrint("DC MAUI: WARNING - Root container not found, view_0 will be added when container is created")
+            }
+        }
         
         // Register event listeners
         if let eventListeners = props["_eventListeners"] as? [String] {
@@ -204,17 +222,10 @@ extension DCViewCoordinator {
         result(true)
     }
     
-    // MARK: - Debugging Methods
-    
-    // Log the view tree to the console
-    func logViewTree(_ result: @escaping FlutterResult) {
-        let tree = viewRegistry.describeViewHierarchy()
-        print("DC MAUI: View Tree:\n\(tree)")
-        result(tree)
-    }
+    // MARK: - Helper Methods for View Hierarchy
     
     // Helper function to describe the view hierarchy
-    private func describeViewHierarchy(_ view: UIView, depth: Int = 0) -> String {
+    internal func describeViewHierarchy(_ view: UIView, depth: Int = 0) -> String {
         let indent = String(repeating: "  ", count: depth)
         let viewId = (view as? DCBaseView)?.viewId ?? "unknown"
         var description = "\(indent)- \(viewId): \(type(of: view))"

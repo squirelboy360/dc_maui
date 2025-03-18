@@ -54,14 +54,6 @@ extension DCViewCoordinator {
            }
        }
     
-    /// Safely access the shared coordinator instance
-    static func getShared() -> DCViewCoordinator? {
-        if shared == nil {
-            print("DCViewCoordinator: Warning - Trying to access shared coordinator before initialization")
-        }
-        return shared
-    }
-    
     /// Find the current root view controller for presenting views
     func findRootViewController() -> UIViewController? {
         // Find the key window in iOS 13+
@@ -74,6 +66,16 @@ extension DCViewCoordinator {
             // Fallback for earlier versions
             return UIApplication.shared.keyWindow?.rootViewController
         }
+    }
+    
+    // MARK: - Utility Methods 
+    
+    /// Safely access the shared coordinator instance
+    static func getShared() -> DCViewCoordinator? {
+        if shared == nil {
+            print("DCViewCoordinator: Warning - Trying to access shared coordinator before initialization")
+        }
+        return shared
     }
     
     /// Helper to check if a view exists in registry
