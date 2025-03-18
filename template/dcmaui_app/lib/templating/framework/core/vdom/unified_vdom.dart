@@ -1,26 +1,34 @@
 import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
-;
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/core/vdom/vdom/extensions/component_vdom.dart';
+import 'package:dc_test/templating/framework/core/vdom/vdom/vdom.dart';
 import 'package:flutter/foundation.dart';
 
-// NativeVDOM combines ComponentVDOM functionality with native event handling
-class NativeVDOM extends ComponentVDOM {
+/// UnifiedVDOM combines functionality from both event handling and optimization techniques
+/// to create an efficient VDOM implementation
+class UnifiedVDOM extends VDOM {
   // Event handlers map: viewId -> eventName -> callback
   final Map<String, Map<String, Function>> _eventHandlers = {};
 
   // Stable handler mapping: controlKey -> {eventName -> handler}
-  // This helps maintain handler references even when view IDs change
   final Map<String, Map<String, Function>> _stableHandlerMap = {};
 
   // Bidirectional mappings for reliable handler retrieval
   final Map<String, String> _controlKeyToViewId = {};
   final Map<String, String> _viewIdToControlKey = {};
 
-  NativeVDOM() {
+  // Configuration
+  final bool _enableOptimizations;
+
+  // View tracking for optimization
+  final Set<String> _unchangedViews = {};
+  final Map<String, Map<String, dynamic>> _lastProps = {};
+
+  UnifiedVDOM({bool enableOptimizations = true})
+      : _enableOptimizations = enableOptimizations {
     // Listen for events from native side
     MainViewCoordinatorInterface.eventStream.listen(_handleNativeEvent);
-    debugPrint('NativeVDOM: Initialized and listening for native events');
+    debugPrint(
+        'UnifiedVDOM: Initialized with optimizations: $_enableOptimizations');
   }
 
   // Handle events coming from native side
@@ -35,7 +43,7 @@ class NativeVDOM extends ComponentVDOM {
       String standardEventName = eventName;
       if (!eventName.startsWith("on")) {
         final String capitalizedName =
-            eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
+            eventName[0].toUpperCase() + eventName.substring(1);
         standardEventName = "on$capitalizedName";
       }
 
@@ -50,7 +58,7 @@ class NativeVDOM extends ComponentVDOM {
       }
 
       debugPrint(
-          'NativeVDOM: Processing $standardEventName event for view $viewId');
+          'UnifiedVDOM: Processing $standardEventName event for view $viewId');
 
       // Look up the handler
       if (_eventHandlers.containsKey(viewId) &&
@@ -73,15 +81,11 @@ class NativeVDOM extends ComponentVDOM {
       if (standardEventName == "onScroll" &&
           _eventHandlers.containsKey(viewId) &&
           _eventHandlers[viewId]!.containsKey("onScrolled")) {
-        // Convert to custom event format
         _eventHandlers[viewId]!["onScrolled"]!(params);
         return;
       }
-
-      debugPrint(
-          'NativeVDOM: No handler found for $standardEventName on view $viewId');
     } catch (e, stack) {
-      debugPrint('NativeVDOM: Error handling event: $e\n$stack');
+      debugPrint('UnifiedVDOM: Error handling event: $e\n$stack');
     }
   }
 
@@ -91,12 +95,12 @@ class NativeVDOM extends ComponentVDOM {
     String standardEventName = eventName;
     if (!eventName.startsWith("on")) {
       final String capitalizedName =
-          eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
+          eventName[0].toUpperCase() + eventName.substring(1);
       standardEventName = "on$capitalizedName";
     }
 
     debugPrint(
-        'NativeVDOM: Registering handler for $standardEventName on view $viewId');
+        'UnifiedVDOM: Registering handler for $standardEventName on view $viewId');
 
     _eventHandlers.putIfAbsent(viewId, () => {});
     _eventHandlers[viewId]![standardEventName] = handler;
@@ -106,7 +110,8 @@ class NativeVDOM extends ComponentVDOM {
   }
 
   // Register an event handler with improved tracking
-  void registerEventHandler(String viewId, String eventName, Function callback,
+  void registerEventHandlerWithProps(
+      String viewId, String eventName, Function callback,
       {Map<String, dynamic>? props}) {
     // Initialize the map for this view if needed
     _eventHandlers.putIfAbsent(viewId, () => {});
@@ -127,7 +132,8 @@ class NativeVDOM extends ComponentVDOM {
       }
     }
 
-    debugPrint('NativeVDOM: Registered handler for $eventName on view $viewId');
+    debugPrint(
+        'UnifiedVDOM: Registered handler for $eventName on view $viewId');
   }
 
   // Helper method to create stable control keys from props
@@ -158,6 +164,11 @@ class NativeVDOM extends ComponentVDOM {
     final propsKey = _generatePropsHash(props);
     if (propsKey.isNotEmpty) keys.add('props:$propsKey');
 
+    // Always add at least one key
+    if (keys.isEmpty) {
+      keys.add('view_$viewId');
+    }
+
     return keys;
   }
 
@@ -186,24 +197,22 @@ class NativeVDOM extends ComponentVDOM {
       cleanProps['_viewType'] = node.type;
 
       // Add node key for better traceability
-      if (node.key != null && node.key.isNotEmpty) {
+      if (node.key.isNotEmpty) {
         cleanProps['_nodeKey'] = node.key;
       }
 
-      debugPrint('NativeVDOM: Creating view $viewId of type ${node.type}');
-
       if (eventHandlers.isNotEmpty) {
         debugPrint(
-            'NativeVDOM: Found ${eventHandlers.length} event handlers: ${eventHandlers.keys.toList()}');
+            'UnifiedVDOM: Found ${eventHandlers.length} event handlers: ${eventHandlers.keys.toList()}');
 
         // Register event handlers on our side
         for (final entry in eventHandlers.entries) {
-          registerEventHandler(viewId, entry.key, entry.value,
+          registerEventHandlerWithProps(viewId, entry.key, entry.value,
               props: cleanProps);
         }
       }
 
-      // Add any event listener prop keys to cleanProps to signal to native side
+      // Add event listener prop keys to cleanProps to signal to native side
       final listenerNames = eventHandlers.keys
           .map((name) => 'on${name[0].toUpperCase()}${name.substring(1)}')
           .toList();
@@ -211,20 +220,27 @@ class NativeVDOM extends ComponentVDOM {
         cleanProps['_eventListeners'] = listenerNames;
       }
 
-      // Pass to parent for normal component handling with cleaned props
+      // Pass to parent for normal view creation
       super.createView(node..props = cleanProps, viewId);
 
       // Restore original props
       node.props.addAll(eventHandlers.map((key, value) =>
           MapEntry('on${key[0].toUpperCase()}${key.substring(1)}', value)));
-    } catch (e) {
-      debugPrint('NativeVDOM: ERROR creating view - $e');
+    } catch (e, stack) {
+      debugPrint('UnifiedVDOM: ERROR creating view - $e\n$stack');
     }
   }
 
   @override
   void updateView(VNode oldNode, VNode newNode, String viewId) {
     try {
+      // Skip update if optimizations enabled and props haven't changed substantially
+      if (_enableOptimizations && _shouldSkipUpdate(oldNode, newNode, viewId)) {
+        _unchangedViews.add(viewId);
+        debugPrint('UnifiedVDOM: Skipping unchanged view update for $viewId');
+        return;
+      }
+
       // Extract event handlers before sending to native
       final eventHandlers = _extractEventHandlers(newNode.props);
 
@@ -235,27 +251,20 @@ class NativeVDOM extends ComponentVDOM {
       cleanProps['_viewType'] = newNode.type;
 
       // Add node key for better traceability
-      if (newNode.key != null && newNode.key.isNotEmpty) {
+      if (newNode.key.isNotEmpty) {
         cleanProps['_nodeKey'] = newNode.key;
-      }
-
-      // Add any event listener prop keys to cleanProps to signal to native side
-      final listenerNames = eventHandlers.keys
-          .map((name) => 'on${name[0].toUpperCase()}${name.substring(1)}')
-          .toList();
-      if (listenerNames.isNotEmpty) {
-        cleanProps['_eventListeners'] = listenerNames;
       }
 
       // Re-register event handlers with improved tracking
       if (eventHandlers.isNotEmpty) {
         for (final entry in eventHandlers.entries) {
-          registerEventHandler(viewId, entry.key, entry.value,
+          registerEventHandlerWithProps(viewId, entry.key, entry.value,
               props: cleanProps);
         }
       }
 
-      debugPrint('NativeVDOM: Updating view $viewId with clean props');
+      // Store current props for future comparison
+      _lastProps[viewId] = Map<String, dynamic>.from(newNode.props);
 
       // Use the parent class's updateView implementation
       super.updateView(oldNode, newNode..props = cleanProps, viewId);
@@ -263,8 +272,8 @@ class NativeVDOM extends ComponentVDOM {
       // Restore original props
       newNode.props.addAll(eventHandlers.map((key, value) =>
           MapEntry('on${key[0].toUpperCase()}${key.substring(1)}', value)));
-    } catch (e) {
-      debugPrint('NativeVDOM: ERROR updating view - $e');
+    } catch (e, stack) {
+      debugPrint('UnifiedVDOM: ERROR updating view - $e\n$stack');
     }
   }
 
@@ -279,12 +288,120 @@ class NativeVDOM extends ComponentVDOM {
 
     _viewIdToControlKey.remove(viewId);
     _eventHandlers.remove(viewId);
+    _lastProps.remove(viewId);
+    _unchangedViews.remove(viewId);
 
     // Proceed with standard view deletion
     super.deleteView(viewId);
   }
 
-  // Helper methods remain the same
+  // Logic to determine if an update can be skipped
+  bool _shouldSkipUpdate(VNode oldNode, VNode newNode, String viewId) {
+    // Skip check if we don't have previous props
+    if (!_lastProps.containsKey(viewId)) return false;
+
+    // Get previous props
+    final lastProps = _lastProps[viewId]!;
+    final newProps = newNode.props;
+
+    // Check for critical props that always require updates
+    if (_hasCriticalPropChanges(lastProps, newProps)) {
+      return false;
+    }
+
+    // If children changed, we must update
+    if (oldNode.children.length != newNode.children.length) {
+      return false;
+    }
+
+    // Compare props using deep equality check
+    return _arePropsEssentiallyEqual(lastProps, newProps);
+  }
+
+  // Logic for checking critical props that should always trigger updates
+  bool _hasCriticalPropChanges(
+      Map<String, dynamic> oldProps, Map<String, dynamic> newProps) {
+    // Critical prop list - always update if these change
+    final criticalProps = [
+      'visible',
+      'opacity',
+      'enabled',
+      'selected',
+      'active'
+    ];
+
+    for (final prop in criticalProps) {
+      if (oldProps.containsKey(prop) &&
+          newProps.containsKey(prop) &&
+          oldProps[prop] != newProps[prop]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Deep comparison for props equality
+  bool _arePropsEssentiallyEqual(
+      Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a.length != b.length) return false;
+
+    for (final key in a.keys) {
+      // Skip internal keys
+      if (key.startsWith('_')) continue;
+
+      // Skip event handlers (they're handled separately)
+      if (key.startsWith('on') && a[key] is Function) continue;
+
+      // Check if key exists in b
+      if (!b.containsKey(key)) return false;
+
+      // Deep compare values
+      if (!_areValuesEssentiallyEqual(a[key], b[key])) return false;
+    }
+
+    // Check for any keys in b that aren't in a
+    for (final key in b.keys) {
+      if (!key.startsWith('_') &&
+          !(key.startsWith('on') && b[key] is Function) &&
+          !a.containsKey(key)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Helper for deep comparison of property values
+  bool _areValuesEssentiallyEqual(dynamic a, dynamic b) {
+    // Simple equality check for primitives and null
+    if (a == b) return true;
+
+    // If one is null but not both
+    if (a == null || b == null) return false;
+
+    // Compare maps recursively
+    if (a is Map && b is Map) {
+      return _arePropsEssentiallyEqual(
+          Map<String, dynamic>.from(a), Map<String, dynamic>.from(b));
+    }
+
+    // Compare lists
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+
+      for (int i = 0; i < a.length; i++) {
+        if (!_areValuesEssentiallyEqual(a[i], b[i])) return false;
+      }
+
+      return true;
+    }
+
+    // Default to direct comparison
+    return a == b;
+  }
+
+  // Helper methods for event handling
   Map<String, Function> _extractEventHandlers(Map<String, dynamic> props) {
     final handlers = <String, Function>{};
 

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
-import 'package:flutter/widgets.dart';
 import 'dart:io' show Platform;
 
 /// ActionSheetIOS utility class for showing iOS action sheets

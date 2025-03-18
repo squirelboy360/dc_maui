@@ -88,9 +88,8 @@ class ViewStyle implements StyleProps {
     final map = <String, dynamic>{};
 
     if (backgroundColor != null) {
-      final colorValue =
-          backgroundColor!.value.toRadixString(16).padLeft(8, '0');
-      map['backgroundColor'] = '#$colorValue';
+      final colorValue = backgroundColor!.toHexString();
+      map['backgroundColor'] = colorValue;
     }
 
     // Handle padding
@@ -152,8 +151,8 @@ class ViewStyle implements StyleProps {
     if (borderWidth != null) map['borderWidth'] = borderWidth;
 
     if (borderColor != null) {
-      final colorValue = borderColor!.value.toRadixString(16).padLeft(8, '0');
-      map['borderColor'] = '#$colorValue';
+      final colorValue = borderColor!.toHexString();
+      map['borderColor'] = colorValue;
     }
 
     // Opacity
@@ -171,8 +170,8 @@ class ViewStyle implements StyleProps {
     if (shadowOpacity != null) map['shadowOpacity'] = shadowOpacity;
 
     if (shadowColor != null) {
-      final colorValue = shadowColor!.value.toRadixString(16).padLeft(8, '0');
-      map['shadowColor'] = '#$colorValue';
+      final colorValue = shadowColor!.toHexString();
+      map['shadowColor'] = colorValue;
     }
 
     if (shadowRadius != null) map['shadowRadius'] = shadowRadius;
@@ -332,4 +331,10 @@ class DCView extends Control {
       buildChildren(children),
     );
   }
+}
+
+// Add this extension method to handle color conversion consistently
+extension ColorExtension on Color {
+  String toHexString() =>
+      '#${(value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 }

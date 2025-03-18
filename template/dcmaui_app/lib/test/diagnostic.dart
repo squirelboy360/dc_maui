@@ -57,8 +57,8 @@ class DiagnosticComponent extends Component {
     // Create a list of text components for all messages
     final messageViews = state['messages']
         .map<DCText>((message) => DCText(
-              message,
-              style: TextStyle(
+              text: message,
+              style: DCTextStyle(
                 fontSize: 12,
                 color: Color(0xFFFFFFFF),
               ),
@@ -67,21 +67,18 @@ class DiagnosticComponent extends Component {
 
     // Create a container for the diagnostic info
     return DCView(
-      props: DCViewProps(
-        style: ViewStyle(
-          backgroundColor: Color(0x88000000),
-          padding: EdgeInsets.all(8),
-          // Remove position-related properties that aren't supported
-        ),
-        additionalProps: {
-          'style': {
-            'position': 'absolute',
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
-          }
-        },
+      style: ViewStyle(
+        backgroundColor: Color(0x88000000),
+        padding: EdgeInsets.all(8),
       ),
+      additionalProps: {
+        'style': {
+          'position': 'absolute',
+          'left': 0,
+          'right': 0,
+          'bottom': 0,
+        }
+      },
       children: messageViews,
     ).build();
   }

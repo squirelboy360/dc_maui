@@ -1,3 +1,5 @@
+import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/index.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
@@ -8,45 +10,40 @@ class MainApp extends Component {
     final counter = UseState<int>('counter', 0);
 
     return DCView(
-      props: DCViewProps(
-        style: ViewStyle(
-          padding: EdgeInsets.all(10),
-          backgroundColor: Colors.amber,
-        ),
+      style: ViewStyle(
+        padding: EdgeInsets.all(10),
+        backgroundColor: Colors.amber,
       ),
       children: [
         DCView(
-          props: DCViewProps(
-            style: ViewStyle(
-              height: 500,
-              width: 20,
-              backgroundColor: Colors.green,
-              padding: EdgeInsets.all(20),
-            ),
+          style: ViewStyle(
+            height: 500,
+            width: 20,
+            backgroundColor: Colors.green,
+            padding: EdgeInsets.all(20),
           ),
           children: [
             DCButton(
               title: "Increment Counter",
-              onPress: (_) {
+              onPress: () {
                 // Simpler state update with hooks
                 counter.value += 1;
               },
             ),
             DCText(
-              style: TextStyle(
+              text: 'Counter: ${counter.value}',
+              style: DCTextStyle(
                 color: Colors.white,
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontWeight: "bold",
               ),
-              // Reference hook value directly
-              'Counter: ${counter.value}',
             ),
             DCText(
-              style: TextStyle(
+              text: 'Using DC framework with hooks',
+              style: DCTextStyle(
                 color: Colors.white,
                 fontSize: 16,
               ),
-              'Using DC framework with hooks',
             ),
           ],
         ),

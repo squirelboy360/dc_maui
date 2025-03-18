@@ -7,7 +7,12 @@ class MainViewCoordinatorInterface {
   static const EventChannel _eventChannel =
       EventChannel('com.dcmaui.framework/events');
 
-  static late Stream<Map<String, dynamic>> eventStream;
+  static final StreamController<Map<String, dynamic>> _eventController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  static Stream<Map<String, dynamic>> get eventStream =>
+      _eventController.stream;
+
   static bool _initialized = false;
 
   // Initialize the coordinator
@@ -18,9 +23,12 @@ class MainViewCoordinatorInterface {
     _channel.setMethodCallHandler(_handleMethodCall);
 
     debugPrint('DC MAUI: Setting up event channel listener');
-    eventStream = _eventChannel
+    _eventChannel
         .receiveBroadcastStream()
-        .map<Map<String, dynamic>>((event) => Map<String, dynamic>.from(event));
+        .map<Map<String, dynamic>>((event) => Map<String, dynamic>.from(event))
+        .listen((event) {
+      _eventController.add(event);
+    });
 
     try {
       // Send initialize signal to native side
@@ -221,7 +229,7 @@ class MainViewCoordinatorInterface {
           'DC MAUI: Normalized event $eventName for view $viewId with data: $params');
 
       // Dispatch the event
-      eventStream.add({
+      _eventController.add({
         'viewId': viewId,
         'eventName': eventName,
         'params': params,
