@@ -1,4 +1,6 @@
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/controls/safe_area_view.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_state.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/controls/button.dart';
 import 'package:dc_test/templating/framework/controls/text.dart';
@@ -6,20 +8,7 @@ import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
-  @override
-  Map<String, dynamic> getInitialState() {
-    return {'counter': 0};
-  }
-
-  void _incrementCounter() {
-    // Get the current counter value
-    final counter = state['counter'] as int? ?? 0;
-    // Update state with new counter value
-    setState({'counter': counter + 1});
-
-    // Debug output to verify state update
-    debugPrint('MainApp: State updated, counter is now ${counter + 1}');
-  }
+  final counter = UseState<int>('counter', 0);
 
   @override
   VNode buildRender() {
@@ -27,11 +16,10 @@ class MainApp extends Component {
     debugPrint('MainApp: Building render with counter=${state["counter"]}');
 
     // Return a simple UI to verify rendering is working
-    return DCView(
+    return DCSafeAreaView(
       style: ViewStyle(
         height: 100,
         backgroundColor: Colors.blue,
-        padding: EdgeInsets.all(20),
       ),
       children: [
         DCText(
@@ -46,7 +34,7 @@ class MainApp extends Component {
           title: "Increment",
           onPress: () {
             debugPrint('Button pressed - incrementing counter');
-            _incrementCounter();
+            counter.value++;
           },
         ),
       ],
