@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TextStyle;
 import 'package:flutter/cupertino.dart';
 
-void showFlutterView({required Widget flutterView}) {
-  runApp(flutterView);
-}
+// void showFlutterView({required Widget flutterView}) {
+//   runApp(flutterView);
+// }
 
 /// Utility functions for Flutter-specific operations
 class FlutterUtility {

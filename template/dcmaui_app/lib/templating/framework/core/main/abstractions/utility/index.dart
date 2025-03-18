@@ -3,5 +3,5 @@
 
 export 'state_abstraction.dart';
 export 'performance_monitor.dart';
-export 'event_bus.dart';
-export 'flutter.dart';
+export '../../event_bus.dart';
+export 'flutter_helpers.dart';

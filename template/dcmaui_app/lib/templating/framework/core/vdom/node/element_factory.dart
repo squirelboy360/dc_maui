@@ -13,32 +13,25 @@ class ElementFactory {
   // Create element with the right type - always use DC prefix
   static VNode createElement(
       String type, Map<String, dynamic> props, List<VNode> children) {
-    // Ensure type has DC prefix for consistency
-    final normalizedType = _normalizeDCPrefix(type);
-
     // Log element creation in debug mode
     if (kDebugMode) {
       debugPrint(
-          'ElementFactory: Created $normalizedType element with key ${props['key'] ?? 'unknown'}');
+          'ElementFactory: Created $type element with key ${props['key'] ?? 'unknown'}');
+    }
+    // Log element creation in debug mode
+    if (kDebugMode) {
+      debugPrint(
+          'ElementFactory: Created  element with key ${props['key'] ?? 'unknown'}');
     }
 
-    final nodeKey =
-        props['key'] as String? ?? '${normalizedType}_el_${_nodeCounter++}';
+    final nodeKey = props['key'] as String? ?? '${type}_el_${_nodeCounter++}';
 
     return VNode(
-      normalizedType,
+      type,
       props: Map<String, dynamic>.from(props),
       children: List<VNode>.from(children),
       key: nodeKey,
     );
-  }
-
-  // Normalize type to ensure DC prefix
-  static String _normalizeDCPrefix(String type) {
-    if (!type.startsWith('DC') && type != 'component') {
-      return 'DC$type';
-    }
-    return type;
   }
 
   // Counter for generating unique node keys
@@ -72,7 +65,6 @@ class ElementFactory {
     );
   }
 }
-
 
 extension VNodeExtension on VNode {
   // Helper to access the VNode directly

@@ -29,6 +29,7 @@ class MainApp extends Component {
     // Return a simple UI to verify rendering is working
     return DCView(
       style: ViewStyle(
+        height: 100,
         backgroundColor: Colors.blue,
         padding: EdgeInsets.all(20),
       ),

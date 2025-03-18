@@ -334,25 +334,40 @@ class GlobalStateManager {
     registerDerivedState(componentId, derivedKey, dependencies);
 
     // Cache for memoization
-    T? _lastResult;
-    bool _initialized = false;
+    T? lastResult;
+    bool initialized = false;
 
     return () {
-      if (!_initialized) {
-        _lastResult = selectorFn();
-        _initialized = true;
-        return _lastResult as T;
+      if (!initialized) {
+        lastResult = selectorFn();
+        initialized = true;
+        return lastResult as T;
       }
 
       // Check if any dependencies have changed
       bool dependenciesChanged = false;
-      // This would need tracking of dependency value changes
-
-      if (dependenciesChanged) {
-        _lastResult = selectorFn();
+      
+      // Implement dependency tracking
+      for (final dep in dependencies) {
+        final depParts = dep.split('.');
+        if (depParts.length != 2) continue;
+        
+        final depComponentId = depParts[0];
+        final depStateKey = depParts[1];
+        
+        // Check if this dependency has changed since last check
+        if (_lastStateValues.containsKey(depComponentId) && 
+            _lastStateValues[depComponentId]!.containsKey(depStateKey)) {
+          dependenciesChanged = true;
+          break;
+        }
       }
 
-      return _lastResult as T;
+      if (dependenciesChanged) {
+        lastResult = selectorFn();
+      }
+
+      return lastResult as T;
     };
   }
 }

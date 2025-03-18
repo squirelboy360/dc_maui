@@ -8,8 +8,8 @@ import 'package:dc_test/templating/framework/core/main/abstractions/error_bounda
 import 'package:dc_test/templating/framework/core/vdom/unified_vdom.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/utility/performance_monitor.dart';
+import 'package:dc_test/templating/framework/core/vdom/vdom/vdom.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 /// DC Framework bootstrap function - initializes the framework and renders the app
 ///
@@ -45,42 +45,9 @@ Future<void> dcBind(
   }
 
   // Create VDOM instance with optimization toggle
-  final vdom = UnifiedVDOM(enableOptimizations: enableOptimizations);
+  final vdom = VDOM();
 
   // Set up error boundary props
-  final errorProps = errorBoundaryProps ??
-      ErrorBoundaryProps(
-        id: 'root-error-boundary',
-        fallback: (error, reset) => DCView(
-          children: [
-            DCText(
-              text: 'Something went wrong',
-              style: DCTextStyle(
-                color: Colors.red,
-                fontSize: 18,
-                fontWeight: "bold", // Fixed: String instead of FontWeight
-              ),
-            ),
-            DCText(
-              text: error.toString(),
-              style: DCTextStyle(
-                color: Colors.red,
-                fontSize: 14,
-              ),
-            ),
-            DCButton(
-              title: 'Try Again',
-              onPress: () => reset(),
-            ),
-          ],
-        ),
-        onError: (error, stack) {
-          if (kDebugMode) {
-            print('DC Framework root error boundary caught error: $error');
-            if (stack != null) print(stack);
-          }
-        },
-      );
 
   // CRITICAL FIX: Ensure both ErrorBoundary and MainApp have proper keys
   final appPropsWithKey = appProps ?? {};

@@ -43,8 +43,7 @@ export 'controls/animated_view.dart';
 export 'core/main/abstractions/hooks/use_state.dart';
 
 // Utilities
-export 'core/main/abstractions/utility/flutter.dart';
-export 'core/main/abstractions/utility/native_extensions.dart';
+export 'core/main/abstractions/utility/flutter_helpers.dart';
 export 'core/main/abstractions/utility/performance_monitor.dart';
 
 
