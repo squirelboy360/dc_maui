@@ -1,9 +1,8 @@
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
-import 'package:dc_test/templating/fr/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
+import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
 import 'package:flutter/widgets.dart';
 
 /// Props for Drawer component
@@ -148,9 +147,6 @@ class DCDrawer extends Control {
       buildChildren(children),
     );
 
-    // Get the view ID for the drawer
-    final String drawerId = containerNode.key;
-
     // Tag all drawer content with special IDs to help them be placed in the drawer
     List<VNode> drawerNodes = [];
     for (var i = 0; i < drawerContent.length; i++) {
@@ -158,12 +154,17 @@ class DCDrawer extends Control {
       // Build the node
       final node = drawerItem.build();
 
-      // Tag the node with a special ID that ends with _drawer
-      final String originalKey = node.key;
-      final String drawerKey = '${originalKey}_drawer';
-      node.key = drawerKey;
+      // Instead of modifying the key directly, create a new node with the drawer suffix
+      final String drawerKey = '${node.key}_drawer';
+      final drawerNode = VNode(
+        node.type,
+        props: node.props,
+        key: drawerKey,
+        children: node.children,
+        componentId: node.componentId,
+      );
 
-      drawerNodes.add(node);
+      drawerNodes.add(drawerNode);
     }
 
     // Add drawer content as additional children
