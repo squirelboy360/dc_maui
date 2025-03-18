@@ -59,6 +59,10 @@ class ErrorBoundary extends Component {
 
   @override
   VNode buildRender() {
+    // CRITICAL FIX: Add debug logging
+    debugPrint(
+        'ErrorBoundary: Rendering with hasError=${state['hasError']}, children=${_children.length}');
+
     if (state['hasError'] == true) {
       // Render fallback UI
       if (_props.fallback != null) {
@@ -124,13 +128,24 @@ class ErrorBoundary extends Component {
     }
 
     // If no error, render children normally
+    // CRITICAL FIX: Add more detailed logging about children
+    if (_children.isEmpty) {
+      debugPrint('ErrorBoundary: No children to render!');
+      return ElementFactory.createElement('DCView', {}, []);
+    }
+
     if (_children.length == 1) {
+      debugPrint(
+          'ErrorBoundary: Rendering single child of type ${_children[0].runtimeType}');
+      // Pass through the single child's VNode
       return _children[0].build();
     }
 
     // Wrap multiple children in a fragment
+    debugPrint(
+        'ErrorBoundary: Rendering multiple children (${_children.length})');
     return ElementFactory.createElement(
-      'DCFragment',
+      'DCView',
       {},
       _children.map((child) => child.build()).toList(),
     );

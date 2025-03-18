@@ -1,13 +1,18 @@
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/index.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
 class MainApp extends Component {
   @override
-  render() {
+  VNode render() {
     // Using hooks for state management
     final counter = UseState<int>('counter', 0);
 
+    // CRITICAL FIX: Add debug output
+    debugPrint('MainApp: Rendering with counter=${counter.value}');
+
+    // CRITICAL FIX: Don't call .build() here - the Component base class will do it
     return DCView(
       style: ViewStyle(
         padding: EdgeInsets.all(10),

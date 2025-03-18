@@ -86,10 +86,10 @@ class ComponentVDOM extends VDOM {
       // Render the component
       final renderedNode = componentInstance.render();
       debugPrint(
-          'ComponentVDOM: Component $componentId rendered node: ${renderedNode.type}');
+          'ComponentVDOM: Component $componentId rendered node: ${renderedNode.type} with ${renderedNode.children.length} children');
       _renderedNodes[componentId] = renderedNode;
 
-      // CRITICAL FIX: Handle component chains correctly
+      // CRITICAL FIX: Handle component output based on type
       if (_isComponent(renderedNode)) {
         debugPrint('ComponentVDOM: Rendered node is another component');
         // Create a new view ID for the nested component
@@ -98,16 +98,20 @@ class ComponentVDOM extends VDOM {
         // Create the component view with the new ID
         _createComponentView(renderedNode, nestedViewId);
 
-        // Instead of setting the ViewId, create a parent-child relationship
+        // Create a parent-child relationship
         super.setChildren(viewId, [nestedViewId]);
 
         debugPrint(
             'ComponentVDOM: Created nested component with ID $nestedViewId as child of $viewId');
       } else {
-        // Regular view nodes are handled as before
+        // Regular view nodes are handled normally
         debugPrint(
             'ComponentVDOM: Creating view for rendered node ${renderedNode.type}');
         super.createView(renderedNode, viewId);
+
+        // CRITICAL FIX: Enhanced logging to debug the view hierarchy
+        debugPrint(
+            'ComponentVDOM: Rendered node structure: ${renderedNode.toTreeString()}');
 
         // Explicitly handle children
         final childViewIds = <String>[];

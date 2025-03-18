@@ -23,13 +23,11 @@ class VNode {
   /// Constructor with improved key generation
   VNode(
     this.type, {
-    Map<String, dynamic>? props,
+    required this.props,
+    this.children = const [],
     String? key,
-    List<VNode>? children,
     this.componentId,
-  })  : props = props ?? {},
-        key = key ?? _generateStableKey(type, props),
-        children = children ?? [],
+  })  : key = key ?? _generateStableKey(type, props),
         _hashValue = Object.hash(key ?? _generateStableKey(type, props), type,
             identityHashCode(props));
 

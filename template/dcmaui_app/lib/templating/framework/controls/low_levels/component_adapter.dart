@@ -11,19 +11,40 @@ class ComponentAdapter extends Control {
 
   @override
   VNode build() {
-    // CRITICAL FIX: Make sure the component node has a proper key
+    // CRITICAL FIX: Add better logging
+    debugPrint(
+        'ComponentAdapter: Building VNode of type ${componentNode.type} with key ${componentNode.key}');
+
+    // CRITICAL FIX: Make sure the component node has a proper key and add trace info
     if (componentNode.key.isEmpty || componentNode.key == 'null') {
       debugPrint(
           'ComponentAdapter: WARNING - Component has no key, generating one');
-      return VNode(
+      final newKey = 'adapter_${identityHashCode(this)}';
+
+      // Create a new VNode with the same properties but a valid key
+      final enhancedNode = VNode(
         componentNode.type,
-        props: componentNode.props,
+        props: Map<String, dynamic>.from(componentNode.props)
+          ..['_adapted'] = true // Mark as processed by adapter
+          ..['_originalType'] = componentNode.type,
         children: componentNode.children,
-        key: 'adapter_${identityHashCode(this)}',
+        key: newKey,
       );
+
+      debugPrint('ComponentAdapter: Created enhanced node with key $newKey');
+      return enhancedNode;
     }
 
-    // Pass through the component node directly
-    return componentNode;
+    // CRITICAL FIX: Add trace info but preserve the original node
+    final enhancedProps = Map<String, dynamic>.from(componentNode.props)
+      ..['_adapted'] = true;
+
+    // Pass through the component node with enhanced props
+    return VNode(
+      componentNode.type,
+      props: enhancedProps,
+      children: componentNode.children,
+      key: componentNode.key,
+    );
   }
 }
