@@ -57,23 +57,26 @@ class UseState<T> {
 
   /// Set a new state value
   set value(T newValue) {
-    if (_currentValue != newValue) {
+    // CRITICAL FIX: More robust equality check for objects
+    bool hasChanged = _currentValue != newValue;
+    if (hasChanged) {
+      debugPrint(
+          'UseState: Updating $_stateKey from $_currentValue to $newValue');
       _currentValue = newValue;
+
+      // Update in global state manager
       GlobalStateManager.instance.setState(_componentId, _stateKey, newValue);
 
-      // Explicitly trigger component update
+      // CRITICAL FIX: Explicitly trigger component update
       if (_updateCallback != null) {
+        debugPrint('UseState: Triggering update callback for $_stateKey');
         _updateCallback!();
       }
 
       // Also notify any global event listeners
       ComponentEventBus.instance.publish('state:$_stateKey', newValue);
 
-      if (kDebugMode) {
-        print('UseState: Updated $_stateKey to $newValue');
-      }
-
-      // Trigger a rebuild notification
+      // CRITICAL FIX: Always notify rebuild to ensure UI updates
       ComponentEventBus.instance.notifyRebuild();
     }
   }
@@ -81,15 +84,12 @@ class UseState<T> {
   // Handle state changes from external sources
   void _handleExternalStateChange(dynamic newValue) {
     if (newValue is T && _currentValue != newValue) {
-      _currentValue = newValue; // Removed unnecessary cast
+      _currentValue = newValue;
 
       // Notify the component to update
       if (_updateCallback != null) {
+        debugPrint('UseState: External update triggered for $_stateKey');
         _updateCallback!();
-      }
-
-      if (kDebugMode) {
-        print('UseState: External update to $_stateKey: $newValue');
       }
     }
   }
@@ -97,6 +97,7 @@ class UseState<T> {
   /// Set the update callback that will be triggered when state changes
   void setUpdateCallback(Function callback) {
     _updateCallback = callback;
+    debugPrint('UseState: Update callback set for $_stateKey');
   }
 
   /// Reset state to initial value

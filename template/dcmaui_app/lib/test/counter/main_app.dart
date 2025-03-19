@@ -40,10 +40,18 @@ class MainApp extends Component {
                 boxSize: 50,
                 checkedColor: Colors.red,
                 margin: EdgeInsets.all(20))),
-        DCModal(visible: true, closeByBackdrop: true,onDismiss: () => debugPrint("Modal dismissed"),onShow: () => debugPrint("Showing Modal"),statusBarTranslucent: true,shouldCloseOnOverlayTap: true,animationType: 'slide',children: [
-          DCText(text: 'Hello World'),
-          DCButton(title: 'Close', onPress: () => print('Close')),
-        ]),
+        DCModal(
+            visible: true,
+            closeByBackdrop: true,
+            onDismiss: () => debugPrint("Modal dismissed"),
+            onShow: () => debugPrint("Showing Modal"),
+            statusBarTranslucent: true,
+            shouldCloseOnOverlayTap: true,
+            animationType: 'slide',
+            children: [
+              DCText(text: 'Hello World'),
+              DCButton(title: 'Close', onPress: () => print('Close')),
+            ]),
         DCActivityIndicator(
             animating: true,
             size: 'large',
@@ -66,11 +74,20 @@ class MainApp extends Component {
             fontWeight: "bold",
           ),
         ),
+        DCTouchableHighlight(onLongPress: () => print('Long Pressed'),
+          style: ViewStyle( 
+            backgroundColor: Colors.pink,
+            padding: EdgeInsets.all(10),
+          ),
+        ),
         DCButton(
           title: "Increment",
           onPress: () {
-            debugPrint('Button pressed - incrementing counter');
-            counter.value++;
+            debugPrint(
+                'Button pressed - incrementing counter from ${counter.value} to ${counter.value + 1}');
+            int newValue = counter.value + 1;
+            counter.value = newValue;
+            debugPrint('Counter should now be: $newValue');
           },
         ),
       ],

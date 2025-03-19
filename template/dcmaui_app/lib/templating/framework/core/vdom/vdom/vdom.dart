@@ -530,7 +530,11 @@ class VDOM {
   /// Handle component update when setState is called
   void _handleComponentUpdate(String componentId) {
     final component = _components[componentId];
-    if (component == null || !component.mounted) return;
+    if (component == null || !component.mounted) {
+      debugPrint(
+          'VDOM: Cannot update component $componentId - not found or unmounted');
+      return;
+    }
 
     debugPrint('VDOM: Handling state update for $componentId');
 
@@ -551,12 +555,14 @@ class VDOM {
         }
       }
 
-      // Render the updated component
+      // CRITICAL FIX: Force re-render the component
       final newRenderedNode = component.render();
       _renderedNodes[componentId] = newRenderedNode;
 
-      // Debug the update
-      debugPrint('VDOM: Component rendered new node: ${newRenderedNode.type}');
+      // Debug the update with more details
+      debugPrint(
+          'VDOM: Component $componentId rendered new node: ${newRenderedNode.type}');
+      debugPrint('VDOM: Component state is now: ${component.state}');
 
       // CRITICAL FIX: Ensure stable viewIds between renders
       nodeToViewId[newRenderedNode.key] = componentId;

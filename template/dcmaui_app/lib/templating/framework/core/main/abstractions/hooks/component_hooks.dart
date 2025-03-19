@@ -2,6 +2,7 @@ import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_st
 import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_effect.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_reducer.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:flutter/foundation.dart';
 
 /// Integrates hooks with the Component class
 class ComponentHooks {
@@ -17,12 +18,18 @@ class ComponentHooks {
     final stateHook =
         UseState<T>(key, initialValue, componentId: _component.componentId);
 
-    // Set the update callback after creating it
+    // CRITICAL FIX: Set the update callback after creating it with proper debugging
     stateHook.setUpdateCallback(() {
       // Trigger component update using the component's setState
       if (_component.mounted) {
+        debugPrint(
+            'ComponentHooks: State changed in hook "${key}", updating component ${_component.componentId}');
+
         // Update the actual component state too
         _component.setState({key: stateHook.value});
+      } else {
+        debugPrint(
+            'ComponentHooks: WARNING - Cannot update unmounted component ${_component.componentId}');
       }
     });
 
@@ -56,6 +63,8 @@ class ComponentHooks {
       final fieldName = hook.key;
       final value = hook.value;
       state[fieldName] = value;
+      debugPrint(
+          'ComponentHooks: Syncing hook "${fieldName}" with value $value to component ${_component.componentId}');
     }
 
     // Update the component's state
