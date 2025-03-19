@@ -10,21 +10,27 @@ class ElementFactory {
     return 'component_el_${_componentCounter++}';
   }
 
+  // Counter for generating unique node keys
+  static int _nodeCounter = 0;
+
   // Create element with the right type - always use DC prefix
   static VNode createElement(
       String type, Map<String, dynamic> props, List<VNode> children) {
-    // Log element creation in debug mode
-    if (kDebugMode) {
-      debugPrint(
-          'ElementFactory: Created $type element with key ${props['key'] ?? 'unknown'}');
-    }
-    // Log element creation in debug mode
-    if (kDebugMode) {
-      debugPrint(
-          'ElementFactory: Created  element with key ${props['key'] ?? 'unknown'}');
+    // CRITICAL FIX: Generate a unique, stable key that includes the type
+    final String nodeKey;
+    if (props.containsKey('key') &&
+        props['key'] != null &&
+        props['key'] is String) {
+      nodeKey = props['key'] as String;
+    } else {
+      nodeKey = '${type}_${_nodeCounter++}';
+      props = Map<String, dynamic>.from(props)..['key'] = nodeKey;
     }
 
-    final nodeKey = props['key'] as String? ?? '${type}_el_${_nodeCounter++}';
+    // Log element creation with proper key
+    if (kDebugMode) {
+      debugPrint('ElementFactory: Created $type element with key $nodeKey');
+    }
 
     return VNode(
       type,
@@ -34,9 +40,6 @@ class ElementFactory {
     );
   }
 
-  // Counter for generating unique node keys
-  static int _nodeCounter = 0;
-
   // Create component with the right settings
   static VNode createComponent(
     Component Function() constructor,
@@ -44,22 +47,27 @@ class ElementFactory {
   ) {
     final componentId = _generateComponentId();
 
+    // CRITICAL FIX: Ensure key exists and is preserved
+    final nodeKey = props.containsKey('key') && props['key'] != null
+        ? props['key'] as String
+        : componentId;
+
+    // Create a new props map with the key
+    final enhancedProps = Map<String, dynamic>.from(props)
+      ..['key'] = nodeKey
+      ..['_isComponent'] = true
+      ..['_componentId'] = componentId
+      ..['_componentConstructor'] = constructor;
+
     // For debug tracing
     if (kDebugMode) {
       debugPrint(
-          'ElementFactory: Created component with ID $componentId and key ${props['key'] ?? 'unknown'}');
+          'ElementFactory: Created component with ID $componentId and key $nodeKey');
     }
-
-    final nodeKey = props['key'] as String? ?? componentId;
 
     return VNode(
       'component',
-      props: {
-        ...props,
-        '_isComponent': true,
-        '_componentId': componentId,
-        '_componentConstructor': constructor,
-      },
+      props: enhancedProps,
       children: [],
       key: nodeKey,
     );

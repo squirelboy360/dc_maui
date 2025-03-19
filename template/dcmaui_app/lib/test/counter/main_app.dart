@@ -1,10 +1,6 @@
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
-import 'package:dc_test/templating/framework/controls/safe_area_view.dart';
-import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_state.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/controls/button.dart';
-import 'package:dc_test/templating/framework/controls/text.dart';
-import 'package:dc_test/templating/framework/controls/view.dart';
+
 import 'package:dc_test/templating/framework/index.dart';
 import 'package:flutter/material.dart' hide TextStyle, Text, View;
 
@@ -23,23 +19,7 @@ class MainApp extends Component {
         backgroundColor: Colors.blue,
       ),
       children: [
-        DCGestureDetector(
-          
-            props: DCGestureDetectorProps(
-              
-              onTap: () {
-                debugPrint('GestureDetector tapped - incrementing counter');
-                counter.value++;
-              },
-            ),
-            children: [
-              DCView(
-                style: ViewStyle(
-                    backgroundColor: Colors.red,
-                    width: 200,
-                    padding: EdgeInsets.all(10),
-                    borderRadius: 20),
-                children: [
+   
                   DCText(
                     text: 'Counter: ${state["counter"]}',
                     style: DCTextStyle(
@@ -48,9 +28,8 @@ class MainApp extends Component {
                       fontWeight: "bold",
                     ),
                   ),
-                ],
-              ),
-            ]),
+                
+            
         DCButton(
           title: "Increment",
           onPress: () {

@@ -1,4 +1,3 @@
-
 /// A virtual DOM node
 class VNode {
   /// The node type (e.g., 'view', 'text', 'component')
@@ -26,14 +25,16 @@ class VNode {
     this.children = const [],
     String? key,
     this.componentId,
-  })  : key = key ?? _generateStableKey(type, props),
-        _hashValue = Object.hash(key ?? _generateStableKey(type, props), type,
+  })  : key = key ?? props['key'] as String? ?? _generateStableKey(type, props),
+        _hashValue = Object.hash(
+            key ?? props['key'] as String? ?? _generateStableKey(type, props),
+            type,
             identityHashCode(props));
 
   /// Generate a stable key based on type and props
   static String _generateStableKey(String type, Map<String, dynamic>? props) {
     // Use ID if available as it's most stable
-    final id = props?['id'] ?? props?['key'] ?? props?['testID'];
+    final id = props?['id'] ?? props?['testID'];
     if (id != null) return '${type}_$id';
 
     // Use type with unique hash
@@ -131,5 +132,26 @@ class VNode {
         : '\n${children.map((c) => c.toTreeString(depth + 1)).join('\n')}';
 
     return '$indent$toString()$childrenStr';
+  }
+
+  // Add method to ensure all children are properly processed
+  List<Map<String, dynamic>> processChildrenForNative() {
+    return children.map((child) {
+      final nodeProps = child.props ?? {};
+      // Ensure children have unique keys for proper rendering
+      if (!nodeProps.containsKey('key')) {
+        nodeProps['key'] = 'child_${child.hashCode}';
+      }
+
+      // Recursively process children of this child
+      if (child.children.isNotEmpty) {
+        nodeProps['children'] = child.processChildrenForNative();
+      }
+
+      return {
+        'type': child.type,
+        'props': nodeProps,
+      };
+    }).toList();
   }
 }

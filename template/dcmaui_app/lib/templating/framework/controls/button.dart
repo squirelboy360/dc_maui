@@ -210,9 +210,17 @@ class DCButton extends Control {
 
   @override
   VNode build() {
+    // CRITICAL FIX: Make sure onPress is directly in the props map, not nested
+    final buttonProps = props.toMap();
+
+    // Ensure onPress is at the top level
+    if (props.onPress != null) {
+      buttonProps['onPress'] = props.onPress;
+    }
+
     return ElementFactory.createElement(
       'DCButton',
-      props.toMap(),
+      buttonProps,
       [], // Button doesn't have children in React Native style
     );
   }

@@ -41,36 +41,36 @@ Future<void> dcBind(
   // Create VDOM instance with optimization toggle
   final vdom = VDOM();
 
-  // Set up error boundary props
-
   // CRITICAL FIX: Ensure both ErrorBoundary and MainApp have proper keys
   final appPropsWithKey = appProps ?? {};
   if (!appPropsWithKey.containsKey('key')) {
     appPropsWithKey['key'] = 'root-app';
   }
 
-  // Create the app component first
-  // final appComponent =
-  //     ElementFactory.createComponent(appComponentConstructor, appPropsWithKey);
-
-  // Debug output for component creation
+  // CRITICAL FIX: Directly use app component for simpler rendering and debugging
   debugPrint(
-      'Bootstrap: Created app component with key ${appPropsWithKey["key"]}');
+      'Bootstrap: Creating app component with key ${appPropsWithKey["key"]}');
 
-  // Then wrap it in ErrorBoundary
+  // Create app component
   final rootComponent = ElementFactory.createComponent(
-    () => appComponentConstructor(),
+    appComponentConstructor,
     appPropsWithKey,
   );
 
   try {
-    // Render the app with extra debugging
-    debugPrint('DC Bootstrap: Rendering root component (ErrorBoundary)');
+    // CRITICAL FIX: Add more detailed debug information
+    debugPrint('DC Bootstrap: Component tree before render:');
+    debugPrint(rootComponent.toTreeString());
+
+    // Render the app
+    debugPrint('DC Bootstrap: Rendering root component');
     vdom.render(rootComponent);
 
     // Log debug information
     if (kDebugMode) {
-      MainViewCoordinatorInterface.logNativeViewTree();
+      // CRITICAL FIX: Use instance method instead of static
+      final coordinator = MainViewCoordinatorInterface();
+      coordinator.logNativeViewTree();
 
       if (enablePerformanceTracking) {
         PerformanceMonitor.instance.takeMemorySnapshot('app_rendered');

@@ -100,15 +100,20 @@ abstract class Component {
       return;
     }
 
+    // CRITICAL FIX: Check if partialState actually contains changes
+    if (partialState.isEmpty) return;
+
     // Queue updates during a render cycle for batching
     if (_isUpdating) {
-      debugPrint('Component: Queueing state update during render cycle');
+      debugPrint(
+          'Component: Queueing state update during render cycle for ${runtimeType.toString()}');
       _pendingStateUpdates.add(Map<String, dynamic>.from(partialState));
       return;
     }
 
     _isUpdating = true;
-    debugPrint('Component: Setting state: $partialState');
+    debugPrint(
+        'Component: Setting state for ${runtimeType.toString()}: $partialState');
 
     // Apply state update
     _applyStateUpdate(partialState);
@@ -126,13 +131,17 @@ abstract class Component {
       final key = entry.key;
       final newValue = entry.value;
 
+      // CRITICAL FIX: Deep equality check for collections
+      final currentValue = _state[key];
+      final valueChanged = !_deepEquals(currentValue, newValue);
+
       // Store previous state for comparison in lifecycle methods
       if (!_previousState.containsKey(key)) {
         _previousState[key] = _state.containsKey(key) ? _state[key] : null;
       }
 
       // Check if the value actually changed
-      if (!_state.containsKey(key) || _state[key] != newValue) {
+      if (valueChanged) {
         _state[key] = newValue;
         _changedStateKeys.add(key);
 
@@ -142,13 +151,34 @@ abstract class Component {
     }
   }
 
+  // Deep equality check for better state comparisons
+  bool _deepEquals(dynamic a, dynamic b) {
+    if (identical(a, b)) return true;
+
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (int i = 0; i < a.length; i++) {
+        if (!_deepEquals(a[i], b[i])) return false;
+      }
+      return true;
+    } else if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key) || !_deepEquals(a[key], b[key])) return false;
+      }
+      return true;
+    }
+
+    return a == b;
+  }
+
   // Schedule an update (if not already scheduled)
   void _scheduleUpdate() {
     if (_hasScheduledUpdate || _updatesSuspended) return;
 
     _hasScheduledUpdate = true;
 
-    // Use microtask to batch multiple setState calls
+    // CRITICAL FIX: Use immediate microtask for priority updates
     Future.microtask(() {
       if (!mounted) return;
 
@@ -164,16 +194,16 @@ abstract class Component {
           shouldComponentUpdate(props, _state)) {
         // Call lifecycle method with previous state
         final prevState = Map<String, dynamic>.from(_previousState);
+
+        // Trigger VDOM update first for immediate visual feedback
+        updateCallback?.call();
+
+        // Then call lifecycle method
         componentDidUpdate(props, prevState);
 
         // Clear tracked changes after update
         _previousState.clear();
-
-        // Reset changed keys after update
         _changedStateKeys.clear();
-
-        // Trigger VDOM update
-        updateCallback?.call();
       }
     });
   }
@@ -250,7 +280,9 @@ abstract class Component {
       // Warn if render is too slow
       if (showPerformanceWarnings &&
           renderTimeMs > _warnRenderTimeThresholdMs) {
-        debugPrint('PERFORMANCE WARNING: Component ${runtimeType.toString()} ' 'render took ${renderTimeMs.toStringAsFixed(2)}ms ' '(threshold: ${_warnRenderTimeThresholdMs}ms)');
+        debugPrint('PERFORMANCE WARNING: Component ${runtimeType.toString()} '
+            'render took ${renderTimeMs.toStringAsFixed(2)}ms '
+            '(threshold: ${_warnRenderTimeThresholdMs}ms)');
       }
     }
 

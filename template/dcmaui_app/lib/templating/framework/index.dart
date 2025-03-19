@@ -72,7 +72,7 @@ class DCFrameworkDebug {
 
   /// Log the active view registry for debugging
   static void logViewRegistry() {
-    MainViewCoordinatorInterface.logNativeViewTree();
+    MainViewCoordinatorInterface().logNativeViewTree();
   }
 
   /// Reset the view registry if views become unresponsive

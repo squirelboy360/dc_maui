@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dc_test/templating/framework/core/main/abstractions/utility/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -27,6 +28,30 @@ class MainViewCoordinatorInterface {
         .receiveBroadcastStream()
         .map<Map<String, dynamic>>((event) => Map<String, dynamic>.from(event))
         .listen((event) {
+      debugPrint('DC MAUI: Received event from native: $event');
+
+      // CRITICAL FIX: Process events from native to dispatch to handlers
+      if (event.containsKey('viewId') &&
+          event.containsKey('eventName') &&
+          event.containsKey('params')) {
+        final viewId = event['viewId'] as String;
+        final eventName = event['eventName'] as String;
+        final params = event['params'] as Map<String, dynamic>;
+
+        // Find and call the registered handler
+        final handler =
+            GlobalStateManager.instance.getEventHandler(viewId, eventName);
+        if (handler != null) {
+          debugPrint(
+              'DC MAUI: Dispatching event $eventName to handler for view $viewId');
+          try {
+            handler(params);
+          } catch (e) {
+            debugPrint('DC MAUI: Error in event handler: $e');
+          }
+        }
+      }
+
       _eventController.add(event);
     });
 
@@ -133,15 +158,19 @@ class MainViewCoordinatorInterface {
     }
   }
 
-  // Register event listeners for a view
+  // Register event listeners for a view - enhanced implementation
   static Future<bool> addEventListeners(
       String viewId, List<String> eventNames) async {
     try {
+      debugPrint('Core: Adding event listeners: $eventNames for view: $viewId');
+
+      // CRITICAL FIX: The Swift code expects 'eventTypes' not 'eventNames'
       final result = await _channel.invokeMethod('addEventListeners', {
         'viewId': viewId,
-        'eventNames': eventNames,
+        'eventTypes':
+            eventNames, // Changed key from 'eventNames' to 'eventTypes'
       });
-      debugPrint('Core: Added event listeners: $eventNames for view: $viewId');
+
       return result == true;
     } catch (e) {
       debugPrint('Core: ERROR adding event listeners: $e');
@@ -163,8 +192,6 @@ class MainViewCoordinatorInterface {
       return false;
     }
   }
-
-  // CRITICAL FIX: Removed simulate event method as it's not needed
 
   // Get information about a view
   static Future<Map<String, dynamic>?> getViewInfo(String viewId) async {
@@ -194,7 +221,7 @@ class MainViewCoordinatorInterface {
     }
   }
 
-  // Make logging more verbose for debugging
+  // CRITICAL FIX: Improved event handling for received events
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
     debugPrint(
         'DC MAUI: Received method call: ${call.method} with args: ${call.arguments}');
@@ -203,12 +230,32 @@ class MainViewCoordinatorInterface {
       final event = Map<String, dynamic>.from(call.arguments);
       final String viewId = event['viewId'];
 
-      // Standardize event name to React Native conventions
-      String eventName = event['eventName'] ?? '';
-      if (!eventName.startsWith('on')) {
+      // Get the original event name from native
+      String originalEventName = event['eventName'] ?? '';
+
+      // Find the actual registered event handler regardless of name format
+      // This allows us to support multiple event name formats for the same event
+      Function? handler;
+
+      // Try with original event name
+      handler = GlobalStateManager.instance
+          .getEventHandler(viewId, originalEventName);
+
+      // Standardize event name to React Native conventions and try again if needed
+      String standardizedEventName = originalEventName;
+      if (!originalEventName.startsWith('on') && handler == null) {
         final capitalizedFirst =
-            eventName.substring(0, 1).toUpperCase() + eventName.substring(1);
-        eventName = 'on$capitalizedFirst';
+            originalEventName.substring(0, 1).toUpperCase() +
+                originalEventName.substring(1);
+        standardizedEventName = 'on$capitalizedFirst';
+
+        // Try to find handler with standardized name
+        handler = GlobalStateManager.instance
+            .getEventHandler(viewId, standardizedEventName);
+
+        // Add debug info to track event name conversion
+        debugPrint(
+            'DC MAUI: Converted event name from "$originalEventName" to "$standardizedEventName" for lookup');
       }
 
       // Ensure params match React Native format
@@ -225,13 +272,24 @@ class MainViewCoordinatorInterface {
         params = {'target': viewId};
       }
 
-      debugPrint(
-          'DC MAUI: Normalized event $eventName for view $viewId with data: $params');
+      // Call handler if found
+      if (handler != null) {
+        try {
+          debugPrint(
+              'DC MAUI: Invoking handler for event $originalEventName on view $viewId');
+          handler(params);
+        } catch (e) {
+          debugPrint('DC MAUI: Error in event handler: $e');
+        }
+      } else {
+        debugPrint(
+            'DC MAUI: No handler found for event $originalEventName or $standardizedEventName on view $viewId');
+      }
 
-      // Dispatch the event
+      // Also broadcast the event with the standardized name for consistency in streams
       _eventController.add({
         'viewId': viewId,
-        'eventName': eventName,
+        'eventName': standardizedEventName,
         'params': params,
       });
 
@@ -247,7 +305,7 @@ class MainViewCoordinatorInterface {
   }
 
   // Add a method to request the native side to print its view tree
-  static Future<void> logNativeViewTree() async {
+  Future<void> logNativeViewTree() async {
     try {
       await _channel.invokeMethod('logViewTree');
     } catch (e) {
