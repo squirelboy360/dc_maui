@@ -347,11 +347,8 @@ class DCBaseView: UIView, ViewUpdatable {
     func addEventListener(_ eventType: String) {
         let standardizedEventName = ensureStandardEventName(eventType)
         eventListeners[standardizedEventName] = true
-        
-        // Set up event detection based on type
-        setupEventHandler(for: standardizedEventName)
     }
-    
+    // TODO: Remove this method once old unstandardized events are migrated
     // Standard event name converter
     private func ensureStandardEventName(_ name: String) -> String {
         if name.hasPrefix("on") {
@@ -360,76 +357,6 @@ class DCBaseView: UIView, ViewUpdatable {
         let firstChar = name.prefix(1).uppercased()
         let rest = name.dropFirst()
         return "on\(firstChar)\(rest)"
-    }
-    
-    // Setup event handlers
-    private func setupEventHandler(for eventType: String) {
-        switch eventType {
-        case "onPress", "onPressIn", "onPressOut", "onLongPress":
-            setupTouchHandlers()
-            
-        case "onLayout":
-            // Handle layout events
-            break
-            
-        case "onMoveShouldSetResponder", "onStartShouldSetResponder":
-            // Responder system events
-            isUserInteractionEnabled = true
-            
-        default:
-            break
-        }
-    }
-    
-    // Setup touch handlers like DCMAUI's Touchable components
-    private func setupTouchHandlers() {
-        isUserInteractionEnabled = true
-        
-        // Remove existing tap gestures to avoid duplicates
-        if let gestures = gestureRecognizers {
-            for gesture in gestures {
-                if gesture is UITapGestureRecognizer {
-                    removeGestureRecognizer(gesture)
-                }
-            }
-        }
-        
-        // Add tap gesture for press events
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handlePress))
-        addGestureRecognizer(tapGesture)
-        
-        // Add long press gesture if needed
-        if eventListeners["onLongPress"] == true {
-            let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
-            longPressGesture.minimumPressDuration = 0.5 // Default
-            addGestureRecognizer(longPressGesture)
-        }
-    }
-    
-    @objc private func handlePress() {
-        if eventListeners["onPress"] == true {
-            // Create event object
-            let event: [String: Any] = [
-                "target": viewId,
-                "timestamp": Date().timeIntervalSince1970 * 1000
-            ]
-            
-            // Send to coordinator
-            DCViewCoordinator.shared?.sendEvent(viewId: viewId, eventName: "onPress", params: event)
-        }
-    }
-    
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        if gesture.state == .began && eventListeners["onLongPress"] == true {
-            // Create event object
-            let event: [String: Any] = [
-                "target": viewId,
-                "timestamp": Date().timeIntervalSince1970 * 1000
-            ]
-            
-            // Send to coordinator
-            DCViewCoordinator.shared?.sendEvent(viewId: viewId, eventName: "onLongPress", params: event)
-        }
     }
     
     // Layout event
