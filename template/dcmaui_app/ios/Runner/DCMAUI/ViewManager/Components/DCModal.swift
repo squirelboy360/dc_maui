@@ -12,7 +12,7 @@ class DCModal: DCBaseView {
     // Core properties
     private var visible: Bool = false
     private var animationType: String = "none" // none, slide, fade
-    private var presentationStyle: String = "fullScreen" // fullScreen, pageSheet, formSheet, overFullScreen
+    private var presentationStyle: String = "formSheet" // fullScreen, pageSheet, formSheet, overFullScreen
     private var transparent: Bool = false
     private var statusBarTranslucent: Bool = false
     private var hardwareAccelerated: Bool = false
