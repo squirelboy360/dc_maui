@@ -24,13 +24,15 @@ class MainViewCoordinatorInterface {
     _channel.setMethodCallHandler(_handleMethodCall);
 
     debugPrint('DC MAUI: Setting up event channel listener');
-    _eventChannel
-        .receiveBroadcastStream()
-        .map<Map<String, dynamic>>((event) => Map<String, dynamic>.from(event))
-        .listen((event) {
+    _eventChannel.receiveBroadcastStream().map<Map<String, dynamic>>((event) {
+      if (event is Map) {
+        return _convertToStringKeyMap(event as Map<Object?, Object?>);
+      }
+      return {'error': 'Invalid event format'};
+    }).listen((event) {
       debugPrint('DC MAUI: Received event from native: $event');
 
-      // CRITICAL FIX: Process events from native to dispatch to handlers
+      // Process events from native to dispatch to handlers
       if (event.containsKey('viewId') &&
           event.containsKey('eventName') &&
           event.containsKey('params')) {
@@ -66,6 +68,29 @@ class MainViewCoordinatorInterface {
       // Create root container view manually to bypass initialization
       await createRootContainer();
     }
+  }
+
+  // Helper method to convert Map<Object?, Object?> to Map<String, dynamic>
+  static Map<String, dynamic> _convertToStringKeyMap(
+      Map<Object?, Object?> map) {
+    return Map<String, dynamic>.fromEntries(
+      map.entries.map(
+        (entry) => MapEntry(
+          entry.key.toString(),
+          _convertValue(entry.value),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to recursively convert values
+  static dynamic _convertValue(Object? value) {
+    if (value is Map<Object?, Object?>) {
+      return _convertToStringKeyMap(value);
+    } else if (value is List) {
+      return value.map((item) => _convertValue(item)).toList();
+    }
+    return value;
   }
 
   // Create a root container view directly
@@ -227,7 +252,8 @@ class MainViewCoordinatorInterface {
         'DC MAUI: Received method call: ${call.method} with args: ${call.arguments}');
 
     if (call.method == 'onNativeEvent') {
-      final event = Map<String, dynamic>.from(call.arguments);
+      final event =
+          _convertToStringKeyMap(call.arguments as Map<Object?, Object?>);
       final String viewId = event['viewId'];
 
       // Get the original event name from native
@@ -261,7 +287,7 @@ class MainViewCoordinatorInterface {
       // Ensure params match React Native format
       Map<String, dynamic> params;
       if (event['params'] is Map) {
-        params = Map<String, dynamic>.from(event['params']);
+        params = event['params'] as Map<String, dynamic>;
 
         // Make sure target is included
         if (!params.containsKey('target')) {
