@@ -208,14 +208,18 @@ class DCButton extends Control {
           additionalProps: additionalProps ?? const {},
         );
 
+  // CRITICAL FIX: Ensure onPress handler is properly called
   @override
   VNode build() {
     // CRITICAL FIX: Make sure onPress is directly in the props map, not nested
     final buttonProps = props.toMap();
 
-    // Ensure onPress is at the top level
+    // CRITICAL FIX: Make sure the handler doesn't receive any args if it doesn't want them
     if (props.onPress != null) {
-      buttonProps['onPress'] = props.onPress;
+      buttonProps['onPress'] = () {
+        debugPrint('DCButton: Calling onPress handler directly');
+        props.onPress!();
+      };
     }
 
     return ElementFactory.createElement(

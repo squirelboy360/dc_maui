@@ -24,6 +24,8 @@ class ComponentEventBus {
 
   // Publish an event
   void publish(String eventName, [dynamic data]) {
+    debugPrint('EventBus: Publishing event "$eventName" with data: $data');
+
     if (_controllers.containsKey(eventName)) {
       _controllers[eventName]!.add(data);
     }

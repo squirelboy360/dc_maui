@@ -1,471 +1,247 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-// Improved state management system with better isolation and change tracking
+/// Global state manager for components and hooks
 class GlobalStateManager {
+  // Singleton instance
   static final GlobalStateManager _instance = GlobalStateManager._internal();
   static GlobalStateManager get instance => _instance;
 
   // Private constructor
   GlobalStateManager._internal();
 
-  // State storage by component ID and state key
-  final Map<String, Map<String, dynamic>> _stateStore = {};
+  // Global state store organized by component ID
+  final Map<String, Map<String, dynamic>> _globalState = {};
 
-  // Track callbacks for state changes
-  final Map<String, List<Function>> _stateListeners = {};
-
-  // Track component event handlers
+  // Event handlers by viewId and eventName
   final Map<String, Map<String, Function>> _eventHandlers = {};
 
-  // Track last event timestamp to prevent rapid re-triggers
-  final Map<String, int> _lastEventTime = {};
+  // State change listeners
+  final Map<String, Map<String, List<Function>>> _stateListeners = {};
 
-  // Track derived state dependencies
-  final Map<String, Set<String>> _stateDependencies = {};
+  // Memo cache for hooks
+  final Map<String, Map<String, _MemoData>> _memoCache = {};
 
-  // Store memoized values with their dependencies
-  final Map<String, _MemoizedValue> _memoCache = {};
-
-  // NEW: Registry for derivation functions
-  final Map<String, Function> _derivationFunctions = {};
-
-  // Track pending updates for batching
-  final Map<String, Map<String, dynamic>> _pendingUpdates = {};
-  bool _batchingUpdates = false;
-
-  // Track last state values for dependency checking in memoization
-  final Map<String, Map<String, dynamic>> _lastStateValues = {};
-
-  // Store an individual state value with change notification
-  void setState(String componentId, String key, dynamic value) {
-    if (!_stateStore.containsKey(componentId)) {
-      _stateStore[componentId] = {};
-    }
-
-    final currentValue = _stateStore[componentId]![key];
-    if (!_deepEquals(currentValue, value)) {
-      // Track previous value for memo dependency checking
-      if (!_lastStateValues.containsKey(componentId)) {
-        _lastStateValues[componentId] = {};
-      }
-      _lastStateValues[componentId]![key] = currentValue;
-
-      // Only update if the value has changed
-      _stateStore[componentId]![key] = value;
-
-      if (_batchingUpdates) {
-        // Queue up the update for later notification
-        if (!_pendingUpdates.containsKey(componentId)) {
-          _pendingUpdates[componentId] = {};
-        }
-        _pendingUpdates[componentId]![key] = value;
-        return;
-      }
-
-      // Notify listeners
-      _notifyStateChange(componentId, key, value);
-
-      // Invalidate any memoized values that depend on this state
-      _invalidateAffectedMemos(componentId, key);
-
-      if (kDebugMode) {
-        print(
-            'GlobalStateManager: State updated for $componentId.$key: $value');
-      }
-    }
+  // Initialize state for a component
+  void initializeState(String componentId, Map<String, dynamic> initialState) {
+    _globalState[componentId] = initialState;
   }
 
-  // Invalidate memoized values that depend on the changed state
-  void _invalidateAffectedMemos(String componentId, String key) {
-    final dependencyKey = "$componentId:$key";
-
-    // Find all memos that depend on this state key
-    final affectedMemos = <String>[];
-    for (final memoId in _memoCache.keys) {
-      final memo = _memoCache[memoId]!;
-      if (memo.dependencies.contains(dependencyKey)) {
-        affectedMemos.add(memoId);
-      }
-    }
-
-    // Invalidate all affected memos
-    for (final memoId in affectedMemos) {
-      _memoCache[memoId]!.isValid = false;
-    }
-  }
-
-  // Create a memoized value that only recalculates when dependencies change
-  T memoize<T>(String componentId, String memoKey, T Function() computeFn,
-      List<String> dependencies) {
-    final memoId = "$componentId:$memoKey";
-
-    // Format dependencies to add component ID
-    final formattedDeps = dependencies.map((dep) {
-      if (dep.contains(':')) return dep; // Already formatted
-      return "$componentId:$dep"; // Add component ID
-    }).toSet();
-
-    // Check if this memo exists and is valid
-    if (_memoCache.containsKey(memoId) && _memoCache[memoId]!.isValid) {
-      return _memoCache[memoId]!.value as T;
-    }
-
-    // Compute new value
-    final value = computeFn();
-
-    // Store in cache
-    _memoCache[memoId] = _MemoizedValue(
-      value: value,
-      dependencies: formattedDeps,
-      isValid: true,
-    );
-
-    return value;
-  }
-
-  // Clear memoization cache for a component
-  void clearMemos(String componentId) {
-    final toRemove = <String>[];
-    _memoCache.forEach((key, value) {
-      if (key.startsWith("$componentId:")) {
-        toRemove.add(key);
-      }
-    });
-
-    for (final key in toRemove) {
-      _memoCache.remove(key);
-    }
-  }
-
-  // Notify listeners about a state change
-  void _notifyStateChange(String componentId, String key, dynamic value) {
-    // Direct listeners on this specific state key
-    final listenerKey = "$componentId:$key";
-    if (_stateListeners.containsKey(listenerKey)) {
-      for (final listener in _stateListeners[listenerKey]!) {
-        listener(value);
-      }
-    }
-
-    // Notify any derived state that depends on this key
-    final dependentKey = "$componentId:$key";
-    if (_stateDependencies.containsKey(dependentKey)) {
-      for (final derivedKey in _stateDependencies[dependentKey]!) {
-        final parts = derivedKey.split(':');
-        if (parts.length == 2) {
-          final derivedComponentId = parts[0];
-          final derivedStateKey = parts[1];
-
-          // IMPLEMENTATION: Recalculate derived state using registered derivation function
-          final derivationFunctionKey = "$derivedComponentId:$derivedStateKey";
-          if (_derivationFunctions.containsKey(derivationFunctionKey)) {
-            final derivationFn = _derivationFunctions[derivationFunctionKey]!;
-
-            try {
-              // Calculate new derived value and update state
-              final newValue = derivationFn();
-
-              if (kDebugMode) {
-                print(
-                    'GlobalStateManager: Recalculating derived state $derivedKey from dependency change');
-              }
-
-              // Update state with the new derived value (without triggering dependency checks again)
-              _updateDerivedState(
-                  derivedComponentId, derivedStateKey, newValue);
-            } catch (e) {
-              if (kDebugMode) {
-                print(
-                    'GlobalStateManager: Error calculating derived state: $e');
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Update derived state without triggering dependency checks
-  void _updateDerivedState(String componentId, String key, dynamic value) {
-    if (!_stateStore.containsKey(componentId)) {
-      _stateStore[componentId] = {};
-    }
-
-    final currentValue = _stateStore[componentId]![key];
-    if (!_deepEquals(currentValue, value)) {
-      // Store the new value
-      _stateStore[componentId]![key] = value;
-
-      // Notify direct listeners on this state
-      final listenerKey = "$componentId:$key";
-      if (_stateListeners.containsKey(listenerKey)) {
-        for (final listener in _stateListeners[listenerKey]!) {
-          listener(value);
-        }
-      }
-
-      if (kDebugMode) {
-        print(
-            'GlobalStateManager: Derived state updated for $componentId.$key: $value');
-      }
-    }
-  }
-
-  // Start batching state updates
-  void beginBatch() {
-    _batchingUpdates = true;
-    _pendingUpdates.clear();
-  }
-
-  // End batching and notify all listeners of changed state
-  void commitBatch() {
-    _batchingUpdates = false;
-
-    // Notify listeners for all pending updates
-    for (final componentId in _pendingUpdates.keys) {
-      for (final key in _pendingUpdates[componentId]!.keys) {
-        final value = _pendingUpdates[componentId]![key];
-        _notifyStateChange(componentId, key, value);
-      }
-    }
-
-    _pendingUpdates.clear();
-  }
-
-  // Deep equality check for better object comparison
-  bool _deepEquals(dynamic a, dynamic b) {
-    if (identical(a, b)) return true;
-
-    // Handle collections
-    if (a is List && b is List) {
-      if (a.length != b.length) return false;
-      for (int i = 0; i < a.length; i++) {
-        if (!_deepEquals(a[i], b[i])) return false;
-      }
-      return true;
-    } else if (a is Map && b is Map) {
-      if (a.length != b.length) return false;
-      for (final key in a.keys) {
-        if (!b.containsKey(key) || !_deepEquals(a[key], b[key])) return false;
-      }
-      return true;
-    }
-
-    // Regular value comparison
-    return a == b;
-  }
-
-  // Get an individual state value
-  T? getState<T>(String componentId, String key, [T? defaultValue]) {
-    if (!_stateStore.containsKey(componentId)) {
+  // Get state value
+  T? getState<T>(String componentId, String key, T defaultValue) {
+    if (!_globalState.containsKey(componentId)) {
       return defaultValue;
     }
-    return _stateStore[componentId]![key] as T? ?? defaultValue;
+
+    if (!_globalState[componentId]!.containsKey(key)) {
+      return defaultValue;
+    }
+
+    final value = _globalState[componentId]![key];
+    if (value is T) {
+      return value;
+    }
+
+    return defaultValue;
   }
 
-  // Initialize a component's state
-  void initializeState(String componentId, Map<String, dynamic> initialState) {
-    if (!_stateStore.containsKey(componentId)) {
-      _stateStore[componentId] = Map<String, dynamic>.from(initialState);
-    } else {
-      // Merge with existing state
-      _stateStore[componentId]!.addAll(initialState);
+  // Set state value
+  void setState<T>(String componentId, String key, T value) {
+    if (!_globalState.containsKey(componentId)) {
+      _globalState[componentId] = {};
+    }
+
+    final oldValue = _globalState[componentId]![key];
+    _globalState[componentId]![key] = value;
+
+    // Notify listeners if value changed
+    if (oldValue != value) {
+      _notifyStateListeners(componentId, key, value);
     }
   }
 
-  // Listen for changes to a specific state key
-  void addStateListener(
-      String componentId, String key, Function(dynamic) listener) {
-    final listenerKey = "$componentId:$key";
-    if (!_stateListeners.containsKey(listenerKey)) {
-      _stateListeners[listenerKey] = [];
-    }
-    _stateListeners[listenerKey]!.add(listener);
-  }
-
-  // Remove a state listener
-  void removeStateListener(
-      String componentId, String key, Function(dynamic) listener) {
-    final listenerKey = "$componentId:$key";
-    if (_stateListeners.containsKey(listenerKey)) {
-      _stateListeners[listenerKey]!.remove(listener);
-    }
-  }
-
-  // Register an event handler with debouncing to prevent double-firing
-  void registerEventHandler(
-      String componentId, String eventName, Function handler) {
-    if (!_eventHandlers.containsKey(componentId)) {
-      _eventHandlers[componentId] = {};
-    }
-
-    _eventHandlers[componentId]![eventName] = (args) {
-      // Simple debouncing - prevent the same event from firing twice in 300ms
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final handlerId = "$componentId:$eventName";
-      final lastTime = _lastEventTime[handlerId] ?? 0;
-
-      if (now - lastTime > 300) {
-        // 300ms debounce
-        _lastEventTime[handlerId] = now;
-        handler(args);
-      } else if (kDebugMode) {
-        print(
-            'GlobalStateManager: Debounced event $eventName for $componentId');
-      }
-    };
-  }
-
-  // Get an event handler
-  Function? getEventHandler(String componentId, String eventName) {
-    return _eventHandlers[componentId]?[eventName];
-  }
-
-  // Clean up a component's state
+  // Clean up state
   void cleanupState(String componentId) {
-    _stateStore.remove(componentId);
-
-    // Clean up listeners
-    final keysToRemove = _stateListeners.keys
-        .where((key) => key.startsWith("$componentId:"))
-        .toList();
-    for (final key in keysToRemove) {
-      _stateListeners.remove(key);
-    }
-
-    // Clean up event handlers
-    _eventHandlers.remove(componentId);
-
-    // Clean up event timestamps
-    final timeKeysToRemove = _lastEventTime.keys
-        .where((key) => key.startsWith("$componentId:"))
-        .toList();
-    for (final key in timeKeysToRemove) {
-      _lastEventTime.remove(key);
-    }
-
-    // Clean up derived state dependencies
-    final depKeysToRemove = _stateDependencies.keys
-        .where((key) => key.startsWith("$componentId:"))
-        .toList();
-    for (final key in depKeysToRemove) {
-      _stateDependencies.remove(key);
-    }
-
-    // Also clean up derivation functions
-    final derivationKeysToRemove = _derivationFunctions.keys
-        .where((key) => key.startsWith("$componentId:"))
-        .toList();
-    for (final key in derivationKeysToRemove) {
-      _derivationFunctions.remove(key);
-    }
-
-    // Clean up memoization cache
-    clearMemos(componentId);
-
-    // Clean up last state values
-    _lastStateValues.remove(componentId);
+    _globalState.remove(componentId);
+    _stateListeners.remove(componentId);
+    _memoCache.remove(componentId);
   }
 
-  // Register a derived state that depends on other state
-  void registerDerivedState(
-      String componentId, String derivedKey, List<String> dependencies) {
-    for (final dep in dependencies) {
-      final depParts = dep.split('.');
-      if (depParts.length != 2) continue;
-
-      final depComponentId = depParts[0];
-      final depStateKey = depParts[1];
-
-      final fullDepKey = "$depComponentId:$depStateKey";
-      if (!_stateDependencies.containsKey(fullDepKey)) {
-        _stateDependencies[fullDepKey] = {};
-      }
-
-      _stateDependencies[fullDepKey]!.add("$componentId:$derivedKey");
+  // Get a memoized value
+  T memoize<T>(String componentId, String key, T Function() factory,
+      List<String> dependencies) {
+    if (!_memoCache.containsKey(componentId)) {
+      _memoCache[componentId] = {};
     }
+
+    final cache = _memoCache[componentId]!;
+    final memoData = cache[key];
+
+    // If no memo data exists, or dependencies changed, recalculate
+    if (memoData == null ||
+        !_areDependenciesEqual(memoData.dependencies, dependencies)) {
+      final T value = factory();
+      cache[key] = _MemoData<T>(value, dependencies);
+      return value;
+    }
+
+    return memoData.value as T;
   }
 
-  // Register a derivation function for a derived state
-  void registerDerivationFunction(
-      String componentId, String derivedKey, Function derivationFn) {
-    final key = "$componentId:$derivedKey";
-    _derivationFunctions[key] = derivationFn;
+  // Register event handler
+  void registerEventHandler(String viewId, String eventName, Function handler) {
+    // Normalize event name to React Native convention
+    final normalizedEventName = _normalizeEventName(eventName);
 
-    // Calculate initial value
-    try {
-      final initialValue = derivationFn();
-      _updateDerivedState(componentId, derivedKey, initialValue);
+    debugPrint(
+        'GlobalStateManager: Registering event handler for $normalizedEventName on view $viewId');
 
-      if (kDebugMode) {
-        print(
-            'GlobalStateManager: Registered derivation function for $componentId.$derivedKey with initial value $initialValue');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print(
-            'GlobalStateManager: Error calculating initial derived state: $e');
-      }
+    if (!_eventHandlers.containsKey(viewId)) {
+      _eventHandlers[viewId] = {};
     }
+
+    _eventHandlers[viewId]![normalizedEventName] = handler;
   }
 
-  // Create a selector function that efficiently computes derived state
-  T Function() createSelector<T>(String componentId, String derivedKey,
-      T Function() selectorFn, List<String> dependencies) {
-    // Register dependencies for this derived state
-    registerDerivedState(componentId, derivedKey, dependencies);
+  // Normalize event name to be consistent with React Native conventions
+  String _normalizeEventName(String eventName) {
+    if (eventName.startsWith('on')) {
+      return eventName;
+    }
 
-    // Register the derivation function
-    registerDerivationFunction(componentId, derivedKey, selectorFn);
+    return 'on${eventName.substring(0, 1).toUpperCase()}${eventName.substring(1)}';
+  }
 
-    // Cache for memoization
-    T? lastResult;
-    bool initialized = false;
+  // Get event handler
+  Function? getEventHandler(String viewId, String eventName) {
+    if (!_eventHandlers.containsKey(viewId)) {
+      return null;
+    }
 
-    return () {
-      if (!initialized) {
-        lastResult = selectorFn();
-        initialized = true;
-        return lastResult as T;
-      }
+    // Try exact match first
+    if (_eventHandlers[viewId]!.containsKey(eventName)) {
+      return _adaptHandlerWithParams(_eventHandlers[viewId]![eventName]!);
+    }
 
-      // Check if any dependencies have changed
-      bool dependenciesChanged = false;
+    // Try normalized version if exact match fails
+    final normalizedEventName = _normalizeEventName(eventName);
+    if (_eventHandlers[viewId]!.containsKey(normalizedEventName)) {
+      return _adaptHandlerWithParams(
+          _eventHandlers[viewId]![normalizedEventName]!);
+    }
 
-      // Implement dependency tracking
-      for (final dep in dependencies) {
-        final depParts = dep.split('.');
-        if (depParts.length != 2) continue;
+    // Handle common event name variations
+    if (eventName == 'onChange' &&
+        _eventHandlers[viewId]!.containsKey('onValueChange')) {
+      return _adaptHandlerWithParams(_eventHandlers[viewId]!['onValueChange']!);
+    }
 
-        final depComponentId = depParts[0];
-        final depStateKey = depParts[1];
+    if (eventName == 'onValueChange' &&
+        _eventHandlers[viewId]!.containsKey('onChange')) {
+      return _adaptHandlerWithParams(_eventHandlers[viewId]!['onChange']!);
+    }
 
-        // Check if this dependency has changed since last check
-        if (_lastStateValues.containsKey(depComponentId) &&
-            _lastStateValues[depComponentId]!.containsKey(depStateKey)) {
-          dependenciesChanged = true;
-          break;
+    return null;
+  }
+
+  // CRITICAL FIX: Adapt handler to accept any parameter values
+  Function _adaptHandlerWithParams(Function handler) {
+    return (dynamic param) {
+      try {
+        // Check the number of parameters the handler expects
+        final runtimeType = handler.runtimeType.toString();
+
+        // Handler takes no parameters
+        if (runtimeType.contains('() =>')) {
+          debugPrint('GlobalStateManager: Calling handler with no parameters');
+          return handler();
+        }
+
+        // Handler takes one parameter
+        if (runtimeType.contains('(dynamic) =>')) {
+          debugPrint('GlobalStateManager: Calling handler with parameter');
+          if (param is Map && param.containsKey('value')) {
+            // Extract 'value' field for handlers expecting a simple value
+            return handler(param['value']);
+          } else {
+            // Pass the map or value directly
+            return handler(param);
+          }
+        }
+
+        // Default case - try to call the handler with the parameter
+        // This might still fail if the handler expects specific parameter types
+        debugPrint('GlobalStateManager: Calling handler with raw parameter');
+        return handler(param);
+      } catch (e) {
+        // If all attempts fail, just call the handler without parameters
+        debugPrint(
+            'GlobalStateManager: Error calling handler: $e, trying without parameters');
+        try {
+          return handler();
+        } catch (e2) {
+          debugPrint('GlobalStateManager: Failed to call handler: $e2');
         }
       }
-
-      if (dependenciesChanged) {
-        lastResult = selectorFn();
-      }
-
-      return lastResult as T;
     };
+  }
+
+  // Add state listener
+  void addStateListener(String componentId, String key, Function listener) {
+    if (!_stateListeners.containsKey(componentId)) {
+      _stateListeners[componentId] = {};
+    }
+
+    if (!_stateListeners[componentId]!.containsKey(key)) {
+      _stateListeners[componentId]![key] = [];
+    }
+
+    _stateListeners[componentId]![key]!.add(listener);
+  }
+
+  // Remove state listener
+  void removeStateListener(String componentId, String key, Function listener) {
+    if (!_stateListeners.containsKey(componentId) ||
+        !_stateListeners[componentId]!.containsKey(key)) {
+      return;
+    }
+
+    _stateListeners[componentId]![key]!.remove(listener);
+  }
+
+  // Notify state listeners
+  void _notifyStateListeners(String componentId, String key, dynamic value) {
+    if (!_stateListeners.containsKey(componentId) ||
+        !_stateListeners[componentId]!.containsKey(key)) {
+      return;
+    }
+
+    for (final listener in _stateListeners[componentId]![key]!) {
+      try {
+        listener(value);
+      } catch (e) {
+        debugPrint('GlobalStateManager: Error in state listener: $e');
+      }
+    }
+  }
+
+  // Compare dependencies for memo
+  bool _areDependenciesEqual(List<dynamic>? a, List<dynamic>? b) {
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+
+    return true;
   }
 }
 
-// Helper class for storing memoized values with dependency tracking
-class _MemoizedValue {
-  final dynamic value;
-  final Set<String> dependencies;
-  bool isValid;
+/// Class for storing memoized data with dependencies
+class _MemoData<T> {
+  final T value;
+  final List<dynamic> dependencies;
 
-  _MemoizedValue({
-    required this.value,
-    required this.dependencies,
-    this.isValid = true,
-  });
+  _MemoData(this.value, this.dependencies);
 }
