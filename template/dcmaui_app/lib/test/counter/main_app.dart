@@ -10,7 +10,7 @@ class MainApp extends Component {
   @override
   VNode buildRender() {
     // CRITICAL FIX: Add extensive debug output
-    debugPrint('MainApp: Building render with counter=${state["counter"]}');
+    debugPrint('MainApp: Building render with counter=${counter.value}');
 
     // Return a simple UI to verify rendering is working
     return DCSafeAreaView(
@@ -40,7 +40,7 @@ class MainApp extends Component {
                 boxSize: 50,
                 checkedColor: Colors.red,
                 margin: EdgeInsets.all(20))),
-        DCModal(visible: true, closeByBackdrop: true,onShow: () => debugPrint("Showing Modal"),statusBarTranslucent: true,shouldCloseOnOverlayTap: true,animationType: 'slide',children: [
+        DCModal(visible: true, closeByBackdrop: true,onDismiss: () => debugPrint("Modal dismissed"),onShow: () => debugPrint("Showing Modal"),statusBarTranslucent: true,shouldCloseOnOverlayTap: true,animationType: 'slide',children: [
           DCText(text: 'Hello World'),
           DCButton(title: 'Close', onPress: () => print('Close')),
         ]),
@@ -59,7 +59,7 @@ class MainApp extends Component {
             style: DCTextInputStyle(backgroundColor: Colors.green)),
         DCScrollView(),
         DCText(
-          text: 'Counter: ${(state["counter"])}',
+          text: 'Counter: ${(counter.value)}',
           style: DCTextStyle(
             color: Colors.orange,
             fontSize: 24,

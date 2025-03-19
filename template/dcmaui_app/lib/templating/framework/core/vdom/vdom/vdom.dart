@@ -542,18 +542,34 @@ class VDOM {
       return;
     }
 
-    // Render the updated component
-    final newRenderedNode = component.render();
-    _renderedNodes[componentId] = newRenderedNode;
+    try {
+      // CRITICAL FIX: Call componentWillUpdate if implemented
+      if (component.props.containsKey('componentWillUpdate')) {
+        final updateCallback = component.props['componentWillUpdate'];
+        if (updateCallback is Function) {
+          updateCallback(component.props, component.state);
+        }
+      }
 
-    // Debug the update
-    debugPrint('VDOM: Component rendered new node: ${newRenderedNode.type}');
+      // Render the updated component
+      final newRenderedNode = component.render();
+      _renderedNodes[componentId] = newRenderedNode;
 
-    // Critical fix: Ensure stable viewIds between renders
-    nodeToViewId[newRenderedNode.key] = componentId;
+      // Debug the update
+      debugPrint('VDOM: Component rendered new node: ${newRenderedNode.type}');
 
-    // Update the view by properly diffing
-    _diffNodeUpdate(prevRenderedNode, newRenderedNode, componentId);
+      // CRITICAL FIX: Ensure stable viewIds between renders
+      nodeToViewId[newRenderedNode.key] = componentId;
+
+      // Update the view by properly diffing
+      _diffNodeUpdate(prevRenderedNode, newRenderedNode, componentId);
+
+      // CRITICAL FIX: Call componentDidUpdate
+      component.componentDidUpdate(component.props, component.state);
+    } catch (e, stack) {
+      debugPrint('VDOM: Error updating component: $e');
+      debugPrint('Stack trace: $stack');
+    }
   }
 
   /// Handle diffing during state updates
@@ -584,15 +600,6 @@ class VDOM {
 
     // Critical fix: Properly update children
     _diffChildren(oldNode, newNode, viewId);
-  }
-
-  /// Helper method to compare lists for equality
-  bool _areListsEqual(List<dynamic> a, List<dynamic> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
   }
 
   /// Log the VDOM tree (for debugging)

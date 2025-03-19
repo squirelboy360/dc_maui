@@ -59,6 +59,12 @@ class ElementFactory {
       ..['_componentId'] = componentId
       ..['_componentConstructor'] = constructor;
 
+    // CRITICAL FIX: Make sure event handlers are properly set up
+    final eventKeys = props.keys.where((key) => key.startsWith('on')).toList();
+    if (eventKeys.isNotEmpty) {
+      enhancedProps['_eventListeners'] = eventKeys;
+    }
+
     // For debug tracing
     if (kDebugMode) {
       debugPrint(

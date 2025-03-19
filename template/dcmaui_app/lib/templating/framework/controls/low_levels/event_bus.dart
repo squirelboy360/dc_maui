@@ -1,59 +1,51 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-/// Event bus for component system-wide notifications
+/// Simple event bus for component communication
 class ComponentEventBus {
+  // Singleton instance
   static final ComponentEventBus _instance = ComponentEventBus._internal();
   static ComponentEventBus get instance => _instance;
 
+  // Private constructor
   ComponentEventBus._internal();
 
-  // General rebuild notification
-  Function? onRebuild;
+  // Event stream controllers
+  final Map<String, StreamController<dynamic>> _controllers = {};
 
-  // Map of specific event listeners
-  final Map<String, List<Function>> _eventListeners = {};
-
-  /// Notify all listeners of a rebuild event
-  void notifyRebuild() {
-    if (kDebugMode) {
-      print('ComponentEventBus: Notifying rebuild');
+  // Get stream for a specific event
+  Stream<T> on<T>(String eventName) {
+    if (!_controllers.containsKey(eventName)) {
+      _controllers[eventName] = StreamController<T>.broadcast();
     }
-    onRebuild?.call();
+
+    return _controllers[eventName]!.stream as Stream<T>;
   }
 
-  /// Subscribe to a named event
-  void subscribe(String eventName, Function callback) {
-    if (!_eventListeners.containsKey(eventName)) {
-      _eventListeners[eventName] = [];
-    }
-    _eventListeners[eventName]!.add(callback);
-  }
-
-  /// Unsubscribe from a named event
-  void unsubscribe(String eventName, Function callback) {
-    if (_eventListeners.containsKey(eventName)) {
-      _eventListeners[eventName]!.remove(callback);
-    }
-  }
-
-  /// Publish a named event with optional data
+  // Publish an event
   void publish(String eventName, [dynamic data]) {
-    if (kDebugMode) {
-      print('ComponentEventBus: Publishing event $eventName with data: $data');
+    if (_controllers.containsKey(eventName)) {
+      _controllers[eventName]!.add(data);
     }
+  }
 
-    if (_eventListeners.containsKey(eventName)) {
-      for (var listener in _eventListeners[eventName]!) {
-        if (data != null) {
-          if (listener is Function(dynamic)) {
-            listener(data);
-          } else {
-            listener();
-          }
-        } else {
-          listener();
-        }
-      }
+  // Special method for rebuild notifications
+  final StreamController<void> _rebuildController =
+      StreamController<void>.broadcast();
+  Stream<void> get rebuildStream => _rebuildController.stream;
+
+  // Notify that a rebuild is needed
+  void notifyRebuild() {
+    debugPrint('ComponentEventBus: Notifying rebuild');
+    _rebuildController.add(null);
+  }
+
+  // Dispose controllers
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.close();
     }
+    _controllers.clear();
+    _rebuildController.close();
   }
 }
