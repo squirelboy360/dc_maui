@@ -1,30 +1,28 @@
-import 'package:dc_test/templating/framework/core/main/abstractions/hooks/component_hooks.dart';
-import 'package:dc_test/templating/framework/core/main/abstractions/hooks/use_state.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/utility/performance_monitor.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/state_controller.dart';
 import 'package:flutter/foundation.dart';
 
 /// Base Component class for function-like components
 abstract class Component {
-  // Internal state
-  Map<String, dynamic> _state = {};
+  // Internal properties - only props and lifecycle, no state management
   Map<String, dynamic> _props = {};
   bool _mounted = false;
   Function? _updateCallback;
   String? _componentId;
-  ComponentHooks? _hooks;
+
+  // Internal state storage - no need for external access
+  final Map<String, dynamic> _state = {};
+  final Map<String, StateValue> _stateHooks = {};
 
   // Performance tracking
   static bool showPerformanceWarnings = kDebugMode;
   static bool _performanceTrackingEnabled = false;
 
-  // Getter for state (read-only)
-  Map<String, dynamic> get state => Map.unmodifiable(_state);
-
   // Getter for props (read-only)
   Map<String, dynamic> get props => Map.unmodifiable(_props);
 
-  // Modified: Add a setter for props to address the analyzer error
+  // Setter for props
   set props(Map<String, dynamic> newProps) {
     _props = Map<String, dynamic>.from(newProps);
   }
@@ -46,72 +44,73 @@ abstract class Component {
     _props = Map<String, dynamic>.from(props);
   }
 
-  // Initialize component state
-  void initializeState(Map<String, dynamic> initialState) {
-    _state = Map<String, dynamic>.from(initialState);
-
-    // Initialize component ID if needed
-    _componentId ??= 'component_${identityHashCode(this)}';
-
-    // Initialize hooks system if not already
-    _hooks ??= ComponentHooks(this);
-    _hooks!.syncStateToComponent();
-  }
-
-  // Update component state
+  // Update state and trigger re-render
   void setState(Map<String, dynamic> newState) {
-    if (!_mounted) {
-      debugPrint('WARNING: setState called on unmounted component');
-      return;
-    }
+    bool hasChanges = false;
 
-    // Make a copy of the current state for comparison
-    final oldState = Map<String, dynamic>.from(_state);
+    debugPrint('Component: setState called with $newState');
 
-    // Update state with new values
-    _state.addAll(newState);
-
-    // Check if state actually changed
-    bool stateChanged = false;
+    // Update state values
     for (final key in newState.keys) {
-      if (oldState[key] != newState[key]) {
-        stateChanged = true;
-        break;
+      final oldValue = _state[key];
+      final newValue = newState[key];
+
+      if (oldValue != newValue) {
+        debugPrint(
+            'Component $componentId: State "$key" changing from $oldValue to $newValue');
+        _state[key] = newValue;
+
+        // Update any associated state hooks
+        if (_stateHooks.containsKey(key)) {
+          _stateHooks[key]!.updateCurrentValue(newValue);
+        }
+
+        hasChanges = true;
       }
     }
 
-    // CRITICAL FIX: Only trigger update if state actually changed
-    if (stateChanged) {
+    // Only trigger update if something actually changed
+    if (hasChanges && _updateCallback != null) {
       debugPrint(
-          'Component: State changed, triggering update for $componentId');
-
-      // Call update callback to trigger re-render
-      if (_updateCallback != null) {
-        _updateCallback!();
-      }
+          'Component $componentId: Changes detected, triggering update...');
+      // CRITICAL FIX: Use direct callback for VDOM updates, not microtask
+      _updateCallback!();
+    } else if (!hasChanges) {
+      debugPrint(
+          'Component $componentId: No changes detected, skipping update');
+    } else if (_updateCallback == null) {
+      debugPrint(
+          'Component $componentId: WARNING - No update callback registered!');
     }
   }
 
-  // Create a new hook
-  UseState<T> useState<T>(String name, T initialValue) {
-    _hooks ??= ComponentHooks(this);
-    return _hooks!.useState<T>(name, initialValue);
-  }
-
-  // Get initial state - override in subclasses
-  Map<String, dynamic> getInitialState() {
-    return {};
-  }
-
-  // Clean up component resources
-  void dispose() {
-    if (_hooks != null) {
-      _hooks!.dispose();
+  // React-like useState hook - the ONLY way to use state
+  StateValue<T> useState<T>(String name, T initialValue) {
+    // If we already have this state hook, return it
+    if (_stateHooks.containsKey(name)) {
+      return _stateHooks[name] as StateValue<T>;
     }
+
+    // Initialize state if needed
+    if (!_state.containsKey(name)) {
+      _state[name] = initialValue;
+    }
+
+    // Create the state controller
+    final controller = StateValue<T>(
+      name: name,
+      initialValue: _state[name] as T,
+      componentId: componentId,
+      setState: setState,
+    );
+
+    // Store for future reference
+    _stateHooks[name] = controller;
+
+    return controller;
   }
 
   // Lifecycle methods - can be overridden in subclasses
-  void componentWillMount() {}
   void componentDidMount() {}
   void componentWillUnmount() {}
   void componentDidUpdate(

@@ -2,12 +2,16 @@ import 'package:dc_test/templating/framework/controls/text.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
-import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
+import 'package:dc_test/templating/framework/core/main/interface/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/painting.dart' hide TextStyle;
 
 /// A diagnostic component that shows issues and status
 class DiagnosticComponent extends Component {
+  // Internal state tracking
+  List<String> _messages = [];
+  bool _nativeUIReady = false;
+
   @override
   Map<String, dynamic> getInitialState() {
     return {
@@ -22,23 +26,34 @@ class DiagnosticComponent extends Component {
 
     // Listen for events from the native side
     MainViewCoordinatorInterface.eventStream.listen((event) {
-      final messages = List<String>.from(state['messages']);
+      final List<String> newMessages = List<String>.from(_messages);
 
       // Special handling for native UI ready event
       if (event['viewId'] == 'system' &&
           event['eventName'] == 'nativeUIReady') {
-        setState({'nativeUIReady': true});
+        _nativeUIReady = true;
+
+        // Trigger update if needed
+        if (updateCallback != null) {
+          updateCallback!();
+        }
       }
 
       // Add the event to our messages
-      messages.add('Event: ${event['eventName']} from ${event['viewId']}');
+      newMessages.add('Event: ${event['eventName']} from ${event['viewId']}');
 
       // Keep only the latest 10 messages
-      if (messages.length > 10) {
-        messages.removeAt(0);
+      if (newMessages.length > 10) {
+        newMessages.removeAt(0);
       }
 
-      setState({'messages': messages});
+      // Update messages state
+      _messages = newMessages;
+
+      // Trigger update if needed
+      if (updateCallback != null) {
+        updateCallback!();
+      }
     });
 
     // Log diagnostic information periodically
@@ -48,16 +63,21 @@ class DiagnosticComponent extends Component {
   }
 
   void _logStatus() {
-    final messages = List<String>.from(state['messages']);
-    messages.add('Status check: Native UI ready: ${state['nativeUIReady']}');
-    setState({'messages': messages});
+    final newMessages = List<String>.from(_messages);
+    newMessages.add('Status check: Native UI ready: $_nativeUIReady');
+    _messages = newMessages;
+
+    // Trigger update if needed
+    if (updateCallback != null) {
+      updateCallback!();
+    }
   }
 
   // Implementation of the abstract buildRender method
   @override
   VNode buildRender() {
     // Create a list of text controls (not VNodes) for all messages
-    final List<Control> messageViews = (state['messages'] as List<String>)
+    final List<Control> messageViews = _messages
         .map<Control>((message) => DCText(
               text: message,
               style: DCTextStyle(

@@ -1,11 +1,11 @@
-import 'package:dc_test/templating/framework/core/main/abstractions/utility/state_abstraction.dart';
-import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
+import 'package:dc_test/templating/framework/controls/low_levels/state_controller.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/low_levels/state_abstraction.dart';
+import 'package:dc_test/templating/framework/core/main/interface/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
 import 'package:flutter/foundation.dart';
 
 /// Unified Virtual DOM implementation that handles both native views and components
-/// This implementation combines the functionality of the basic VDOM and ComponentVDOM
 class VDOM {
   // Previous render tree for diffing
   VNode? _previousTree;
@@ -20,6 +20,9 @@ class VDOM {
   final Map<String, Component> _components = {};
   final Map<String, VNode> _renderedNodes = {};
   final Map<String, VNode> _viewIdToComponentNode = {};
+
+  // Store component states
+  final Map<String, Map<String, dynamic>> _componentStates = {};
 
   /// Get a stable view ID for a node
   String getViewId(VNode node) {
@@ -156,10 +159,21 @@ class VDOM {
         final oldChild = oldChildren[oldIndex];
 
         processedIndices.add(oldIndex);
-        _diff(oldChild, newChild);
+
+        // CRITICAL FIX: Actually reuse the view ID here without recreating the view
+        final viewId = getViewId(oldChild);
+        nodeToViewId["${newChild.type}_${newChild.key}"] = viewId;
+
+        debugPrint(
+            'VDOM: Reusing view $viewId by key for child ${newChild.type} with key ${newChild.key}');
+
+        // Update props if needed but AVOID recreating the view
+        if (!_arePropsEqual(oldChild.props, newChild.props)) {
+          updateView(oldChild, newChild, viewId);
+        }
 
         // Add to updated child list
-        updatedChildViewIds.add(getViewId(newChild));
+        updatedChildViewIds.add(viewId);
       } else {
         // New child - mount it
         _mount(newChild);
@@ -167,19 +181,7 @@ class VDOM {
       }
     }
 
-    // Second pass: Remove children that don't exist in new tree
-    for (int oldIndex = 0; oldIndex < oldChildren.length; oldIndex++) {
-      if (!processedIndices.contains(oldIndex)) {
-        final oldChild = oldChildren[oldIndex];
-        final oldChildViewId = getViewId(oldChild);
-
-        debugPrint(
-            'VDOM: Removing child ${oldChild.type} with ID $oldChildViewId');
-        deleteView(oldChildViewId);
-      }
-    }
-
-    // Critical fix: Always update children order in parent
+    // CRITICAL FIX: Just let the new child list replace the old one completely
     setChildren(parentViewId, updatedChildViewIds);
   }
 
@@ -208,7 +210,7 @@ class VDOM {
   }
 
   /// Get a component instance from a node
-  Component? _getComponentInstance(VNode node) {
+  dynamic _getComponentInstance(VNode node) {
     final componentId = _getComponentId(node);
     return _components[componentId];
   }
@@ -216,6 +218,58 @@ class VDOM {
   /// Get the component ID from a node
   String _getComponentId(VNode node) {
     return node.props['_componentId'] as String;
+  }
+
+  // ========== STATE MANAGEMENT ==========
+
+  /// Get component state
+  Map<String, dynamic> getComponentState(String componentId) {
+    return _componentStates[componentId] ?? {};
+  }
+
+  /// Set component state
+  void setComponentState(String componentId, Map<String, dynamic> newState) {
+    if (!_componentStates.containsKey(componentId)) {
+      _componentStates[componentId] = {};
+    }
+
+    // Update state values
+    bool stateChanged = false;
+    for (final key in newState.keys) {
+      if (_componentStates[componentId]![key] != newState[key]) {
+        _componentStates[componentId]![key] = newState[key];
+        stateChanged = true;
+      }
+    }
+
+    // If state changed, trigger update
+    if (stateChanged) {
+      debugPrint(
+          'VDOM: State changed for component $componentId, triggering update');
+
+      // Update component's StateValue controllers to reflect new values
+      final component = _components[componentId];
+      if (component is Component) {
+        // Force state synchronization before render
+        for (final key in newState.keys) {
+          final field = findComponentStateField(component, key);
+          if (field != null && field is StateValue) {
+            debugPrint(
+                'VDOM: Updating StateValue for $key to ${newState[key]}');
+            field.updateCurrentValue(newState[key]);
+          }
+        }
+      }
+
+      _handleComponentUpdate(componentId);
+    }
+  }
+
+  // Helper to find a StateValue field in a component by its name
+  dynamic findComponentStateField(Component component, String fieldName) {
+    // Reflection isn't easy in Dart, so this is a simplification
+    // In a real implementation, you'd need to use mirrors or another approach
+    return null;
   }
 
   // ========== VIEW MANAGEMENT METHODS ==========
@@ -299,8 +353,9 @@ class VDOM {
   /// Create a component view
   void _createComponentView(VNode node, String viewId) {
     try {
+      // Get the component constructor function
       final componentConstructor =
-          node.props['_componentConstructor'] as Component Function();
+          node.props['_componentConstructor'] as Function;
       final componentInstance = componentConstructor();
       final componentId = viewId;
 
@@ -316,64 +371,67 @@ class VDOM {
         ..remove('_componentId')
         ..remove('_componentConstructor');
 
-      componentInstance.props = cleanProps;
+      // Set component props
+      if (componentInstance is Component) {
+        componentInstance.props = cleanProps;
 
-      // Set up component's update mechanism
-      componentInstance.updateCallback = () {
-        _handleComponentUpdate(componentId);
-      };
+        // Set up component's update mechanism
+        componentInstance.updateCallback = () {
+          _handleComponentUpdate(componentId);
+        };
 
-      // Initialize state with values from getInitialState
-      componentInstance.initializeState(componentInstance.getInitialState());
+        // Initialize empty state instead of trying to call getInitialState
+        _componentStates[componentId] = {};
 
-      // Call lifecycle methods
-      componentInstance.componentWillMount();
-      componentInstance.mounted = true;
+        // Call lifecycle methods - componentDidMount instead of componentWillMount
+        componentInstance.mounted = true;
 
-      // Render the component
-      debugPrint('VDOM: Rendering component ${componentInstance.runtimeType}');
-      final renderedNode = componentInstance.render();
-      _renderedNodes[componentId] = renderedNode;
-
-      debugPrint(
-          'VDOM: Component $componentId rendered node of type ${renderedNode.type} with key ${renderedNode.key}');
-
-      // Handle cases where component returns another component vs. a native view
-      if (_isComponent(renderedNode)) {
+        // Render the component
         debugPrint(
-            'VDOM: Component returned another component - creating nested component view');
+            'VDOM: Rendering component ${componentInstance.runtimeType}');
+        final renderedNode = componentInstance.render();
+        _renderedNodes[componentId] = renderedNode;
 
-        // Create the nested component with its own view ID
-        final nestedViewId = getViewId(renderedNode);
-        _createComponentView(renderedNode, nestedViewId);
-
-        // Set parent-child relationship to ensure proper view hierarchy
         debugPrint(
-            'VDOM: Setting parent-child relationship: $viewId -> $nestedViewId');
-        setChildren(viewId, [nestedViewId]);
-      } else {
-        // Component returned a regular view - create it directly
-        debugPrint(
-            'VDOM: Component returned a regular view - creating with ID $viewId');
-        MainViewCoordinatorInterface.createView(
-            viewId, renderedNode.type, renderedNode.props);
+            'VDOM: Component $componentId rendered node of type ${renderedNode.type} with key ${renderedNode.key}');
 
-        // Process children
-        final childViewIds = <String>[];
-        for (var child in renderedNode.children) {
-          final childViewId = getViewId(child);
-          createView(child, childViewId);
-          childViewIds.add(childViewId);
+        // Handle cases where component returns another component vs. a native view
+        if (_isComponent(renderedNode)) {
+          debugPrint(
+              'VDOM: Component returned another component - creating nested component view');
+
+          // Create the nested component with its own view ID
+          final nestedViewId = getViewId(renderedNode);
+          _createComponentView(renderedNode, nestedViewId);
+
+          // Set parent-child relationship to ensure proper view hierarchy
+          debugPrint(
+              'VDOM: Setting parent-child relationship: $viewId -> $nestedViewId');
+          setChildren(viewId, [nestedViewId]);
+        } else {
+          // Component returned a regular view - create it directly
+          debugPrint(
+              'VDOM: Component returned a regular view - creating with ID $viewId');
+          MainViewCoordinatorInterface.createView(
+              viewId, renderedNode.type, renderedNode.props);
+
+          // Process children
+          final childViewIds = <String>[];
+          for (var child in renderedNode.children) {
+            final childViewId = getViewId(child);
+            createView(child, childViewId);
+            childViewIds.add(childViewId);
+          }
+
+          // Set children relationship
+          if (childViewIds.isNotEmpty) {
+            setChildren(viewId, childViewIds);
+          }
         }
 
-        // Set children relationship
-        if (childViewIds.isNotEmpty) {
-          setChildren(viewId, childViewIds);
-        }
+        // Call didMount callback
+        componentInstance.componentDidMount();
       }
-
-      // Call didMount callback
-      componentInstance.componentDidMount();
     } catch (e, stackTrace) {
       debugPrint('VDOM: ERROR in _createComponentView - $e');
       debugPrint('Stack trace: $stackTrace');
@@ -418,21 +476,35 @@ class VDOM {
       });
 
       // Update the view with clean props
+      debugPrint(
+          'VDOM: Sending update for view $viewId with props: $cleanProps');
       MainViewCoordinatorInterface.updateView(viewId, cleanProps);
 
-      // Handle event handler changes
+      // CRITICAL FIX: Only update event handlers if they actually changed
       final handlersToRemove = oldEventHandlers
           .where((e) => !newEventHandlers.containsKey(e))
           .toList();
 
       if (handlersToRemove.isNotEmpty) {
+        debugPrint('VDOM: Removing event handlers: $handlersToRemove');
         MainViewCoordinatorInterface.removeEventListeners(
             viewId, handlersToRemove);
       }
 
-      if (newEventHandlers.isNotEmpty) {
-        MainViewCoordinatorInterface.addEventListeners(
-            viewId, newEventHandlers.keys.toList());
+      // Register any new handlers
+      final handlersToAdd = newEventHandlers.keys
+          .where((key) => !oldEventHandlers.contains(key))
+          .toList();
+
+      if (handlersToAdd.isNotEmpty) {
+        debugPrint('VDOM: Adding event handlers: $handlersToAdd');
+        MainViewCoordinatorInterface.addEventListeners(viewId, handlersToAdd);
+
+        // Register new handlers with global state manager
+        for (final key in handlersToAdd) {
+          GlobalStateManager.instance
+              .registerEventHandler(viewId, key, newEventHandlers[key]!);
+        }
       }
     } else {
       // Component type changed, replace the entire view
@@ -455,32 +527,37 @@ class VDOM {
       ..remove('_componentId')
       ..remove('_componentConstructor');
 
-    // Check if we should update
-    if (!component.shouldComponentUpdate(newProps, component.state)) {
-      return;
-    }
+    if (component is Component) {
+      // Get current state
+      final currentState = _componentStates[viewId] ?? {};
 
-    // Update props and trigger lifecycle
-    final prevProps = Map<String, dynamic>.from(component.props);
-    component.props = newProps;
+      // Check if we should update
+      if (!component.shouldComponentUpdate(newProps, currentState)) {
+        return;
+      }
 
-    // Get previous rendered node
-    final prevRenderedNode = _renderedNodes[viewId];
-    if (prevRenderedNode == null) {
-      debugPrint('VDOM: Warning: Previous rendered node not found');
-      return;
-    }
+      // Update props and trigger lifecycle
+      final prevProps = Map<String, dynamic>.from(component.props);
+      component.props = newProps;
 
-    // Re-render component
-    final newRenderedNode = component.render();
-    _renderedNodes[viewId] = newRenderedNode;
+      // Get previous rendered node
+      final prevRenderedNode = _renderedNodes[viewId];
+      if (prevRenderedNode == null) {
+        debugPrint('VDOM: Warning: Previous rendered node not found');
+        return;
+      }
 
-    // Update the rendered view
-    _diffNodeUpdate(prevRenderedNode, newRenderedNode, viewId);
+      // Re-render component
+      final newRenderedNode = component.render();
+      _renderedNodes[viewId] = newRenderedNode;
 
-    // Call lifecycle method
-    if (component.mounted) {
-      component.componentDidUpdate(prevProps, component.state);
+      // Update the rendered view
+      _diffNodeUpdate(prevRenderedNode, newRenderedNode, viewId);
+
+      // Call lifecycle method
+      if (component.mounted) {
+        component.componentDidUpdate(prevProps, currentState);
+      }
     }
   }
 
@@ -498,13 +575,14 @@ class VDOM {
   /// Delete a component view
   void _deleteComponentView(VNode node, String viewId) {
     final component = _getComponentInstance(node);
-    if (component != null) {
+    if (component != null && component is Component) {
       // Call lifecycle method directly
       component.componentWillUnmount();
       component.mounted = false;
 
-      // Remove component
+      // Remove component and state
       _components.remove(_getComponentId(node));
+      _componentStates.remove(viewId);
 
       // Get the rendered node
       final renderedNode = _renderedNodes.remove(viewId);
@@ -530,7 +608,7 @@ class VDOM {
   /// Handle component update when setState is called
   void _handleComponentUpdate(String componentId) {
     final component = _components[componentId];
-    if (component == null || !component.mounted) {
+    if (component == null || (component is Component && !component.mounted)) {
       debugPrint(
           'VDOM: Cannot update component $componentId - not found or unmounted');
       return;
@@ -547,34 +625,56 @@ class VDOM {
     }
 
     try {
-      // CRITICAL FIX: Call componentWillUpdate if implemented
-      if (component.props.containsKey('componentWillUpdate')) {
-        final updateCallback = component.props['componentWillUpdate'];
-        if (updateCallback is Function) {
-          updateCallback(component.props, component.state);
-        }
+      if (component is Component) {
+        // Re-render component
+        final newRenderedNode = component.render();
+
+        // CRITICAL FIX: Preserve view IDs by transferring them before diffing
+        _preserveViewIds(prevRenderedNode, newRenderedNode);
+
+        // Store the new rendered node
+        _renderedNodes[componentId] = newRenderedNode;
+
+        // Debug the update with more details
+        debugPrint(
+            'VDOM: Component $componentId rendered new node: ${newRenderedNode.type}');
+
+        // CRITICAL FIX: Ensure stable viewIds between renders
+        nodeToViewId[newRenderedNode.key] = componentId;
+
+        // Update the view by properly diffing
+        _diffNodeUpdate(prevRenderedNode, newRenderedNode, componentId);
+
+        // Current state
+        final currentState = _componentStates[componentId] ?? {};
+
+        // CRITICAL FIX: Call componentDidUpdate
+        component.componentDidUpdate(component.props, currentState);
       }
-
-      // CRITICAL FIX: Force re-render the component
-      final newRenderedNode = component.render();
-      _renderedNodes[componentId] = newRenderedNode;
-
-      // Debug the update with more details
-      debugPrint(
-          'VDOM: Component $componentId rendered new node: ${newRenderedNode.type}');
-      debugPrint('VDOM: Component state is now: ${component.state}');
-
-      // CRITICAL FIX: Ensure stable viewIds between renders
-      nodeToViewId[newRenderedNode.key] = componentId;
-
-      // Update the view by properly diffing
-      _diffNodeUpdate(prevRenderedNode, newRenderedNode, componentId);
-
-      // CRITICAL FIX: Call componentDidUpdate
-      component.componentDidUpdate(component.props, component.state);
     } catch (e, stack) {
       debugPrint('VDOM: Error updating component: $e');
       debugPrint('Stack trace: $stack');
+    }
+  }
+
+  /// CRITICAL FIX: Preserve view IDs between renders to prevent stacking
+  void _preserveViewIds(VNode oldNode, VNode newNode) {
+    // Transfer the key mapping to ensure same views are used
+    final oldKey = "${oldNode.type}_${oldNode.key}";
+    final newKey = "${newNode.type}_${newNode.key}";
+
+    if (nodeToViewId.containsKey(oldKey)) {
+      final viewId = nodeToViewId[oldKey]!;
+      nodeToViewId[newKey] = viewId;
+      debugPrint('VDOM: Preserving view ID $viewId from $oldKey to $newKey');
+    }
+
+    // Recursively handle children
+    // Only match children by index if count matches
+    if (oldNode.children.length == newNode.children.length) {
+      for (int i = 0; i < oldNode.children.length; i++) {
+        _preserveViewIds(oldNode.children[i], newNode.children[i]);
+      }
     }
   }
 
@@ -582,9 +682,14 @@ class VDOM {
   void _diffNodeUpdate(VNode oldNode, VNode newNode, String viewId) {
     debugPrint('VDOM: Diffing node update for $viewId');
 
-    // Critical fix: Ensure components preserve viewIds
-    if (oldNode.key != newNode.key) {
-      nodeToViewId[newNode.key] = viewId;
+    // CRITICAL FIX: Ensure keymapping is preserved properly
+    final oldKey = "${oldNode.type}_${oldNode.key}";
+    final newKey = "${newNode.type}_${newNode.key}";
+
+    if (nodeToViewId.containsKey(oldKey)) {
+      // Transfer ID mapping to ensure same view ID is used
+      nodeToViewId[newKey] = viewId;
+      debugPrint('VDOM: Transferring view ID $viewId from $oldKey to $newKey');
     }
 
     // If types are different but IDs must be preserved
@@ -592,9 +697,8 @@ class VDOM {
       debugPrint(
           'VDOM: Node type changed from ${oldNode.type} to ${newNode.type} but keeping viewId: $viewId');
 
-      // Actually replace the view while preserving ID
-      MainViewCoordinatorInterface.deleteView(viewId);
-      createView(newNode, viewId);
+      // Use updateView which will handle type changes appropriately
+      updateView(oldNode, newNode, viewId);
       return;
     }
 
@@ -604,7 +708,7 @@ class VDOM {
       updateView(oldNode, newNode, viewId);
     }
 
-    // Critical fix: Properly update children
+    // Correctly diff children without recreation
     _diffChildren(oldNode, newNode, viewId);
   }
 

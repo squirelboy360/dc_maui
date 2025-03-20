@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/core/main/abstractions/utility/state_abstraction.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/hooks/low_levels/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 
 /// Hook for memoized values that only recompute when dependencies change

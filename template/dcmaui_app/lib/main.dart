@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/core/main/abstractions/bootstrap.dart';
+import 'package:dc_test/templating/framework/core/main/abstractions/utility/bootstrap.dart';
 import 'package:dc_test/test/counter/main_app.dart';
 import 'package:flutter/material.dart';
 

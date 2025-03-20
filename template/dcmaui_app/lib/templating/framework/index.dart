@@ -1,10 +1,10 @@
-import 'package:dc_test/templating/framework/core/main/main_view_coordinator.dart';
+import 'package:dc_test/templating/framework/core/main/interface/main_view_coordinator.dart';
 
 /// Main entry point for the DC MAUI Framework
 /// Exposes all components and utilities
 
 // Core system
-export 'core/main/main_view_coordinator.dart';
+export 'core/main/interface/main_view_coordinator.dart';
 export 'core/vdom/vdom/vdom.dart';
 
 // Controls/Components
