@@ -722,4 +722,359 @@ class VDOM {
       _logTree(child, depth + 1);
     }
   }
+
+  /// Reconcile children using a key-based algorithm similar to React
+  Future<void> _reconcileChildren(String parentViewId, List<VNode> oldChildren,
+      List<VNode> newChildren) async {
+    // Step 1: Create maps for O(1) lookup of children by key
+    final oldChildrenMap = {for (var child in oldChildren) child.key: child};
+    final newChildrenMap = {for (var child in newChildren) child.key: child};
+
+    // Step 2: Track which old children have been processed
+    final oldChildrenProcessed = {
+      for (var child in oldChildren) child.key: false
+    };
+
+    // Step 3: Create a list to store the updated children view IDs in the correct order
+    final updatedChildrenViewIds = <String>[];
+
+    // Step 4: Process new children
+    for (final newChild in newChildren) {
+      if (oldChildrenMap.containsKey(newChild.key)) {
+        // The child exists in both old and new trees - update it
+        final oldChild = oldChildrenMap[newChild.key]!;
+        final childViewId = nodeToViewId[oldChild.key];
+
+        if (childViewId != null) {
+          // Mark as processed
+          oldChildrenProcessed[oldChild.key] = true;
+
+          // Update the child node
+          await _updateTree(oldChild, newChild);
+
+          // Add to the updated children list
+          updatedChildrenViewIds.add(childViewId);
+        } else {
+          // View ID not found, need to mount
+          final newViewId =
+              await _mountNode(newChild, parentViewId: parentViewId);
+          if (newViewId != null) {
+            updatedChildrenViewIds.add(newViewId);
+          }
+        }
+      } else {
+        // This is a new child - mount it
+        final newViewId =
+            await _mountNode(newChild, parentViewId: parentViewId);
+        if (newViewId != null) {
+          updatedChildrenViewIds.add(newViewId);
+        }
+      }
+    }
+
+    // Step 5: Unmount children that don't exist in the new tree
+    for (final entry in oldChildrenProcessed.entries) {
+      if (!entry.value && !newChildrenMap.containsKey(entry.key)) {
+        final oldChild = oldChildrenMap[entry.key]!;
+        await _unmountNode(oldChild);
+      }
+    }
+
+    // Step 6: Update the children order in the parent
+    if (updatedChildrenViewIds.isNotEmpty) {
+      await _setChildren(parentViewId, updatedChildrenViewIds);
+    }
+  }
+
+  /// Update a regular view node
+  Future<void> _updateRegularNode(VNode oldNode, VNode newNode) async {
+    final viewId = nodeToViewId[oldNode.key];
+    if (viewId == null) {
+      debugPrint('VDOM: View ID not found for ${oldNode.key}, remounting');
+      await _mountNode(newNode,
+          parentViewId: _childToParent[nodeToViewId[oldNode.key]]);
+      return;
+    }
+
+    // Transfer the view ID to the new node
+    nodeToViewId[newNode.key] = viewId;
+
+    // Check if we actually need to update the view properties
+    bool propsChanged = _propsChanged(oldNode.props, newNode.props);
+
+    // Only update the native view if props have changed
+    if (propsChanged) {
+      debugPrint('VDOM: Updating native view $viewId (${newNode.type})');
+      await MainViewCoordinatorInterface.updateView(viewId, newNode.props);
+    } else {
+      debugPrint('VDOM: Props unchanged for $viewId, skipping update');
+    }
+
+    // Diff children using a more sophisticated algorithm (similar to React's reconciliation)
+    await _reconcileChildren(viewId, oldNode.children, newNode.children);
+  }
+
+  /// Helper to check if props have changed between old and new nodes
+  bool _propsChanged(
+      Map<String, dynamic> oldProps, Map<String, dynamic> newProps) {
+    // If key counts differ, props have changed
+    if (oldProps.length != newProps.length) return true;
+
+    // Special case: if there's a 'key' prop that's different, ignore it for comparison
+    // Since we generate sequential keys for nodes based on renders
+    final oldPropsForCompare = Map<String, dynamic>.from(oldProps);
+    final newPropsForCompare = Map<String, dynamic>.from(newProps);
+
+    // Remove keys that we know will differ but don't affect rendering
+    oldPropsForCompare.remove('key');
+    newPropsForCompare.remove('key');
+
+    // Compare remaining props
+    for (final key in oldPropsForCompare.keys) {
+      if (!newPropsForCompare.containsKey(key) ||
+          !_valuesEqual(oldPropsForCompare[key], newPropsForCompare[key])) {
+        return true;
+      }
+    }
+
+    // Check if new props has keys old props doesn't
+    for (final key in newPropsForCompare.keys) {
+      if (!oldPropsForCompare.containsKey(key)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Deep equality check for prop values
+  bool _valuesEqual(dynamic value1, dynamic value2) {
+    // Handles null case
+    if (value1 == null && value2 == null) return true;
+    if (value1 == null || value2 == null) return false;
+
+    // Handle maps (style objects etc)
+    if (value1 is Map && value2 is Map) {
+      if (value1.length != value2.length) return false;
+
+      for (final key in value1.keys) {
+        if (!value2.containsKey(key) ||
+            !_valuesEqual(value1[key], value2[key])) {
+          return false;
+        }
+      }
+
+      for (final key in value2.keys) {
+        if (!value1.containsKey(key)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    // Handle lists
+    if (value1 is List && value2 is List) {
+      if (value1.length != value2.length) return false;
+
+      for (int i = 0; i < value1.length; i++) {
+        if (!_valuesEqual(value1[i], value2[i])) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    // Default comparison
+    return value1 == value2;
+  }
+
+  /// Mount a single node and its children
+  Future<String?> _mountNode(VNode node, {String? parentViewId}) async {
+    debugPrint('VDOM: Mounting node ${node.type} with key ${node.key}');
+
+    String? viewId;
+
+    // Handle component nodes (which need special processing)
+    if (_isComponentNode(node)) {
+      viewId = await _mountComponentNode(node, parentViewId);
+    } else {
+      // Regular view node
+      viewId = _generateViewId(node.key);
+      nodeToViewId[node.key] = viewId;
+
+      // Create the native view
+      final success = await _createNativeView(viewId, node);
+      if (!success) {
+        debugPrint('VDOM: Failed to create native view for ${node.type}');
+        return null;
+      }
+
+      // If we have a parent, attach this view to it
+      if (parentViewId != null) {
+        await _attachView(parentViewId, viewId);
+        _childToParent[viewId] = parentViewId;
+      }
+
+      // Process children
+      if (node.children.isNotEmpty) {
+        final childrenViewIds = <String>[];
+
+        for (final child in node.children) {
+          final childViewId = await _mountNode(child, parentViewId: viewId);
+          if (childViewId != null) {
+            childrenViewIds.add(childViewId);
+          }
+        }
+
+        // Set the children in the correct order
+        if (childrenViewIds.isNotEmpty) {
+          await _setChildren(viewId, childrenViewIds);
+        }
+      }
+    }
+
+    return viewId;
+  }
+
+  /// Update an existing tree by comparing old and new nodes
+  Future<void> _updateTree(VNode oldNode, VNode newNode) async {
+    // If keys are different, we need to remount the entire subtree
+    if (oldNode.key != newNode.key || oldNode.type != newNode.type) {
+      debugPrint('VDOM: Keys or types different, remounting subtree');
+      await _unmountNode(oldNode);
+      await _mountNode(newNode,
+          parentViewId: _childToParent[nodeToViewId[oldNode.key]]);
+      return;
+    }
+
+    // Update the node (different logic for components vs regular views)
+    if (_isComponentNode(newNode)) {
+      await _updateComponentNode(oldNode, newNode);
+    } else {
+      await _updateRegularNode(oldNode, newNode);
+    }
+  }
+
+  /// Set children relationship on the native side
+  Future<bool> _setChildren(String parentViewId, List<String> childIds) async {
+    try {
+      return await MainViewCoordinatorInterface.setChildren(
+          parentViewId, childIds);
+    } catch (e) {
+      debugPrint('VDOM: Error setting children: $e');
+      return false;
+    }
+  }
+
+  /// Unmount a node and its children
+  Future<void> _unmountNode(VNode node) async {
+    // Skip if node doesn't have a view ID
+    final viewId = nodeToViewId[node.key];
+    if (viewId == null) {
+      return;
+    }
+
+    // For component nodes, trigger unmount lifecycle and clean up
+    if (_isComponentNode(node)) {
+      final component = _components[node.key];
+      if (component != null) {
+        component.componentWillUnmount();
+        _components.remove(node.key);
+        _renderedNodes.remove(node.key);
+      }
+
+      // Find the actual rendered view of this component and unmount that
+      final renderedNode = _renderedNodes[node.key];
+      if (renderedNode != null) {
+        await _unmountNode(renderedNode);
+      }
+    } else {
+      // For regular nodes, delete the native view (which cascades to children)
+      await MainViewCoordinatorInterface.deleteView(viewId);
+
+      // Clean up our tracking maps
+      nodeToViewId.remove(node.key);
+      _childToParent.remove(viewId);
+
+      // We don't need to explicitly unmount children here as the native side
+      // will handle cascade deletion, but we should clean up our maps
+      for (final child in node.children) {
+        await _unmountNode(child);
+      }
+    }
+  }
+
+  // Track parent-child relationships to maintain hierarchy during updates
+  final Map<String, String> _childToParent = {};
+
+  /// Check if node is a component node based on type convention
+  bool _isComponentNode(VNode node) {
+    return node.type == 'component' ||
+        node.props.containsKey('_isComponent') ||
+        node.props.containsKey('_component');
+  }
+
+  /// Generate a unique view ID for a node
+  String _generateViewId(String nodeKey) {
+    return 'view_${_viewIdCounter++}';
+  }
+
+  /// Create a native view for the given node
+  Future<bool> _createNativeView(String viewId, VNode node) async {
+    try {
+      final success = await MainViewCoordinatorInterface.createView(
+        viewId,
+        node.type,
+        node.props,
+      );
+      return success;
+    } catch (e) {
+      debugPrint('VDOM: Error creating native view: $e');
+      return false;
+    }
+  }
+
+  /// Attach a child view to a parent view
+  Future<bool> _attachView(String parentViewId, String childViewId) async {
+    try {
+      return await MainViewCoordinatorInterface.setChildren(
+          parentViewId, [childViewId]);
+    } catch (e) {
+      debugPrint('VDOM: Error attaching view: $e');
+      return false;
+    }
+  }
+
+  /// Mount a component node
+  Future<String?> _mountComponentNode(VNode node, String? parentViewId) async {
+    debugPrint('VDOM: Mounting component node with key ${node.key}');
+
+    // Create a view ID for this component
+    final viewId = _generateViewId(node.key);
+
+    // Create the component view (uses existing _createComponentView method)
+    _createComponentView(node, viewId);
+
+    // If we have a parent, create the parent-child relationship
+    if (parentViewId != null) {
+      await _attachView(parentViewId, viewId);
+      _childToParent[viewId] = parentViewId;
+    }
+
+    return viewId;
+  }
+
+  /// Update a component node
+  Future<void> _updateComponentNode(VNode oldNode, VNode newNode) async {
+    final viewId = nodeToViewId[oldNode.key];
+    if (viewId == null) {
+      debugPrint('VDOM: Component view ID not found for update');
+      return;
+    }
+
+    // Use existing method which already handles component updates
+    _updateComponentView(oldNode, newNode, viewId);
+  }
 }

@@ -50,6 +50,30 @@ class MainApp extends Component {
           title: "Increment",
           onPress: () => counter!.value = counter!.value + 1,
         ),
+        DCView(
+            style: ViewStyle(
+              height: 150,
+              borderRadius: 20,
+              shadowRadius: 20,
+              padding: EdgeInsets.all(20),
+              position: 'none',
+              backgroundColor: Colors.red,
+              display: 'flex',
+            ),
+            children: [
+              DCText(text: 'This is a child view'),
+              DCButton(
+                title: "Decrement",
+                onPress: () => counter!.value = counter!.value - 1,
+              ),
+            ]),
+        DCModal(visible: counter!.value > 5,animationType: 'slide', children: [
+          DCText(text: 'This is a modal'),
+          DCButton(
+            title: "Close",
+            onPress: () => counter!.value = 0,
+          ),
+        ]),
       ],
     ).build();
   }
