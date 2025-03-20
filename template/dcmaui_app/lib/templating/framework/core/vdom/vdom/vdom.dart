@@ -317,17 +317,6 @@ class VDOM {
     return node.props['_isComponent'] == true;
   }
 
-  /// Get a component instance from a node
-  dynamic _getComponentInstance(VNode node) {
-    final componentId = _getComponentId(node);
-    return _components[componentId];
-  }
-
-  /// Get the component ID from a node
-  String _getComponentId(VNode node) {
-    return node.props['_componentId'] as String;
-  }
-
   // ========== STATE MANAGEMENT ==========
 
   /// Get component state
@@ -567,45 +556,43 @@ class VDOM {
     // Transfer component ID to ensure consistent tracking
     newNode.props['_componentId'] = componentId;
 
-    if (component is Component) {
-      // Get current state
-      final currentState = _componentStates[componentId] ?? {};
+    // Get current state
+    final currentState = _componentStates[componentId] ?? {};
 
-      // Check if we should update
-      if (!component.shouldComponentUpdate(newProps, currentState)) {
-        return;
-      }
+    // Check if we should update
+    if (!component.shouldComponentUpdate(newProps, currentState)) {
+      return;
+    }
 
-      // Update props and trigger lifecycle
-      final prevProps = Map<String, dynamic>.from(component.props);
-      component.props = newProps;
+    // Update props and trigger lifecycle
+    final prevProps = Map<String, dynamic>.from(component.props);
+    component.props = newProps;
 
-      // Get previous rendered node
-      final prevRenderedNode = _renderedNodes[componentId];
-      if (prevRenderedNode == null) {
-        debugPrint('VDOM: Warning: Previous rendered node not found');
-        return;
-      }
+    // Get previous rendered node
+    final prevRenderedNode = _renderedNodes[componentId];
+    if (prevRenderedNode == null) {
+      debugPrint('VDOM: Warning: Previous rendered node not found');
+      return;
+    }
 
-      // Re-render component
-      final newRenderedNode = component.render();
+    // Re-render component
+    final newRenderedNode = component.render();
 
-      // CRITICAL FIX: Preserve view IDs
-      _preserveViewIds(prevRenderedNode, newRenderedNode);
+    // CRITICAL FIX: Preserve view IDs
+    _preserveViewIds(prevRenderedNode, newRenderedNode);
 
-      // Store new rendered node for next update
-      _renderedNodes[componentId] = newRenderedNode;
+    // Store new rendered node for next update
+    _renderedNodes[componentId] = newRenderedNode;
 
-      // CRITICAL: Explicitly ensure the component's viewId is transferred to rendered output
-      nodeToViewId["${newRenderedNode.type}_${newRenderedNode.key}"] = viewId;
+    // CRITICAL: Explicitly ensure the component's viewId is transferred to rendered output
+    nodeToViewId["${newRenderedNode.type}_${newRenderedNode.key}"] = viewId;
 
-      // Update the rendered view
-      _diffComponentOutput(prevRenderedNode, newRenderedNode, viewId);
+    // Update the rendered view
+    _diffComponentOutput(prevRenderedNode, newRenderedNode, viewId);
 
-      // Call lifecycle method
-      if (component.mounted) {
-        component.componentDidUpdate(prevProps, currentState);
-      }
+    // Call lifecycle method
+    if (component.mounted) {
+      component.componentDidUpdate(prevProps, currentState);
     }
   }
 
@@ -617,9 +604,6 @@ class VDOM {
         'VDOM: Old output type: ${oldOutput.type}, key: ${oldOutput.key}, children: ${oldOutput.children.length}');
     debugPrint(
         'VDOM: New output type: ${newOutput.type}, key: ${newOutput.key}, children: ${newOutput.children.length}');
-
-    // CRITICAL FIX: Always preserve children views, even if the types change
-    final preserveChildViews = true;
 
     // If root output type changed, we need special handling
     if (oldOutput.type != newOutput.type) {
@@ -843,7 +827,7 @@ class VDOM {
           'VDOM: Deleting component view: $viewId (component ID: $componentId)');
 
       final component = _components[componentId];
-      if (component != null && component is Component) {
+      if (component != null) {
         // Call lifecycle
         component.componentWillUnmount();
         component.mounted = false;
@@ -875,7 +859,7 @@ class VDOM {
   /// Handle component update when setState is called
   void _handleComponentUpdate(String componentId) {
     final component = _components[componentId];
-    if (component == null || (component is Component && !component.mounted)) {
+    if (component == null || (!component.mounted)) {
       debugPrint(
           'VDOM: Cannot update component $componentId - not found or unmounted');
       return;
@@ -899,63 +883,61 @@ class VDOM {
     }
 
     try {
-      if (component is Component) {
-        // Get previous rendered node
-        final prevRenderedNode = _renderedNodes[componentId];
-        if (prevRenderedNode == null) {
-          debugPrint(
-              'VDOM: Error: No previous rendered node found for $componentId');
-          return;
-        }
-
-        // CRITICAL FIX: First create a shallow copy of the rendered node to avoid direct mutation
-        final prevRenderedNodeCopy = VNode(prevRenderedNode.type,
-            props: Map<String, dynamic>.from(prevRenderedNode.props),
-            children: List<VNode>.from(prevRenderedNode.children),
-            key: prevRenderedNode.key);
-
-        // Re-render component
-        final newRenderedNode = component.render();
-
-        // Debug logging
+      // Get previous rendered node
+      final prevRenderedNode = _renderedNodes[componentId];
+      if (prevRenderedNode == null) {
         debugPrint(
-            'VDOM: STATE UPDATE - Component $componentId rendered new tree with root type ${newRenderedNode.type}');
+            'VDOM: Error: No previous rendered node found for $componentId');
+        return;
+      }
 
+      // CRITICAL FIX: First create a shallow copy of the rendered node to avoid direct mutation
+      final prevRenderedNodeCopy = VNode(prevRenderedNode.type,
+          props: Map<String, dynamic>.from(prevRenderedNode.props),
+          children: List<VNode>.from(prevRenderedNode.children),
+          key: prevRenderedNode.key);
+
+      // Re-render component
+      final newRenderedNode = component.render();
+
+      // Debug logging
+      debugPrint(
+          'VDOM: STATE UPDATE - Component $componentId rendered new tree with root type ${newRenderedNode.type}');
+
+      debugPrint(
+          'VDOM: Old node key: ${prevRenderedNode.key}, new node key: ${newRenderedNode.key}');
+
+      // CRITICAL FIX: First transfer all view IDs from old tree to new tree
+      _preserveViewIds(prevRenderedNode, newRenderedNode);
+
+      // CRITICAL FIX: Store a deep copy of the new rendered node to prevent mutations
+      _renderedNodes[componentId] = _deepCopyVNode(newRenderedNode);
+
+      // CRITICAL: Ensure the component's viewId is preserved for the root node
+      final oldNodeKey = "${prevRenderedNode.type}_${prevRenderedNode.key}";
+      final newNodeKey = "${newRenderedNode.type}_${newRenderedNode.key}";
+
+      if (nodeToViewId.containsKey(oldNodeKey)) {
+        nodeToViewId[newNodeKey] = viewId;
+        _createdViews.add(viewId);
         debugPrint(
-            'VDOM: Old node key: ${prevRenderedNode.key}, new node key: ${newRenderedNode.key}');
+            'VDOM: Preserved component root view ID $viewId from $oldNodeKey to $newNodeKey');
+      }
 
-        // CRITICAL FIX: First transfer all view IDs from old tree to new tree
-        _preserveViewIds(prevRenderedNode, newRenderedNode);
+      // CRITICAL FIX: Compare modal and container views more carefully to preserve them
+      if (_isSpecialContainerType(prevRenderedNode.type) &&
+          _isSpecialContainerType(newRenderedNode.type)) {
+        debugPrint(
+            'VDOM: Detected special container type update - ensuring strict preservation');
+      }
 
-        // CRITICAL FIX: Store a deep copy of the new rendered node to prevent mutations
-        _renderedNodes[componentId] = _deepCopyVNode(newRenderedNode);
+      // Update the view - using our specialized method for component output
+      _diffComponentOutput(prevRenderedNodeCopy, newRenderedNode, viewId);
 
-        // CRITICAL: Ensure the component's viewId is preserved for the root node
-        final oldNodeKey = "${prevRenderedNode.type}_${prevRenderedNode.key}";
-        final newNodeKey = "${newRenderedNode.type}_${newRenderedNode.key}";
-
-        if (nodeToViewId.containsKey(oldNodeKey)) {
-          nodeToViewId[newNodeKey] = viewId;
-          _createdViews.add(viewId);
-          debugPrint(
-              'VDOM: Preserved component root view ID $viewId from $oldNodeKey to $newNodeKey');
-        }
-
-        // CRITICAL FIX: Compare modal and container views more carefully to preserve them
-        if (_isSpecialContainerType(prevRenderedNode.type) &&
-            _isSpecialContainerType(newRenderedNode.type)) {
-          debugPrint(
-              'VDOM: Detected special container type update - ensuring strict preservation');
-        }
-
-        // Update the view - using our specialized method for component output
-        _diffComponentOutput(prevRenderedNodeCopy, newRenderedNode, viewId);
-
-        // Call lifecycle method
-        if (component.mounted) {
-          final currentState = _componentStates[componentId] ?? {};
-          component.componentDidUpdate(component.props, currentState);
-        }
+      // Call lifecycle method
+      if (component.mounted) {
+        final currentState = _componentStates[componentId] ?? {};
+        component.componentDidUpdate(component.props, currentState);
       }
     } catch (e, stack) {
       debugPrint('VDOM: Error updating component: $e');
