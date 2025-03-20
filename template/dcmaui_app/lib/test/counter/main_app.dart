@@ -67,7 +67,7 @@ class MainApp extends Component {
                 onPress: () => counter!.value = counter!.value - 1,
               ),
             ]),
-        DCModal(visible: counter!.value > 5,animationType: 'slide', children: [
+        DCModal(visible: counter!.value > 5, animationType: 'slide', children: [
           DCText(text: 'This is a modal'),
           DCButton(
             title: "Close",
