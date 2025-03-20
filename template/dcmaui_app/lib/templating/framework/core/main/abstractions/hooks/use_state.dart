@@ -1,4 +1,4 @@
-import 'package:dc_test/templating/framework/controls/low_levels/event_bus.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/event_bus.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/hooks/low_levels/state_abstraction.dart';
 import 'package:flutter/foundation.dart';
 

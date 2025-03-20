@@ -2,8 +2,8 @@
 // Import this file to get access to all UI controls
 
 // Base controls
-export 'low_levels/control.dart';
-export 'low_levels/component_adapter.dart';
+export '../core/vdom/node/low_levels/control.dart';
+export '../core/vdom/node/low_levels/component_adapter.dart';
 
 // Core UI components
 export 'view.dart';

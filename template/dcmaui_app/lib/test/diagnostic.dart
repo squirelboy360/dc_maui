@@ -1,7 +1,7 @@
 import 'package:dc_test/templating/framework/controls/text.dart';
 import 'package:dc_test/templating/framework/controls/view.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/control.dart';
 import 'package:dc_test/templating/framework/core/main/interface/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:flutter/painting.dart' hide TextStyle;

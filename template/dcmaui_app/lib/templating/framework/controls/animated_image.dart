@@ -1,7 +1,7 @@
-import 'package:dc_test/templating/framework/controls/low_levels/control.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/control.dart';
 import 'package:dc_test/templating/framework/controls/animated_view.dart';
 import 'package:dc_test/templating/framework/controls/image.dart';
-import 'package:dc_test/templating/framework/core/vdom/node/element_factory.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/element_factory.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 
 /// Props for AnimatedImage component

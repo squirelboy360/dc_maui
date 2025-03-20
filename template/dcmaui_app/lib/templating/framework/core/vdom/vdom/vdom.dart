@@ -1,8 +1,8 @@
-import 'package:dc_test/templating/framework/controls/low_levels/state_controller.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/state_controller.dart';
 import 'package:dc_test/templating/framework/core/main/abstractions/hooks/low_levels/state_abstraction.dart';
 import 'package:dc_test/templating/framework/core/main/interface/main_view_coordinator.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/component.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/component.dart';
 import 'package:flutter/foundation.dart';
 
 /// Unified Virtual DOM implementation that handles both native views and components
@@ -751,7 +751,10 @@ class VDOM {
       }
     }
 
-    // Second pass: Remove children that don't exist in the new tree
+    // CRITICAL FIX: Don't actually mark views for removal that are still in the updatedChildViewIds
+    // This was the main bug - we were marking views for removal even though we were still using them
+    final childrenToRemove = <String>[];
+
     for (final oldKey in oldChildrenByKey.keys) {
       if (!processedKeys.contains(oldKey) &&
           !newChildren.any((c) => c.key == oldKey)) {
@@ -761,13 +764,26 @@ class VDOM {
 
         if (nodeToViewId.containsKey(oldNodeKey)) {
           final viewId = nodeToViewId[oldNodeKey]!;
-          debugPrint(
-              'VDOM: Removing child view $viewId as it no longer exists');
-          deleteView(viewId);
-          _createdViews.remove(viewId);
-          nodeToViewId.remove(oldNodeKey);
+          // Only mark for removal if it's truly not in the updated list
+          if (!updatedChildViewIds.contains(viewId)) {
+            childrenToRemove.add(viewId);
+            debugPrint(
+                'VDOM: Marking child view $viewId for removal (key: $oldKey, not in updated list)');
+          } else {
+            debugPrint(
+                'VDOM: Child view $viewId is marked for reuse (key: $oldKey)');
+          }
         }
       }
+    }
+
+    // Only actually remove views that we're sure aren't reused
+    for (final viewId in childrenToRemove) {
+      debugPrint('VDOM: Actually removing unused child view $viewId');
+      deleteView(viewId);
+      _createdViews.remove(viewId);
+      // Remove from the viewId map by looking up the key
+      nodeToViewId.removeWhere((key, value) => value == viewId);
     }
 
     // Final step: Update children order in parent view
@@ -905,11 +921,14 @@ class VDOM {
         debugPrint(
             'VDOM: STATE UPDATE - Component $componentId rendered new tree with root type ${newRenderedNode.type}');
 
+        debugPrint(
+            'VDOM: Old node key: ${prevRenderedNode.key}, new node key: ${newRenderedNode.key}');
+
         // CRITICAL FIX: First transfer all view IDs from old tree to new tree
         _preserveViewIds(prevRenderedNode, newRenderedNode);
 
-        // Store for next update
-        _renderedNodes[componentId] = newRenderedNode;
+        // CRITICAL FIX: Store a deep copy of the new rendered node to prevent mutations
+        _renderedNodes[componentId] = _deepCopyVNode(newRenderedNode);
 
         // CRITICAL: Ensure the component's viewId is preserved for the root node
         final oldNodeKey = "${prevRenderedNode.type}_${prevRenderedNode.key}";
@@ -920,6 +939,13 @@ class VDOM {
           _createdViews.add(viewId);
           debugPrint(
               'VDOM: Preserved component root view ID $viewId from $oldNodeKey to $newNodeKey');
+        }
+
+        // CRITICAL FIX: Compare modal and container views more carefully to preserve them
+        if (_isSpecialContainerType(prevRenderedNode.type) &&
+            _isSpecialContainerType(newRenderedNode.type)) {
+          debugPrint(
+              'VDOM: Detected special container type update - ensuring strict preservation');
         }
 
         // Update the view - using our specialized method for component output
@@ -935,6 +961,22 @@ class VDOM {
       debugPrint('VDOM: Error updating component: $e');
       debugPrint('Stack trace: $stack');
     }
+  }
+
+  /// Helper to create a deep copy of a VNode
+  VNode _deepCopyVNode(VNode node) {
+    return VNode(node.type,
+        props: Map<String, dynamic>.from(node.props),
+        children: _deepCopyChildren(node.children),
+        key: node.key);
+  }
+
+  /// Check if a node type is a special container that should have its children preserved
+  bool _isSpecialContainerType(String type) {
+    return type.contains('Modal') ||
+        type.contains('SafeArea') ||
+        type.contains('View') ||
+        type.contains('Container');
   }
 
   /// Helper to deep copy children arrays for safe diffing

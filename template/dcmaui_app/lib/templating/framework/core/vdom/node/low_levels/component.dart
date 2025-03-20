@@ -1,6 +1,6 @@
 import 'package:dc_test/templating/framework/core/main/abstractions/utility/performance_monitor.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:dc_test/templating/framework/controls/low_levels/state_controller.dart';
+import 'package:dc_test/templating/framework/core/vdom/node/low_levels/state_controller.dart';
 import 'package:flutter/foundation.dart';
 
 /// Base Component class for function-like components
