@@ -108,11 +108,14 @@ class VDOM {
     // Extract event handlers for separate handling
     final eventHandlers = <String, Function>{};
 
-    // Remove functions from props
+    // Use the same consistent approach for extracting events
     cleanProps.keys.toList().forEach((key) {
       if (cleanProps[key] is Function) {
-        eventHandlers[key] = cleanProps[key] as Function;
-        cleanProps.remove(key);
+        // Only detect events using the standard "on" prefix approach
+        if (key.startsWith('on') && key.length > 2) {
+          eventHandlers[key] = cleanProps[key] as Function;
+          cleanProps.remove(key);
+        }
       }
     });
 
@@ -121,10 +124,17 @@ class VDOM {
 
     // Update event handlers if needed
     if (eventHandlers.isNotEmpty) {
+      debugPrint(
+          'VDOM: Updating ${eventHandlers.length} event handlers for $viewId');
+
       for (final entry in eventHandlers.entries) {
         GlobalStateManager.instance
             .registerEventHandler(viewId, entry.key, entry.value);
       }
+
+      // Make sure the native side knows about these event handlers
+      MainViewCoordinatorInterface.addEventListeners(
+          viewId, eventHandlers.keys.toList());
     }
   }
 
@@ -389,39 +399,16 @@ class VDOM {
         final cleanProps = Map<String, dynamic>.from(node.props);
         final eventHandlers = <String, Function>{};
 
-        // Extract event handlers for registration
+        // Extract event handlers using proper controls helper - simplified to only use ControlProps
         cleanProps.keys.toList().forEach((key) {
-          if (key.startsWith('on') && cleanProps[key] is Function) {
-            eventHandlers[key] = cleanProps[key] as Function;
-            cleanProps.remove(key);
+          if (cleanProps[key] is Function) {
+            // Only detect events using the standard "on" prefix approach
+            if (key.startsWith('on') && key.length > 2) {
+              eventHandlers[key] = cleanProps[key] as Function;
+              cleanProps.remove(key);
+            }
           }
         });
-
-        // CRITICAL FIX: Support for non-prefixed events too (for backwards compatibility)
-        // Common event types to check
-        final commonEvents = [
-          'press',
-          'click',
-          'change',
-          'focus',
-          'blur',
-          'scroll'
-        ];
-        for (final eventName in commonEvents) {
-          if (cleanProps.containsKey(eventName) &&
-              cleanProps[eventName] is Function) {
-            // Get standardized name
-            final standardName =
-                'on${eventName.substring(0, 1).toUpperCase()}${eventName.substring(1)}';
-
-            // Register with standardized name for consistency
-            eventHandlers[standardName] = cleanProps[eventName] as Function;
-            cleanProps.remove(eventName);
-
-            debugPrint(
-                'VDOM: Standardized event "$eventName" to "$standardName"');
-          }
-        }
 
         // Create the view with clean props
         MainViewCoordinatorInterface.createView(viewId, node.type, cleanProps);
@@ -455,7 +442,6 @@ class VDOM {
           node.props['_componentConstructor'] as Function;
       final componentInstance = componentConstructor();
       final componentId = node.props['_componentId'] as String;
-
       debugPrint(
           'VDOM: Creating component ${componentInstance.runtimeType} with ID $componentId');
 
@@ -488,7 +474,6 @@ class VDOM {
             'VDOM: Rendering component ${componentInstance.runtimeType}');
         final renderedNode = componentInstance.render();
         _renderedNodes[componentId] = renderedNode;
-
         debugPrint(
             'VDOM: Component $componentId rendered node of type ${renderedNode.type} with key ${renderedNode.key}');
 
@@ -496,7 +481,6 @@ class VDOM {
         if (_isComponent(renderedNode)) {
           debugPrint(
               'VDOM: Component returned another component - creating nested component view');
-
           // Create the nested component with its own view ID
           final nestedViewId = getViewId(renderedNode);
           _createComponentView(renderedNode, nestedViewId);
@@ -584,9 +568,6 @@ class VDOM {
     // Store new rendered node for next update
     _renderedNodes[componentId] = newRenderedNode;
 
-    // CRITICAL: Explicitly ensure the component's viewId is transferred to rendered output
-    nodeToViewId["${newRenderedNode.type}_${newRenderedNode.key}"] = viewId;
-
     // Update the rendered view
     _diffComponentOutput(prevRenderedNode, newRenderedNode, viewId);
 
@@ -649,7 +630,6 @@ class VDOM {
     for (final oldChild in oldChildren) {
       final key = oldChild.key;
       oldChildrenByKey[key] = oldChild;
-
       final nodeKey = "${oldChild.type}_$key";
       if (nodeToViewId.containsKey(nodeKey)) {
         oldChildViewIds[key] = nodeToViewId[nodeKey]!;
@@ -676,7 +656,6 @@ class VDOM {
         if (oldChildViewIds.containsKey(key)) {
           final childViewId = oldChildViewIds[key]!;
           nodeToViewId[newNodeKey] = childViewId;
-
           debugPrint('VDOM: Reusing view ID $childViewId for child $key');
 
           // If same type, just update props
@@ -738,14 +717,12 @@ class VDOM {
     // CRITICAL FIX: Don't actually mark views for removal that are still in the updatedChildViewIds
     // This was the main bug - we were marking views for removal even though we were still using them
     final childrenToRemove = <String>[];
-
     for (final oldKey in oldChildrenByKey.keys) {
       if (!processedKeys.contains(oldKey) &&
           !newChildren.any((c) => c.key == oldKey)) {
         // This child was removed in the new tree
         final oldChild = oldChildrenByKey[oldKey]!;
         final oldNodeKey = "${oldChild.type}_${oldChild.key}";
-
         if (nodeToViewId.containsKey(oldNodeKey)) {
           final viewId = nodeToViewId[oldNodeKey]!;
           // Only mark for removal if it's truly not in the updated list
@@ -822,7 +799,6 @@ class VDOM {
     if (_viewIdToComponentNode.containsKey(viewId)) {
       final node = _viewIdToComponentNode[viewId]!;
       final componentId = node.props['_componentId'] as String;
-
       debugPrint(
           'VDOM: Deleting component view: $viewId (component ID: $componentId)');
 
@@ -837,7 +813,6 @@ class VDOM {
         _componentStates.remove(componentId);
         _renderedNodes.remove(componentId);
       }
-
       _viewIdToComponentNode.remove(viewId);
 
       // Delete the native view after cleanup
@@ -903,7 +878,6 @@ class VDOM {
       // Debug logging
       debugPrint(
           'VDOM: STATE UPDATE - Component $componentId rendered new tree with root type ${newRenderedNode.type}');
-
       debugPrint(
           'VDOM: Old node key: ${prevRenderedNode.key}, new node key: ${newRenderedNode.key}');
 
@@ -976,7 +950,6 @@ class VDOM {
     final indent = ' ' * (depth * 2);
     final viewId = getViewId(node);
     debugPrint('$indent$viewId: ${node.type} (props: ${node.props})');
-
     for (final child in node.children) {
       _logTree(child, depth + 1);
     }

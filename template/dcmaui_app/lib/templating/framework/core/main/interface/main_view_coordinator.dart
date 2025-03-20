@@ -258,30 +258,24 @@ class MainViewCoordinatorInterface {
 
       // Get the original event name from native
       String originalEventName = event['eventName'] ?? '';
+      debugPrint('DC MAUI: Received event $originalEventName for view $viewId');
 
-      // Find the actual registered event handler regardless of name format
-      // This allows us to support multiple event name formats for the same event
+      // Generate all possible standardized event name formats to try
+      final possibleEventNames = _getAllPossibleEventNames(originalEventName);
+      debugPrint('DC MAUI: Trying event names: $possibleEventNames');
+
+      // Find a matching handler
       Function? handler;
+      String? matchedEventName;
 
-      // Try with original event name
-      handler = GlobalStateManager.instance
-          .getEventHandler(viewId, originalEventName);
-
-      // Standardize event name to React Native conventions and try again if needed
-      String standardizedEventName = originalEventName;
-      if (!originalEventName.startsWith('on') && handler == null) {
-        final capitalizedFirst =
-            originalEventName.substring(0, 1).toUpperCase() +
-                originalEventName.substring(1);
-        standardizedEventName = 'on$capitalizedFirst';
-
-        // Try to find handler with standardized name
-        handler = GlobalStateManager.instance
-            .getEventHandler(viewId, standardizedEventName);
-
-        // Add debug info to track event name conversion
-        debugPrint(
-            'DC MAUI: Converted event name from "$originalEventName" to "$standardizedEventName" for lookup');
+      for (final eventName in possibleEventNames) {
+        handler =
+            GlobalStateManager.instance.getEventHandler(viewId, eventName);
+        if (handler != null) {
+          matchedEventName = eventName;
+          debugPrint('DC MAUI: Found handler for event name: $eventName');
+          break;
+        }
       }
 
       // Ensure params match React Native format
@@ -299,20 +293,25 @@ class MainViewCoordinatorInterface {
       }
 
       // Call handler if found
-      if (handler != null) {
+      if (handler != null && matchedEventName != null) {
         try {
           debugPrint(
-              'DC MAUI: Invoking handler for event $originalEventName on view $viewId');
+              'DC MAUI: Invoking handler for event $originalEventName (matched to $matchedEventName) on view $viewId');
           handler(params);
-        } catch (e) {
+        } catch (e, stack) {
           debugPrint('DC MAUI: Error in event handler: $e');
+          debugPrint('Stack trace: $stack');
         }
       } else {
         debugPrint(
-            'DC MAUI: No handler found for event $originalEventName or $standardizedEventName on view $viewId');
+            'DC MAUI: No handler found for event $originalEventName on view $viewId');
       }
 
-      // Also broadcast the event with the standardized name for consistency in streams
+      // Use a standardized event name for consistency in streams
+      final standardizedEventName = possibleEventNames.isNotEmpty
+          ? possibleEventNames[0]
+          : originalEventName;
+
       _eventController.add({
         'viewId': viewId,
         'eventName': standardizedEventName,
@@ -328,6 +327,47 @@ class MainViewCoordinatorInterface {
     }
 
     return null;
+  }
+
+  // Helper method to generate all possible event name formats
+  static List<String> _getAllPossibleEventNames(String originalEventName) {
+    final result = <String>[];
+
+    // React-style with 'on' prefix
+    if (originalEventName.startsWith('on')) {
+      result.add(originalEventName);
+
+      // Add version with different casing
+      final eventNameWithoutPrefix = originalEventName.substring(2);
+      result.add(
+          'on${eventNameWithoutPrefix.substring(0, 1).toUpperCase()}${eventNameWithoutPrefix.substring(1)}');
+      result.add(
+          'on${eventNameWithoutPrefix.substring(0, 1).toLowerCase()}${eventNameWithoutPrefix.substring(1)}');
+
+      // Add versions without prefix
+      result.add(eventNameWithoutPrefix);
+      result.add(eventNameWithoutPrefix.substring(0, 1).toLowerCase() +
+          eventNameWithoutPrefix.substring(1));
+    }
+    // Native-style without 'on' prefix
+    else {
+      // Add standard React-style version
+      final capitalized = originalEventName.substring(0, 1).toUpperCase() +
+          originalEventName.substring(1);
+      result.add('on$capitalized');
+
+      // Add other variants
+      result.add('on${originalEventName}');
+      result.add(originalEventName);
+
+      // Handle special case for longPress which is a common issue
+      if (originalEventName.toLowerCase() == 'longpress') {
+        result.add('onLongPress');
+        result.add('longPress');
+      }
+    }
+
+    return result;
   }
 
   // Add a method to request the native side to print its view tree

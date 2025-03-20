@@ -111,22 +111,52 @@ class GlobalStateManager {
     return 'on${eventName.substring(0, 1).toUpperCase()}${eventName.substring(1)}';
   }
 
-  // Get event handler
+  // Get event handler - improved to better handle different event name formats
   Function? getEventHandler(String viewId, String eventName) {
     if (!_eventHandlers.containsKey(viewId)) {
       return null;
     }
 
+    // For debugging
+    debugPrint(
+        'GlobalStateManager: Looking for handler for $eventName on view $viewId');
+    debugPrint(
+        'GlobalStateManager: Available handlers: ${_eventHandlers[viewId]!.keys.toList()}');
+
     // Try exact match first
     if (_eventHandlers[viewId]!.containsKey(eventName)) {
+      debugPrint('GlobalStateManager: Found exact match for $eventName');
       return _adaptHandlerWithParams(_eventHandlers[viewId]![eventName]!);
     }
 
     // Try normalized version if exact match fails
     final normalizedEventName = _normalizeEventName(eventName);
     if (_eventHandlers[viewId]!.containsKey(normalizedEventName)) {
+      debugPrint(
+          'GlobalStateManager: Found normalized match $normalizedEventName for $eventName');
       return _adaptHandlerWithParams(
           _eventHandlers[viewId]![normalizedEventName]!);
+    }
+
+    // Try without the 'on' prefix
+    if (eventName.startsWith('on') && eventName.length > 2) {
+      final withoutPrefix =
+          eventName.substring(2, 3).toLowerCase() + eventName.substring(3);
+      if (_eventHandlers[viewId]!.containsKey(withoutPrefix)) {
+        debugPrint(
+            'GlobalStateManager: Found match without prefix: $withoutPrefix for $eventName');
+        return _adaptHandlerWithParams(_eventHandlers[viewId]![withoutPrefix]!);
+      }
+    }
+
+    // Try with camelCase variations (longPress vs LongPress)
+    final camelCaseVariations = _getCamelCaseVariations(eventName);
+    for (final variation in camelCaseVariations) {
+      if (_eventHandlers[viewId]!.containsKey(variation)) {
+        debugPrint(
+            'GlobalStateManager: Found camelCase variation match: $variation for $eventName');
+        return _adaptHandlerWithParams(_eventHandlers[viewId]![variation]!);
+      }
     }
 
     // Handle common event name variations
@@ -140,7 +170,49 @@ class GlobalStateManager {
       return _adaptHandlerWithParams(_eventHandlers[viewId]!['onChange']!);
     }
 
+    debugPrint('GlobalStateManager: No handler found for $eventName');
     return null;
+  }
+
+  // Generate camelCase variations of event names
+  List<String> _getCamelCaseVariations(String eventName) {
+    final result = <String>[];
+
+    // Handle React-style event names (onEventName)
+    if (eventName.startsWith('on') && eventName.length > 2) {
+      // Extract the event name without the 'on' prefix
+      final baseName = eventName.substring(2);
+
+      // Add variations with different capitalization
+      result.add('on${baseName}');
+      result.add(
+          'on${baseName.substring(0, 1).toLowerCase()}${baseName.substring(1)}');
+      result.add(
+          'on${baseName.substring(0, 1).toUpperCase()}${baseName.substring(1)}');
+
+      // Add variations without the 'on' prefix
+      result.add(baseName);
+      result
+          .add(baseName.substring(0, 1).toLowerCase() + baseName.substring(1));
+      result
+          .add(baseName.substring(0, 1).toUpperCase() + baseName.substring(1));
+    }
+    // Handle native event names (eventName without 'on' prefix)
+    else {
+      // Add variations with different capitalization
+      result.add(eventName);
+      result.add(
+          eventName.substring(0, 1).toLowerCase() + eventName.substring(1));
+      result.add(
+          eventName.substring(0, 1).toUpperCase() + eventName.substring(1));
+
+      // Add variations with the 'on' prefix
+      result.add(
+          'on${eventName.substring(0, 1).toUpperCase()}${eventName.substring(1)}');
+      result.add('on${eventName}');
+    }
+
+    return result;
   }
 
   // CRITICAL FIX: Adapt handler to accept any parameter values
