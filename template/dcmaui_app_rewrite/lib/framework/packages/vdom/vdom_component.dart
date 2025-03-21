@@ -9,17 +9,18 @@ abstract class VDomComponentClass {
 class VDomComponent extends VDomNode {
   final VDomComponentClass component;
   final Map<String, dynamic> props;
-  VDomNode? _renderedNode;
+  // Changed to public to allow access from renderer
+  VDomNode? renderedNode;
 
   VDomComponent({
     required this.component,
     required this.props,
   }) {
-    _renderedNode = component.render();
+    renderedNode = component.render();
   }
 
   @override
   String toString() {
-    return 'Component(${component.runtimeType}): ${_renderedNode?.toString() ?? 'Not Rendered'}';
+    return 'Component(${component.runtimeType}): ${renderedNode?.toString() ?? 'Not Rendered'}';
   }
 }
