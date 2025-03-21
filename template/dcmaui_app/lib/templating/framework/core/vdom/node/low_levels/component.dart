@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 abstract class Component {
   // Internal properties - only props and lifecycle, no state management
   Map<String, dynamic> _props = {};
-  bool _mounted = false;
-  Function? _updateCallback;
+  bool mounted = false;
+  Function? updateCallback;
   String? _componentId;
 
   // Internal state storage - no need for external access
@@ -26,14 +26,6 @@ abstract class Component {
   set props(Map<String, dynamic> newProps) {
     _props = Map<String, dynamic>.from(newProps);
   }
-
-  // Getter/setter for mounted state
-  bool get mounted => _mounted;
-  set mounted(bool value) => _mounted = value;
-
-  // Getter/setter for update callback
-  Function? get updateCallback => _updateCallback;
-  set updateCallback(Function? callback) => _updateCallback = callback;
 
   // Getter for component ID
   String get componentId =>
@@ -70,15 +62,15 @@ abstract class Component {
     }
 
     // Only trigger update if something actually changed
-    if (hasChanges && _updateCallback != null) {
+    if (hasChanges && updateCallback != null) {
       debugPrint(
           'Component $componentId: Changes detected, triggering update...');
       // CRITICAL FIX: Use direct callback for VDOM updates, not microtask
-      _updateCallback!();
+      updateCallback!();
     } else if (!hasChanges) {
       debugPrint(
           'Component $componentId: No changes detected, skipping update');
-    } else if (_updateCallback == null) {
+    } else if (updateCallback == null) {
       debugPrint(
           'Component $componentId: WARNING - No update callback registered!');
     }

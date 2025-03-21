@@ -1,3 +1,4 @@
+import 'package:dc_test/templating/framework/controls/section_list.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/low_levels/component.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 
@@ -14,38 +15,38 @@ class MainApp extends Component {
   @override
   VNode buildRender() {
     final counter = useState<int>('counter', 5);
-    final info = useState<Map<String, dynamic>>('showInfo', {});
+    final showInfo = useState<bool>('showInfo', false);
     return DCSafeAreaView(
         style: ViewStyle(backgroundColor: Colors.indigoAccent),
-        onInsetsChange: (v) {
-          info.value = v;
-        },
         children: [
-          DCModal(visible: info.value.isNotEmpty, children: [
-            DCView(
-                style: ViewStyle(
-                    height: 50,
-                    backgroundColor: Colors.green.withValues(alpha: 0.1)),
+          DCView(style: ViewStyle(backgroundColor: Colors.amber,height: 300), children: [
+            DCTouchableOpacity(
+              style: ViewStyle(alignSelf: 'center'),
+                onPress: () {
+                  counter.value++;
+                  showInfo.value = true;
+                },
                 children: [
-                  DCText(
-                      text: "Insets: ${info.value}",
-                      style: DCTextStyle(fontSize: 20))
-                ])
-          ]),
-          
-          DCTouchableOpacity(
-              onLongPress: () => debugPrint("long pressed wow"),
-              children: [
-                DCView(
-                    style: ViewStyle(
-                        height: 50,
-                        backgroundColor: Colors.green.withValues(alpha: 0.1)),
-                    children: [
-                      DCText(
-                          text: "Counter: ${counter.value}",
-                          style: DCTextStyle(fontSize: 20))
-                    ])
-              ])
+                  DCView(
+                      style: ViewStyle(
+                          height: 50,
+                          backgroundColor: Colors.green.withValues(alpha: 0.1)),
+                      children: [
+                        DCText(
+                            text: "Counter: ${counter.value}",
+                            style: DCTextStyle(fontSize: 20))
+                      ])
+                ]),
+            DCModal(visible: showInfo.value, children: [
+              DCView(
+                  style: ViewStyle(height: 50, backgroundColor: Colors.green),
+                  children: [
+                    DCText(
+                        text: "Insets: ${showInfo.value}",
+                        style: DCTextStyle(fontSize: 20))
+                  ])
+            ]),
+          ])
         ]).build();
   }
 }

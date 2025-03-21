@@ -343,11 +343,6 @@ class MainViewCoordinatorInterface {
           'on${eventNameWithoutPrefix.substring(0, 1).toUpperCase()}${eventNameWithoutPrefix.substring(1)}');
       result.add(
           'on${eventNameWithoutPrefix.substring(0, 1).toLowerCase()}${eventNameWithoutPrefix.substring(1)}');
-
-      // Add versions without prefix
-      result.add(eventNameWithoutPrefix);
-      result.add(eventNameWithoutPrefix.substring(0, 1).toLowerCase() +
-          eventNameWithoutPrefix.substring(1));
     }
     // Native-style without 'on' prefix
     else {
@@ -357,7 +352,7 @@ class MainViewCoordinatorInterface {
       result.add('on$capitalized');
 
       // Add other variants
-      result.add('on${originalEventName}');
+      result.add('on$originalEventName');
       result.add(originalEventName);
 
       // Handle special case for longPress which is a common issue

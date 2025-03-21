@@ -1,5 +1,4 @@
 import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
-import 'package:flutter/widgets.dart';
 
 /// Base class for all UI controls
 abstract class Control {

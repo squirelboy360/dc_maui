@@ -29,6 +29,13 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
+        },
+        {
+            "name": "Flutter (lib/templating/framework/controls/animated_image.dart)",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "template/dcmaui_app",
+            "program": "lib/templating/framework/controls/animated_image.dart"
         }
     ]
 }
