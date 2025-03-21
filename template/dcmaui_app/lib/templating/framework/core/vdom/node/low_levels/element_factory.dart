@@ -33,7 +33,7 @@ class ElementFactory {
       }
 
       // Create a stable key based on type and position
-      nodeKey = '${type}_${_elementCounters[type]++}';
+      nodeKey = '${type}_${_elementCounters[type]!}';
 
       // Add the key to props
       props = Map<String, dynamic>.from(props)..['key'] = nodeKey;
