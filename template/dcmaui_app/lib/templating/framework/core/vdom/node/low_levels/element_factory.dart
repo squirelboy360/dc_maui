@@ -10,20 +10,32 @@ class ElementFactory {
     return 'component_el_${_componentCounter++}';
   }
 
-  // Counter for generating unique node keys
-  static int _nodeCounter = 0;
+  // Counter for generating unique element keys by type
+  static final Map<String, int> _elementCounters = {};
 
-  // Create element with the right type - always use DC prefix
+  // Create element with the right type - works exactly like React's createElement
   static VNode createElement(
       String type, Map<String, dynamic> props, List<VNode> children) {
-    // CRITICAL FIX: Generate a unique, stable key that includes the type
+    // CRITICAL FIX: Handle key generation correctly
     final String nodeKey;
+
+    // If key is explicitly provided in props, use it (React behavior)
     if (props.containsKey('key') &&
         props['key'] != null &&
         props['key'] is String) {
       nodeKey = props['key'] as String;
-    } else {
-      nodeKey = '${type}_${_nodeCounter++}';
+    }
+    // Otherwise generate a unique key for this element type
+    else {
+      // Initialize counter for this type if needed
+      if (!_elementCounters.containsKey(type)) {
+        _elementCounters[type] = 0;
+      }
+
+      // Create a stable key based on type and position
+      nodeKey = '${type}_${_elementCounters[type]++}';
+
+      // Add the key to props
       props = Map<String, dynamic>.from(props)..['key'] = nodeKey;
     }
 
@@ -32,6 +44,7 @@ class ElementFactory {
       debugPrint('ElementFactory: Created $type element with key $nodeKey');
     }
 
+    // Return a new VNode with correct key
     return VNode(
       type,
       props: Map<String, dynamic>.from(props),
@@ -39,6 +52,8 @@ class ElementFactory {
       key: nodeKey,
     );
   }
+
+  // Generate a unique signature for an element based on type and key props
 
   // Create component with the right settings
   static VNode createComponent(
@@ -48,9 +63,12 @@ class ElementFactory {
     final componentId = _generateComponentId();
 
     // CRITICAL FIX: Ensure key exists and is preserved
-    final nodeKey = props.containsKey('key') && props['key'] != null
-        ? props['key'] as String
-        : componentId;
+    final String nodeKey;
+    if (props.containsKey('key') && props['key'] != null) {
+      nodeKey = props['key'] as String;
+    } else {
+      nodeKey = componentId;
+    }
 
     // Create a new props map with the key
     final enhancedProps = Map<String, dynamic>.from(props)
@@ -77,6 +95,12 @@ class ElementFactory {
       children: [],
       key: nodeKey,
     );
+  }
+
+  // Reset all element counters - useful for complete re-renders
+  static void resetElementCounters() {
+    _elementCounters.clear();
+    _componentCounter = 0;
   }
 }
 

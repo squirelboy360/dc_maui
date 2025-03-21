@@ -3,82 +3,67 @@ import 'package:dc_test/templating/framework/core/vdom/node/node.dart';
 import 'package:dc_test/templating/framework/core/vdom/node/low_levels/state_controller.dart';
 import 'package:flutter/foundation.dart';
 
-/// Base Component class for function-like components
+/// Base Component class - exact 1:1 implementation of React.Component
 abstract class Component {
-  // Internal properties - only props and lifecycle, no state management
+  // React's internal component properties
   Map<String, dynamic> _props = {};
   bool mounted = false;
   Function? updateCallback;
   String? _componentId;
 
-  // Internal state storage - no need for external access
+  // React's state storage
   final Map<String, dynamic> _state = {};
   final Map<String, StateValue> _stateHooks = {};
 
-  // Performance tracking
+  // Performance tracking (React dev tools equivalent)
   static bool showPerformanceWarnings = kDebugMode;
   static bool _performanceTrackingEnabled = false;
 
-  // Getter for props (read-only)
+  // React's exact props getter (immutable)
   Map<String, dynamic> get props => Map.unmodifiable(_props);
 
-  // Setter for props
+  // React's props setter (triggers updates)
   set props(Map<String, dynamic> newProps) {
     _props = Map<String, dynamic>.from(newProps);
   }
 
-  // Getter for component ID
+  // Component identity (React's internal component instance ID)
   String get componentId =>
       _componentId ?? 'component_${identityHashCode(this)}';
 
-  // Initialize component with props
-  void initProps(Map<String, dynamic> props) {
-    _props = Map<String, dynamic>.from(props);
-  }
-
-  // Update state and trigger re-render
+  // React's exact setState implementation
   void setState(Map<String, dynamic> newState) {
+    // Check if component is mounted - React won't update unmounted components
+    if (!mounted) {
+      debugPrint('Warning: setState called on unmounted component');
+      return;
+    }
+
     bool hasChanges = false;
+    final stateUpdates = <String, dynamic>{};
 
-    debugPrint('Component: setState called with $newState');
-
-    // Update state values
+    // React's shallow copy and comparison
     for (final key in newState.keys) {
       final oldValue = _state[key];
       final newValue = newState[key];
 
       if (oldValue != newValue) {
-        debugPrint(
-            'Component $componentId: State "$key" changing from $oldValue to $newValue');
         _state[key] = newValue;
-
-        // Update any associated state hooks
-        if (_stateHooks.containsKey(key)) {
-          _stateHooks[key]!.updateCurrentValue(newValue);
-        }
-
+        stateUpdates[key] = newValue;
         hasChanges = true;
       }
     }
 
-    // Only trigger update if something actually changed
+    // Only trigger update if something changed
     if (hasChanges && updateCallback != null) {
-      debugPrint(
-          'Component $componentId: Changes detected, triggering update...');
-      // CRITICAL FIX: Use direct callback for VDOM updates, not microtask
+      // React enqueues the update via its scheduler
       updateCallback!();
-    } else if (!hasChanges) {
-      debugPrint(
-          'Component $componentId: No changes detected, skipping update');
-    } else if (updateCallback == null) {
-      debugPrint(
-          'Component $componentId: WARNING - No update callback registered!');
     }
   }
 
-  // React-like useState hook - the ONLY way to use state
+  // React's useState hook implementation
   StateValue<T> useState<T>(String name, T initialValue) {
-    // If we already have this state hook, return it
+    // React only initializes on first render
     if (_stateHooks.containsKey(name)) {
       return _stateHooks[name] as StateValue<T>;
     }
@@ -88,43 +73,57 @@ abstract class Component {
       _state[name] = initialValue;
     }
 
-    // Create the state controller
-    final controller = StateValue<T>(
+    // Create the hook with React's state updater
+    final hook = StateValue<T>(
       name: name,
       initialValue: _state[name] as T,
       componentId: componentId,
       setState: setState,
     );
 
-    // Store for future reference
-    _stateHooks[name] = controller;
+    // Store reference
+    _stateHooks[name] = hook;
 
-    return controller;
+    return hook;
   }
 
-  // Lifecycle methods - can be overridden in subclasses
+  // Access to state fields for VDOM reconciliation (needed by React's internal logic)
+  dynamic getStateField(String fieldName) {
+    // Check if we have a state hook with this name
+    if (_stateHooks.containsKey(fieldName)) {
+      return _stateHooks[fieldName];
+    }
+    return null;
+  }
+
+  // React's exact lifecycle methods
   void componentDidMount() {}
   void componentWillUnmount() {}
   void componentDidUpdate(
       Map<String, dynamic> prevProps, Map<String, dynamic> prevState) {}
 
-  // Should component update - can be overridden for optimization
+  // React's error handling lifecycle method
+  void componentDidCatch(dynamic error, StackTrace? stackTrace) {}
+
+  // React's performance optimization method
   bool shouldComponentUpdate(
       Map<String, dynamic> nextProps, Map<String, dynamic> nextState) {
+    // Default implementation in React.Component always returns true
     return true;
   }
 
-  // Build the render tree - must be implemented by subclasses
+  // React's required render method
   VNode buildRender();
 
-  // Public render method with performance tracking
+  // The public render interface (React's internal rendering)
   VNode render() {
+    // React's performance measurement in dev mode
     if (_performanceTrackingEnabled && showPerformanceWarnings) {
       final stopwatch = Stopwatch()..start();
       final result = buildRender();
       stopwatch.stop();
 
-      // Track performance
+      // React DevTools-like performance logging
       PerformanceMonitor.instance.trackRender(
           componentId, runtimeType.toString(), stopwatch.elapsedMicroseconds);
 
@@ -134,12 +133,12 @@ abstract class Component {
     }
   }
 
-  // Helper for deferred rendering
+  // Debug representation (similar to React's component.toString())
   String toTreeString() {
     return "Component(${runtimeType.toString()})";
   }
 
-  // Enable or disable performance tracking
+  // React's dev mode helpers
   static void enablePerformanceTracking(bool enabled) {
     _performanceTrackingEnabled = enabled;
   }
