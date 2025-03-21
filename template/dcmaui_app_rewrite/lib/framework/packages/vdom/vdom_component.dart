@@ -1,3 +1,5 @@
+import 'package:dc_test/framework/packages/vdom/component.dart';
+
 import 'vdom_node.dart';
 
 /// Component class interface
@@ -16,6 +18,26 @@ class VDomComponent extends VDomNode {
     required this.component,
     required this.props,
   }) {
+    renderedNode = component.render();
+  }
+
+  /// Update this component's props and re-render
+  void updateProps(Map<String, dynamic> newProps) {
+    // Update individual props
+    newProps.forEach((key, value) {
+      if (value == null) {
+        props.remove(key);
+      } else {
+        props[key] = value;
+      }
+    });
+
+    // If the component is stateful, update its props
+    if (component is StatefulComponent) {
+      (component as StatefulComponent).props = Map.from(props);
+    }
+
+    // Re-render the component
     renderedNode = component.render();
   }
 

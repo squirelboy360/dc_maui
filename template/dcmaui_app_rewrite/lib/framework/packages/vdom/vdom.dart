@@ -1,3 +1,5 @@
+import 'package:dc_test/framework/packages/vdom/component.dart';
+
 import 'vdom_node.dart';
 import 'vdom_root.dart';
 import 'vdom_element.dart';
@@ -31,14 +33,32 @@ class VDom {
     return VDomText(content: content);
   }
 
-  /// Create a component node
+  /// Create a component node and register with VDOM for state updates
   static VDomComponent createComponent(VDomComponentClass component,
       {Map<String, dynamic>? props}) {
-    return VDomComponent(
+    final componentNode = VDomComponent(
       component: component,
       props: props ?? {},
     );
+
+    // Register the component with this VDOM instance if it's a StatefulComponent
+    if (component is StatefulComponent) {
+      component.registerWithVDom(_instance, componentNode);
+    }
+
+    return componentNode;
   }
+
+  // Singleton instance for component registration
+  static final VDom _instance = VDom._internal();
+
+  // Factory constructor to return the singleton instance
+  factory VDom() {
+    return _instance;
+  }
+
+  // Internal constructor for the singleton pattern
+  VDom._internal();
 
   /// Render a tree to the root
   void render(VDomNode newTree) {
@@ -148,6 +168,21 @@ class VDom {
     }
 
     return patches;
+  }
+
+  /// Diff a component's old and new rendered trees
+  List<VDomPatch> diffComponent(
+      VDomNode oldNode, VDomNode newNode, VDomComponent component) {
+    // Use the existing diff logic but create a special component-specific path
+    return _diff(oldNode, newNode, 'component-${component.hashCode}');
+  }
+
+  /// Apply patches from a component update
+  void patchComponent(List<VDomPatch> patches) {
+    // Apply the patches to the root (similar to how the normal render method works)
+    if (_root != null) {
+      _patch(_root!, patches);
+    }
   }
 
   /// Compare props and return changes
