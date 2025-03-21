@@ -87,52 +87,9 @@ class DCViewCoordinator: NSObject, FlutterPlugin, FlutterStreamHandler {
         default:
             result(FlutterMethodNotImplemented)
         }
-    }
-    
-    // MARK: - FlutterStreamHandler Implementation
-    
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        eventSink = events
-        debugPrint("DC MAUI: Started listening for events")
-        
-        // Send initial event to confirm event channel is working
-        sendEvent(viewId: "system", eventName: "nativeUIReady", params: ["timestamp": Date().timeIntervalSince1970 * 1000])
-        
-        return nil
-    }
-    
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        eventSink = nil
-        debugPrint("DC MAUI: Stopped listening for events")
-        return nil
-    }
-    
-    // MARK: - Event Handling
-    
-    /// Send event to Flutter side
-    func sendEvent(viewId: String, eventName: String, params: [String: Any] = [:]) {
-        guard let eventSink = eventSink else {
-            debugPrint("DC MAUI: Error - tried to send event but no event sink available")
-            return
-        }
-        
-        var eventParams = params
-        eventParams["target"] = viewId
-        
-        let event: [String: Any] = [
-            "viewId": viewId,
-            "eventName": eventName,
-            "params": eventParams
-        ]
-        
-        DispatchQueue.main.async {
-            eventSink(event)
-        }
-    }
-    
-    // MARK: - Root View Setup
-    
-    /// Set up the root container view
+
+
+          /// Set up the root container view
     func setupRootView() {
         // Find the root view controller for our container
         guard let rootVC = rootViewController ?? findRootViewController() else {
@@ -179,85 +136,6 @@ class DCViewCoordinator: NSObject, FlutterPlugin, FlutterStreamHandler {
             }
         }
         
-        // Send confirmation event
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.sendEvent(
-                viewId: "system", 
-                eventName: "rootContainerReady",
-                params: [
-                    "rootId": rootViewId,
-                    "width": containerView.bounds.width,
-                    "height": containerView.bounds.height
-                ]
-            )
-        }
     }
     
-    // MARK: - Helper Methods
     
-    // Removed duplicate findRootViewController() - Using implementation from Coordinator+Shared.swift
-    
-    // MARK: - Debugging Methods
-    
-    /// Log the view tree to console
-    func logViewTree(_ result: @escaping FlutterResult) {
-        let tree = viewRegistry.logViewHierarchy()
-        print("DC MAUI: View Tree:\n\(tree)")
-        result(tree)
-    }
-}
-
-extension DCViewCoordinator {
-    // MARK: - Function Handling Methods
-    
-    /// Invoke a function from JS using its reference
-    func callFunction(reference: [String: Any], params: [String: Any]) -> Any? {
-        debugPrint("DC MAUI: Calling function \(reference)")
-        
-        // Simplified implementation - in a real React Native port this would
-        // use a JavaScript bridge to evaluate the function
-        if let functionId = reference["functionId"] as? String {
-            // Send event to Dart side to execute the function
-            sendEvent(
-                viewId: "system",
-                eventName: "callFunction",
-                params: [
-                    "functionId": functionId,
-                    "params": params
-                ]
-            )
-        }
-        
-        return nil
-    }
-    
-    /// Render a view using a JS function reference
-    func renderFunction(reference: [String: Any], params: [String: Any]) -> UIView? {
-        debugPrint("DC MAUI: Rendering function \(reference)")
-        
-        // Simplified implementation - instead of actually executing JS,
-        // create a placeholder view that will be replaced when the real
-        // content is rendered from Dart
-        let placeholderView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
-        placeholderView.backgroundColor = UIColor.clear
-        
-        // Store the function reference for later use
-        if let functionId = reference["functionId"] as? String {
-            // Add a tag to identify this view
-            placeholderView.tag = functionId.hash
-            
-            // Send event to Dart side to render this content
-            sendEvent(
-                viewId: "system",
-                eventName: "renderFunction",
-                params: [
-                    "functionId": functionId,
-                    "params": params,
-                    "placeholder": placeholderView.tag
-                ]
-            )
-        }
-        
-        return placeholderView
-    }
-}
