@@ -42,6 +42,7 @@ class AppDelegate: FlutterAppDelegate {
         let bridge = DCMauiNativeBridge.shared
         
         // Register Swift implementations with C layer
+        
         dcmaui_register_swift_functions(
             { return bridge.dcmaui_initialize() },
             { viewId, type, props in return bridge.dcmaui_create_view(viewId, type, props) },
