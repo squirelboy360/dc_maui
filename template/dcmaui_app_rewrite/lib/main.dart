@@ -22,7 +22,7 @@ void startNativeApp() async {
 
   // Create a simple test view
   final createResult = await bridge.createView("test_view", "Text", {
-    "content": "Hello from DCMAUI!",
+    "content": "Hello from DCMAUI! Test Test Test",
     "fontSize": 24,
     "color": "#000000",
     "textAlign": "center"
