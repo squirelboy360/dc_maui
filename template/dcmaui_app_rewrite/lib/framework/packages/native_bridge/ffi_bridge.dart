@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'native_bridge.dart';
+import 'dart:developer' as developer;
 
 /// FFI-based implementation of NativeBridge for iOS/macOS
 class FFINativeBridge implements NativeBridge {
@@ -93,21 +94,36 @@ class FFINativeBridge implements NativeBridge {
 
   @override
   Future<bool> initialize() async {
-    return _initialize() == 1;
+    try {
+      developer.log('Initializing FFI bridge', name: 'FFI');
+      final result = _initialize() != 0;
+      developer.log('FFI bridge initialization result: $result', name: 'FFI');
+      return result;
+    } catch (e) {
+      developer.log('Failed to initialize FFI bridge: $e', name: 'FFI');
+      return false;
+    }
   }
 
   @override
   Future<bool> createView(
       String viewId, String type, Map<String, dynamic> props) async {
-    return using((arena) {
-      final viewIdPointer = viewId.toNativeUtf8(allocator: arena);
-      final typePointer = type.toNativeUtf8(allocator: arena);
-      final propsJson = jsonEncode(props);
-      final propsPointer = propsJson.toNativeUtf8(allocator: arena);
+    try {
+      developer.log('Creating view via FFI: $viewId, $type', name: 'FFI');
+      return using((arena) {
+        final viewIdPointer = viewId.toNativeUtf8(allocator: arena);
+        final typePointer = type.toNativeUtf8(allocator: arena);
+        final propsJson = jsonEncode(props);
+        final propsPointer = propsJson.toNativeUtf8(allocator: arena);
 
-      final result = _createView(viewIdPointer, typePointer, propsPointer);
-      return result == 1;
-    });
+        final result = _createView(viewIdPointer, typePointer, propsPointer);
+        developer.log('FFI createView result: $result', name: 'FFI');
+        return result != 0;
+      });
+    } catch (e) {
+      developer.log('FFI createView error: $e', name: 'FFI');
+      return false;
+    }
   }
 
   @override

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'framework/packages/vdom/vdom.dart';
 import 'framework/packages/renderer/vdom_renderer.dart';
+import 'framework/packages/native_bridge/native_bridge.dart';
+import 'dart:developer' as developer;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,42 +13,32 @@ void startNativeApp() async {
   // Create VDOM instance
   final vdom = VDom();
 
-  // Create renderer
-  final renderer = VDomRenderer();
+  // Create native bridge directly for testing
+  final bridge = NativeBridgeFactory.create();
 
-  // Create root and store reference
-  final root = vdom.createRoot();
+  developer.log('Initializing native bridge', name: 'App');
+  final initialized = await bridge.initialize();
+  developer.log('Native bridge initialized: $initialized', name: 'App');
 
-  // Initial UI
-  final initialTree = VDom.createElement('View', props: {
-    'backgroundColor': '#FFFFFF',
-    'padding': 16,
-  }, children: [
-    VDom.createElement('Text', props: {
-      'fontSize': 24,
-      'color': '#000000',
-      'textAlign': 'center',
-    }, children: [
-      VDom.createText('Welcome to DCMAUI')
-    ]),
-    VDom.createElement('Button', props: {
-      'title': 'Click Me',
-      'onPress': () {
-        // Using a logger instead of print
-        debugPrint('Button pressed!');
-      },
-      'backgroundColor': '#0066CC',
-      'color': '#FFFFFF',
-      'marginTop': 16,
-    })
-  ]);
+  // Create a simple test view
+  final createResult = await bridge.createView("test_view", "Text", {
+    "content": "Hello from DCMAUI!",
+    "fontSize": 24,
+    "color": "#000000",
+    "textAlign": "center"
+  });
 
-  // Render initial tree to VDOM
-  vdom.render(initialTree);
+  developer.log('Created test view: $createResult', name: 'App');
 
-  // Log the root for debugging
-  debugPrint('VDOM Root: ${root.toString()}');
+  // Attach to root view
+  final attachResult = await bridge.attachView("test_view", "root", 0);
+  developer.log('Attached test view to root: $attachResult', name: 'App');
 
-  // Render to native UI
-  await renderer.renderNode(initialTree);
+  // Register event callback
+  bridge.setEventHandler((viewId, eventType, eventData) {
+    developer.log('Event received: $viewId - $eventType - $eventData',
+        name: 'App');
+  });
+
+  developer.log('DCMAUI framework started in headless mode', name: 'App');
 }

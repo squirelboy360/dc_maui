@@ -20,6 +20,7 @@ import UIKit
     
     // Called by FFI to initialize the native bridge
     @objc public func dcmaui_initialize() -> Int8 {
+        print("DCMauiNativeBridge: initialize() called from FFI")
         // Set up any necessary initialization
         return 1
     }
@@ -32,15 +33,18 @@ import UIKit
         let typeString = String(cString: type)
         let propsString = String(cString: propsJson)
         
+        print("DCMauiNativeBridge: Creating view - ID: \(viewIdString), Type: \(typeString)")
+        
         // Parse props JSON
         guard let propsData = propsString.data(using: .utf8),
               let props = try? JSONSerialization.jsonObject(with: propsData) as? [String: Any] else {
+            print("DCMauiNativeBridge: Failed to parse props JSON")
             return 0
         }
         
         // Get the component type from registry
         guard let componentType = DCMauiComponentRegistry.shared.getComponentType(for: typeString) else {
-            print("Unsupported component type: \(typeString)")
+            print("DCMauiNativeBridge: Unsupported component type: \(typeString)")
             return 0
         }
         
@@ -50,6 +54,7 @@ import UIKit
         // Store in registry with component type info
         viewRegistry[viewIdString] = (view, typeString)
         
+        print("DCMauiNativeBridge: View created successfully: \(viewIdString)")
         return 1
     }
     
@@ -202,15 +207,25 @@ import UIKit
     
     // Send an event back to Dart
     func sendEventToDart(viewId: String, eventName: String, eventData: [String: Any]) {
+        // Call the local callback first
         eventCallback?(viewId, eventName, eventData)
         
-        // Also forward to C layer if needed
-        if let viewIdCStr = viewId.cString(using: .utf8),
-           let eventNameCStr = eventName.cString(using: .utf8),
-           let eventDataJson = try? JSONSerialization.data(withJSONObject: eventData),
-           let eventDataJsonStr = String(data: eventDataJson, encoding: .utf8),
-           let eventDataCStr = eventDataJsonStr.cString(using: .utf8) {
-            dcmaui_send_event(viewIdCStr, eventNameCStr, eventDataCStr)
+        // DEBUG: Log the event for now
+        print("DCMauiNativeBridge: Event fired - \(viewId) - \(eventName)")
+        
+        // In a complete implementation, this would properly forward to the C layer
+    }
+    
+    // Method for direct view setup without going through C layer
+    func manuallyCreateRootView(_ view: UIView, viewId: String, props: [String: Any]) {
+        // Create the appropriate component type (assuming View)
+        if let componentType = DCMauiComponentRegistry.shared.getComponentType(for: "View") {
+            componentType.updateView(view, props: props)
+            
+            // Store in registry
+            viewRegistry[viewId] = (view, "View")
+            
+            print("Root view manually created with ID: \(viewId)")
         }
     }
 }
